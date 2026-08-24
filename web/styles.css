@@ -134,7 +134,7 @@ textarea:focus { box-shadow: inset 0 0 0 2px var(--signal); }
 textarea.drop-target { box-shadow: inset 0 0 0 3px var(--signal); }
 .editor-footer { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 18px; }
 #editor-status { color: var(--muted); font-size: 12px; }
-.result-pane { min-width: 0; padding: 40px 0 40px 40px; }
+.result-pane { min-width: 0; height: 720px; padding: 40px 10px 40px 40px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #9da499 transparent; scrollbar-width: thin; }
 .result-idle { height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--muted); }
 .result-glyph { display: grid; place-items: center; width: 74px; height: 74px; margin-bottom: 24px; border: 1px solid var(--line); font-family: Georgia, serif; font-size: 38px; }
 .result-idle h3, .result-content h3 { margin: 0; color: var(--ink); font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-size: 30px; font-weight: 400; }
@@ -159,7 +159,7 @@ textarea.drop-target { box-shadow: inset 0 0 0 3px var(--signal); }
 .receipt-actions { display: flex; gap: 28px; align-items: center; }
 
 .integration-section { display: grid; grid-template-columns: 1fr 1fr; gap: 10vw; background: var(--paper); }
-.integration-section h2 { max-width: 630px; font-size: 68px; }
+.integration-section h2 { max-width: 630px; font-size: 60px; line-height: 1.02; }
 .integration-list { border-top: 1px solid var(--ink); }
 .integration-list > * { display: grid; grid-template-columns: 100px 1fr auto; align-items: center; min-height: 100px; border-bottom: 1px solid var(--line); transition: padding .2s ease, background .2s ease; }
 .integration-list > a:hover { padding: 0 12px; background: var(--signal); }
@@ -214,7 +214,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   .verifier-heading { gap: 28px; }
   .verifier-workspace { grid-template-columns: 1fr; }
   .editor-pane { min-height: 580px; padding-right: 0; border-right: 0; }
-  .result-pane { min-height: 520px; padding-left: 0; }
+  .result-pane { height: auto; min-height: 520px; padding-left: 0; overflow-y: visible; }
   .integration-section { gap: 64px; }
   h2, .verifier-heading h2, .integration-section h2 { font-size: 56px; }
   .receipt-lookup { grid-template-columns: 1fr auto; padding: 16px 0; }
