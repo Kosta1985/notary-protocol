@@ -13,12 +13,26 @@ export default {
         return json({ algorithm: "Ed25519", publicKey: publicPem(env) });
       }
       if (request.method === "GET" && url.pathname === "/v1/demo") {
+        await recordAnalytics(env, "demo_loaded");
         return json(await createSignedDemo());
       }
+      if (request.method === "GET" && url.pathname === "/v1/stats") {
+        const rows = await env.DB.prepare("SELECT day, event, count FROM analytics_daily WHERE day >= date('now', '-29 days') ORDER BY day ASC").all();
+        const totals = {};
+        const days = new Map();
+        for (const row of rows.results ?? []) {
+          totals[row.event] = (totals[row.event] ?? 0) + row.count;
+          if (!days.has(row.day)) days.set(row.day, { day: row.day });
+          days.get(row.day)[row.event] = row.count;
+        }
+        return json({ windowDays: 30, totals, daily: [...days.values()], privacy: "Aggregate event counts only; no user identifiers are stored." });
+      }
       if (request.method === "POST" && url.pathname === "/v1/verify") {
+        await recordAnalytics(env, "verification_started");
         const envelope = await readJson(request);
         const receipt = await createReceipt(envelope, env);
         await saveReceipt(receipt, env);
+        await recordAnalytics(env, receipt.valid ? "verification_valid" : "verification_invalid");
         return json(receipt, receipt.valid ? 200 : 422);
       }
       if (request.method === "POST" && url.pathname === "/v1/receipts/verify") {
@@ -28,6 +42,7 @@ export default {
       if (request.method === "GET" && url.pathname.startsWith("/v1/receipts/")) {
         const id = decodeURIComponent(url.pathname.slice("/v1/receipts/".length));
         const row = await env.DB.prepare("SELECT receipt FROM receipts WHERE id = ?1").bind(id).first();
+        if (row) await recordAnalytics(env, "receipt_retrieved");
         return row ? json(JSON.parse(row.receipt)) : json({ error: "receipt_not_found" }, 404);
       }
       if (request.method === "GET" && url.pathname === "/.well-known/agent-card.json") {
@@ -67,13 +82,24 @@ export default {
           }
         });
       }
-      if (request.method === "GET") return withSecurityHeaders(await env.ASSETS.fetch(request));
+      if (request.method === "GET") {
+        if (url.pathname === "/") await recordAnalytics(env, "page_view");
+        return withSecurityHeaders(await env.ASSETS.fetch(request));
+      }
       return json({ error: "not_found" }, 404);
     } catch (error) {
       return json({ error: error instanceof RequestError ? "invalid_request" : "internal_error", message: error.message }, error.status ?? 500);
     }
   }
 };
+
+async function recordAnalytics(env, event) {
+  try {
+    await env.DB.prepare("INSERT INTO analytics_daily (day, event, count) VALUES (date('now'), ?1, 1) ON CONFLICT(day, event) DO UPDATE SET count = count + 1").bind(event).run();
+  } catch {
+    // Telemetry must never interrupt verification or static delivery.
+  }
+}
 
 class RequestError extends Error {
   constructor(message, status) {

@@ -1,9 +1,15 @@
 #!/usr/bin/env node
 import { createInterface } from "node:readline";
-import { NotaryClient } from "../../sdk/typescript/dist/index.js";
-
-const client = new NotaryClient(process.env.NOTARY_URL ?? "http://127.0.0.1:8787");
+const baseUrl = (process.env.NOTARY_URL ?? "https://notary-protocol.notary-labs.workers.dev").replace(/\/$/, "");
 const input = createInterface({ input: process.stdin, terminal: false });
+const supportedVersions = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
+
+async function callApi(path, options) {
+  const response = await fetch(`${baseUrl}${path}`, options);
+  const body = await response.json();
+  if (!body.checks && !response.ok) throw new Error(body.message ?? `Notary request failed (${response.status})`);
+  return body;
+}
 
 const tools = [
   {
@@ -28,13 +34,14 @@ input.on("line", async (line) => {
     request = JSON.parse(line);
     let result;
     if (request.method === "initialize") {
-      result = { protocolVersion: "2025-03-26", capabilities: { tools: {} }, serverInfo: { name: "notary-protocol", version: "0.1.0" } };
+      const requested = request.params?.protocolVersion;
+      result = { protocolVersion: supportedVersions.includes(requested) ? requested : supportedVersions[0], capabilities: { tools: {} }, serverInfo: { name: "notary-protocol", version: "0.1.0" } };
     } else if (request.method === "tools/list") {
       result = { tools };
     } else if (request.method === "tools/call" && request.params?.name === "notary_verify") {
-      result = { content: [{ type: "text", text: JSON.stringify(await client.verify(request.params.arguments.envelope), null, 2) }] };
+      result = { content: [{ type: "text", text: JSON.stringify(await requestApiVerification(request.params.arguments.envelope), null, 2) }] };
     } else if (request.method === "tools/call" && request.params?.name === "notary_get_receipt") {
-      result = { content: [{ type: "text", text: JSON.stringify(await client.getReceipt(request.params.arguments.receiptId), null, 2) }] };
+      result = { content: [{ type: "text", text: JSON.stringify(await callApi(`/v1/receipts/${encodeURIComponent(request.params.arguments.receiptId)}`), null, 2) }] };
     } else if (request.method === "notifications/initialized") {
       return;
     } else {
@@ -45,3 +52,7 @@ input.on("line", async (line) => {
     send({ jsonrpc: "2.0", id: request?.id ?? null, error: { code: error.code ?? -32603, message: error.message } });
   }
 });
+
+function requestApiVerification(envelope) {
+  return callApi("/v1/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(envelope) });
+}

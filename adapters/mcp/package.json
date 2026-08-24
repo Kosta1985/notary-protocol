@@ -1,0 +1,31 @@
+{
+  "name": "@kosta1985/notary-mcp",
+  "version": "0.1.0",
+  "description": "MCP tools for verifying AI-agent transaction evidence with Notary Protocol.",
+  "type": "module",
+  "bin": {
+    "notary-mcp": "server.js"
+  },
+  "files": [
+    "server.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "ai-agents",
+    "cryptographic-evidence",
+    "verification"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kosta1985/notary-protocol.git",
+    "directory": "adapters/mcp"
+  },
+  "homepage": "https://notary-protocol.notary-labs.workers.dev",
+  "bugs": "https://github.com/Kosta1985/notary-protocol/issues",
+  "license": "MIT",
+  "mcpName": "io.github.kosta1985/notary-protocol"
+}

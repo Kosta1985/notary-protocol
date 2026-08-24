@@ -12,9 +12,11 @@
     "start": "node api/src/server.js",
     "test": "node --test",
     "demo": "node scripts/create-demo.js",
+    "vectors:generate": "node scripts/generate-test-vectors.js",
     "cf:prepare": "node scripts/prepare-cloudflare-assets.js",
     "cf:dev": "npm run cf:prepare && npx wrangler@latest dev",
-    "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy"
+    "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy",
+    "seo:submit": "node scripts/submit-indexnow.js"
   },
   "license": "MIT"
 }

@@ -16,6 +16,8 @@ The service requires Node.js 20 or later and has no runtime package dependencies
 | `RATE_LIMIT` | `120` | Maximum POST requests per client in one window |
 | `RATE_LIMIT_WINDOW_MS` | `60000` | Rate-limit window in milliseconds |
 
+The application stores only aggregate daily activity counters for product telemetry. It does not add IP addresses, user-agent strings, cookies, fingerprints, or envelope contents to the analytics store. Public 30-day totals are served at `/v1/stats`.
+
 ## Production checklist
 
 - Mount the data directory on durable encrypted storage.

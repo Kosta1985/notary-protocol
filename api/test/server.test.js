@@ -15,11 +15,18 @@ test("HTTP flow creates and retrieves a receipt", async (context) => {
   const health = await fetch(`${baseUrl}/health`).then((response) => response.json());
   assert.equal(health.status, "ok");
 
+  assert.equal((await fetch(`${baseUrl}/`)).status, 200);
+  const stats = await fetch(`${baseUrl}/v1/stats`).then((response) => response.json());
+  assert.equal(stats.totals.page_view, 1);
+
   const envelope = await fetch(`${baseUrl}/v1/demo`).then((response) => response.json());
   const verifyResponse = await fetch(`${baseUrl}/v1/verify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(envelope) });
   assert.equal(verifyResponse.status, 200);
   const receipt = await verifyResponse.json();
   assert.equal(receipt.valid, true);
+
+  const updatedStats = await fetch(`${baseUrl}/v1/stats`).then((response) => response.json());
+  assert.equal(updatedStats.totals.verification_valid, 1);
 
   const stored = await fetch(`${baseUrl}/v1/receipts/${receipt.id}`).then((response) => response.json());
   assert.deepEqual(stored, receipt);

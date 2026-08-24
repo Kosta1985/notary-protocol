@@ -40,6 +40,9 @@
     "/v1/demo": {
       "get": { "operationId": "createDemoEnvelope", "responses": { "200": { "description": "Fresh signed demo envelope" } } }
     },
+    "/v1/stats": {
+      "get": { "operationId": "getPublicStats", "responses": { "200": { "description": "Anonymous aggregate activity for the last 30 days" } } }
+    },
     "/.well-known/agent-card.json": {
       "get": { "operationId": "getA2AAgentCard", "responses": { "200": { "description": "A2A agent card" } } }
     },

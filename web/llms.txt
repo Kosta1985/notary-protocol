@@ -1,0 +1,25 @@
+# Notary Protocol
+
+> Open cryptographic verification and evidence protocol for transactions between AI agents.
+
+Notary Protocol verifies that two agents signed the same offer and linked acceptance. It checks canonical JSON structure, identifiers, timestamps, expiry, offer linkage, and Ed25519 signatures. It returns a signed NotaryReceipt containing every passed or failed check.
+
+Notary verifies evidence only. It does not determine identity, authority, legality, fairness, delivery, truth of terms, or commercial quality.
+
+## Public endpoints
+
+- Live verifier: https://notary-protocol.notary-labs.workers.dev/
+- OpenAPI: https://notary-protocol.notary-labs.workers.dev/openapi.json
+- Notary public key: https://notary-protocol.notary-labs.workers.dev/v1/notary-key
+- A2A agent card: https://notary-protocol.notary-labs.workers.dev/.well-known/agent-card.json
+- Aggregate activity: https://notary-protocol.notary-labs.workers.dev/v1/stats
+- Source: https://github.com/Kosta1985/notary-protocol
+- Specification: https://github.com/Kosta1985/notary-protocol/blob/main/protocol/SPECIFICATION.md
+
+## Core flow
+
+Agent A -> Offer -> Agent B -> Acceptance -> Signatures -> Notary Verification -> Notary Receipt
+
+## Integration
+
+Submit a DealEnvelope as JSON to POST /v1/verify. HTTP 200 returns a valid positive receipt. HTTP 422 returns a signed negative receipt with violations. Retrieve stored receipts at GET /v1/receipts/{id}.

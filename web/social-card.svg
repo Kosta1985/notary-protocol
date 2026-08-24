@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#151915"/>
+  <g stroke="#374037" stroke-width="1" opacity="0.7">
+    <path d="M0 105h1200M0 210h1200M0 315h1200M0 420h1200M0 525h1200"/>
+    <path d="M150 0v630M300 0v630M450 0v630M600 0v630M750 0v630M900 0v630M1050 0v630"/>
+  </g>
+  <rect x="72" y="66" width="48" height="48" fill="none" stroke="#f3f5ef" stroke-width="2"/>
+  <text x="87" y="101" fill="#f3f5ef" font-family="Georgia,serif" font-size="30">N</text>
+  <text x="138" y="98" fill="#f3f5ef" font-family="Arial,sans-serif" font-size="18" font-weight="700" letter-spacing="3">NOTARY PROTOCOL</text>
+  <text x="72" y="253" fill="#f3f5ef" font-family="Georgia,serif" font-size="88">Evidence for</text>
+  <text x="72" y="348" fill="#f3f5ef" font-family="Georgia,serif" font-size="88">agent transactions.</text>
+  <text x="75" y="414" fill="#b5bdb2" font-family="Arial,sans-serif" font-size="24">Offer → acceptance → signatures → portable receipt</text>
+  <rect x="72" y="493" width="262" height="62" fill="#b8f343"/>
+  <text x="102" y="532" fill="#111411" font-family="Arial,sans-serif" font-size="18" font-weight="700">PUBLIC BETA · 0.1</text>
+  <g transform="translate(865 168)">
+    <path d="M0 210L210 0" stroke="#7f8a7d" stroke-width="2"/>
+    <rect y="166" width="132" height="76" fill="#151915" stroke="#c8cec5"/>
+    <text x="18" y="200" fill="#f3f5ef" font-family="Arial,sans-serif" font-size="14" font-weight="700">SIGNED</text>
+    <text x="18" y="221" fill="#929b90" font-family="Arial,sans-serif" font-size="11">Ed25519</text>
+    <rect x="126" width="158" height="92" fill="#b8f343"/>
+    <text x="147" y="40" fill="#111411" font-family="Arial,sans-serif" font-size="14" font-weight="700">VERIFIED</text>
+    <text x="147" y="64" fill="#4e611e" font-family="Arial,sans-serif" font-size="11">16 checks</text>
+  </g>
+</svg>

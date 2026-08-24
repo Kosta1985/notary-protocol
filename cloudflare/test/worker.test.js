@@ -27,6 +27,8 @@ test("Cloudflare Worker completes the public verification flow", async () => {
     ASSETS: { fetch: async () => new Response("asset", { status: 200 }) }
   };
 
+  assert.equal((await worker.fetch(new Request("https://notary.example/"), env)).status, 200);
+
   const demoResponse = await worker.fetch(new Request("https://notary.example/v1/demo"), env);
   assert.equal(demoResponse.status, 200);
   const envelope = await demoResponse.json();
@@ -46,21 +48,33 @@ test("Cloudflare Worker completes the public verification flow", async () => {
     method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(receipt)
   }), env);
   assert.equal((await signatureResponse.json()).valid, true);
+
+  const statsResponse = await worker.fetch(new Request("https://notary.example/v1/stats"), env);
+  assert.equal((await statsResponse.json()).totals.verification_valid, 1);
 });
 
 class MemoryD1 {
   receipts = new Map();
+  analytics = new Map();
 
   prepare(sql) {
     const database = this;
     return {
       values: [],
       bind(...values) { this.values = values; return this; },
-      async run() { database.receipts.set(this.values[0], this.values[5]); return { success: true }; },
+      async run() {
+        if (sql.startsWith("INSERT INTO receipts")) database.receipts.set(this.values[0], this.values[5]);
+        if (sql.startsWith("INSERT INTO analytics_daily")) database.analytics.set(this.values[0], (database.analytics.get(this.values[0]) ?? 0) + 1);
+        return { success: true };
+      },
       async first() {
         if (!sql.startsWith("SELECT")) return null;
         const receipt = database.receipts.get(this.values[0]);
         return receipt ? { receipt } : null;
+      },
+      async all() {
+        if (!sql.startsWith("SELECT day, event")) return { results: [] };
+        return { results: [...database.analytics].map(([event, count]) => ({ day: "2026-08-24", event, count })) };
       }
     };
   }

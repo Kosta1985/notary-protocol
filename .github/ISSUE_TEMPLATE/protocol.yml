@@ -1,0 +1,22 @@
+name: Protocol proposal
+description: Propose a change to the evidence format or verification semantics.
+title: "Protocol: "
+body:
+  - type: textarea
+    id: problem
+    attributes: { label: Interoperability or security problem }
+    validations: { required: true }
+  - type: textarea
+    id: example
+    attributes:
+      label: Concrete example
+      description: Include a minimal envelope or receipt fragment without sensitive information.
+    validations: { required: true }
+  - type: textarea
+    id: proposal
+    attributes: { label: Proposed change }
+    validations: { required: true }
+  - type: textarea
+    id: compatibility
+    attributes: { label: Compatibility and security impact }
+    validations: { required: true }

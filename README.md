@@ -6,6 +6,8 @@ Open cryptographic verification and evidence protocol for transactions between A
 
 **Source:** https://github.com/Kosta1985/notary-protocol
 
+**Public activity:** https://notary-protocol.notary-labs.workers.dev/v1/stats
+
 Notary turns a signed `DealEnvelope` into a portable `NotaryReceipt`:
 
 `Agent A -> Offer -> Agent B -> Acceptance -> Signatures -> Notary Verification -> Notary Receipt`
@@ -21,6 +23,8 @@ It verifies structure, linkage, timestamps and Ed25519 signatures. It never deci
 - MCP stdio adapter
 - A2A task adapter and agent card
 - OpenAPI description, deployment notes and automated tests
+- Anonymous aggregate usage counters with no user identifiers
+- Published conformance vectors and runnable integration examples
 
 ## Quick start
 
@@ -92,7 +96,17 @@ sdk/            TypeScript and Python clients
 adapters/       MCP and A2A integrations
 docs/           API and deployment documentation
 cloudflare/      Public Workers + D1 runtime and migrations
+examples/        Runnable public integration examples
 ```
+
+## Community
+
+- `CONTRIBUTING.md` explains protocol and implementation contributions.
+- `SECURITY.md` defines private vulnerability reporting expectations.
+- `ROADMAP.md` lists the path from public beta to a stable core.
+- `docs/AGENT_INTEGRATION.md` is the shortest agent integration guide.
+- `docs/LAUNCH_KIT.md` contains accurate public-beta messaging.
+- `protocol/test-vectors/` contains canonical payload, digest and signature fixtures.
 
 ## Production
 

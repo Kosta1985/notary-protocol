@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#111411">
+    <title>Activity · Notary Protocol</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/activity.js"></script>
+  </head>
+  <body class="activity-page">
+    <header class="site-header scrolled">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">N</span><span>NOTARY PROTOCOL</span></a>
+      <a class="header-action" href="/">Return to verifier</a>
+    </header>
+    <main class="activity-content">
+      <div class="activity-heading">
+        <div><p class="eyebrow">Public telemetry · 30 days</p><h1>Protocol activity</h1></div>
+        <p>Aggregate event counts only. No user identifiers, IP addresses, fingerprints, or evidence contents are stored in the analytics database.</p>
+      </div>
+      <section class="activity-totals" aria-label="Activity totals">
+        <div><span>Page views</span><strong id="metric-views">—</strong></div>
+        <div><span>Demo loads</span><strong id="metric-demos">—</strong></div>
+        <div><span>Verifications</span><strong id="metric-verifications">—</strong></div>
+        <div><span>Valid results</span><strong id="metric-valid">—</strong></div>
+      </section>
+      <section class="activity-funnel" aria-labelledby="funnel-title">
+        <div><p class="eyebrow">Usage funnel</p><h2 id="funnel-title">From visit to receipt.</h2></div>
+        <dl>
+          <div><dt>Demo engagement</dt><dd id="rate-demo">—</dd></div>
+          <div><dt>Verification completion</dt><dd id="rate-verify">—</dd></div>
+          <div><dt>Valid evidence</dt><dd id="rate-valid">—</dd></div>
+          <div><dt>Receipt retrievals</dt><dd id="metric-retrievals">—</dd></div>
+        </dl>
+      </section>
+      <section class="activity-history" aria-labelledby="history-title">
+        <div class="activity-section-title"><h2 id="history-title">Daily verification attempts</h2><span id="activity-updated">Loading…</span></div>
+        <div id="activity-chart" class="activity-chart" aria-live="polite"></div>
+      </section>
+    </main>
+  </body>
+</html>

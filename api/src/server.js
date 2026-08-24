@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createSignedDemo } from "./demo.js";
+import { AnalyticsStore } from "./analytics.js";
 import { createNotary } from "./notary.js";
 import { ReceiptStore } from "./store.js";
 
@@ -76,6 +77,7 @@ export function createServer(options = {}) {
   const dataDir = options.dataDir ?? process.env.NOTARY_DATA_DIR ?? join(root, "api/data");
   const notary = options.notary ?? createNotary({ keyFile: process.env.NOTARY_KEY_FILE ?? join(dataDir, "notary-key.pem") });
   const store = options.store ?? new ReceiptStore(join(dataDir, "receipts.jsonl"));
+  const analytics = options.analytics ?? new AnalyticsStore(join(dataDir, "analytics.json"));
   const corsOrigin = process.env.CORS_ORIGIN ?? "*";
   const rateLimit = createRateLimiter(options.rateLimit ?? {
     limit: process.env.RATE_LIMIT ?? 120,
@@ -100,10 +102,16 @@ export function createServer(options = {}) {
       }
       if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { status: "ok", version: "0.1.0" }, corsOrigin);
       if (request.method === "GET" && url.pathname === "/v1/notary-key") return json(response, 200, { algorithm: "Ed25519", publicKey: notary.publicKey }, corsOrigin);
-      if (request.method === "GET" && url.pathname === "/v1/demo") return json(response, 200, createSignedDemo(), corsOrigin);
+      if (request.method === "GET" && url.pathname === "/v1/demo") {
+        analytics.record("demo_loaded");
+        return json(response, 200, createSignedDemo(), corsOrigin);
+      }
+      if (request.method === "GET" && url.pathname === "/v1/stats") return json(response, 200, analytics.summary(), corsOrigin);
       if (request.method === "POST" && url.pathname === "/v1/verify") {
+        analytics.record("verification_started");
         const envelope = await readJson(request);
         const receipt = store.save(notary.verify(envelope));
+        analytics.record(receipt.valid ? "verification_valid" : "verification_invalid");
         return json(response, receipt.valid ? 200 : 422, receipt, corsOrigin);
       }
       if (request.method === "POST" && url.pathname === "/v1/receipts/verify") {
@@ -113,6 +121,7 @@ export function createServer(options = {}) {
       }
       if (request.method === "GET" && url.pathname.startsWith("/v1/receipts/")) {
         const receipt = store.get(decodeURIComponent(url.pathname.slice("/v1/receipts/".length)));
+        if (receipt) analytics.record("receipt_retrieved");
         return receipt ? json(response, 200, receipt, corsOrigin) : json(response, 404, { error: "receipt_not_found" }, corsOrigin);
       }
       if (request.method === "GET" && url.pathname === "/.well-known/agent-card.json") {
@@ -147,6 +156,7 @@ export function createServer(options = {}) {
         const schema = JSON.parse(await readFile(join(root, "protocol/notary-receipt.schema.json"), "utf8"));
         return json(response, 200, schema, corsOrigin);
       }
+      if (request.method === "GET" && url.pathname === "/") analytics.record("page_view");
       if (request.method === "GET" && await staticFile(url.pathname, response)) return;
       json(response, 404, { error: "not_found" }, corsOrigin);
     } catch (error) {

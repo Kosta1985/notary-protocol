@@ -1,0 +1,47 @@
+{
+  "version": "0.1",
+  "id": "deal_conformance_001",
+  "createdAt": "2026-08-24T00:00:00.000Z",
+  "expiresAt": "2099-12-31T23:59:59.000Z",
+  "initiator": {
+    "id": "agent:test-initiator",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAh4EZ5WPr3BjEIjqQqgVEfcfCHZ6cKLXRu2NjqgD1UEA=\n-----END PUBLIC KEY-----\n"
+  },
+  "counterparty": {
+    "id": "agent:test-counterparty",
+    "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEABUK9Kl8YS/imgmECfPw2RGnMAZZRnEVQMF1je3hwksc=\n-----END PUBLIC KEY-----\n"
+  },
+  "offer": {
+    "id": "offer_conformance_001",
+    "createdAt": "2026-08-24T00:00:00.000Z",
+    "nonce": "jx3OQXMZmrpuin_Qar1_XQ",
+    "terms": {
+      "action": "conformance_test",
+      "count": 3,
+      "nested": {
+        "enabled": true,
+        "labels": [
+          "alpha",
+          "beta"
+        ]
+      }
+    }
+  },
+  "acceptance": {
+    "offerId": "offer_conformance_001",
+    "acceptedAt": "2026-08-24T00:00:01.000Z",
+    "nonce": "GfuOUAJ1glFu0KKRGIq4Xw"
+  },
+  "signatures": [
+    {
+      "role": "initiator",
+      "algorithm": "Ed25519",
+      "value": "OGhs1h2_eKaFDJPa2XJo0kQO6lGAmEmq39loRnLOOxX5_KYKv0UXOH8EH612quakNz3eNJgvfUa_v2y4u72ZBw"
+    },
+    {
+      "role": "counterparty",
+      "algorithm": "Ed25519",
+      "value": "8kbOb7EuLcdKMxyAB45GEt6n4KP4SXE4binQyfoJHsuj4zNIQgz1-oDKYBji2r1ye5ZrC075I3HxvXJFLMdRDw"
+    }
+  ]
+}

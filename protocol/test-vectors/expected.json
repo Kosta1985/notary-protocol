@@ -1,0 +1,85 @@
+{
+  "evidenceDigest": "g8oPNbWhU4gynH-5vBJd6f7WodiEu-w6MPIqNQrQlRA",
+  "initiatorSigningPayload": "{\"counterparty\":{\"id\":\"agent:test-counterparty\",\"publicKey\":\"-----BEGIN PUBLIC KEY-----\\nMCowBQYDK2VwAyEABUK9Kl8YS/imgmECfPw2RGnMAZZRnEVQMF1je3hwksc=\\n-----END PUBLIC KEY-----\\n\"},\"createdAt\":\"2026-08-24T00:00:00.000Z\",\"dealId\":\"deal_conformance_001\",\"domain\":\"notary.deal.initiator.v0.1\",\"expiresAt\":\"2099-12-31T23:59:59.000Z\",\"initiator\":{\"id\":\"agent:test-initiator\",\"publicKey\":\"-----BEGIN PUBLIC KEY-----\\nMCowBQYDK2VwAyEAh4EZ5WPr3BjEIjqQqgVEfcfCHZ6cKLXRu2NjqgD1UEA=\\n-----END PUBLIC KEY-----\\n\"},\"offer\":{\"createdAt\":\"2026-08-24T00:00:00.000Z\",\"id\":\"offer_conformance_001\",\"nonce\":\"jx3OQXMZmrpuin_Qar1_XQ\",\"terms\":{\"action\":\"conformance_test\",\"count\":3,\"nested\":{\"enabled\":true,\"labels\":[\"alpha\",\"beta\"]}}},\"version\":\"0.1\"}",
+  "counterpartySigningPayload": "{\"acceptance\":{\"acceptedAt\":\"2026-08-24T00:00:01.000Z\",\"nonce\":\"GfuOUAJ1glFu0KKRGIq4Xw\",\"offerId\":\"offer_conformance_001\"},\"counterparty\":{\"id\":\"agent:test-counterparty\",\"publicKey\":\"-----BEGIN PUBLIC KEY-----\\nMCowBQYDK2VwAyEABUK9Kl8YS/imgmECfPw2RGnMAZZRnEVQMF1je3hwksc=\\n-----END PUBLIC KEY-----\\n\"},\"createdAt\":\"2026-08-24T00:00:00.000Z\",\"dealId\":\"deal_conformance_001\",\"domain\":\"notary.deal.counterparty.v0.1\",\"expiresAt\":\"2099-12-31T23:59:59.000Z\",\"initiator\":{\"id\":\"agent:test-initiator\",\"publicKey\":\"-----BEGIN PUBLIC KEY-----\\nMCowBQYDK2VwAyEAh4EZ5WPr3BjEIjqQqgVEfcfCHZ6cKLXRu2NjqgD1UEA=\\n-----END PUBLIC KEY-----\\n\"},\"offer\":{\"createdAt\":\"2026-08-24T00:00:00.000Z\",\"id\":\"offer_conformance_001\",\"nonce\":\"jx3OQXMZmrpuin_Qar1_XQ\",\"terms\":{\"action\":\"conformance_test\",\"count\":3,\"nested\":{\"enabled\":true,\"labels\":[\"alpha\",\"beta\"]}}},\"version\":\"0.1\"}",
+  "receipt": {
+    "version": "0.1",
+    "id": "ntr_g8oPNbWhU4gynH-5vBJd6f7W",
+    "dealId": "deal_conformance_001",
+    "evidenceDigest": "g8oPNbWhU4gynH-5vBJd6f7WodiEu-w6MPIqNQrQlRA",
+    "verifiedAt": "2026-08-24T00:00:02.000Z",
+    "valid": true,
+    "checks": [
+      {
+        "code": "structure",
+        "passed": true
+      },
+      {
+        "code": "version",
+        "passed": true
+      },
+      {
+        "code": "deal_id",
+        "passed": true
+      },
+      {
+        "code": "created_at",
+        "passed": true
+      },
+      {
+        "code": "parties",
+        "passed": true
+      },
+      {
+        "code": "distinct_parties",
+        "passed": true
+      },
+      {
+        "code": "offer",
+        "passed": true
+      },
+      {
+        "code": "acceptance",
+        "passed": true
+      },
+      {
+        "code": "offer_link",
+        "passed": true
+      },
+      {
+        "code": "creation_order",
+        "passed": true
+      },
+      {
+        "code": "time_order",
+        "passed": true
+      },
+      {
+        "code": "expiry_order",
+        "passed": true
+      },
+      {
+        "code": "not_expired",
+        "passed": true
+      },
+      {
+        "code": "signature_set",
+        "passed": true
+      },
+      {
+        "code": "initiator_signature",
+        "passed": true
+      },
+      {
+        "code": "counterparty_signature",
+        "passed": true
+      }
+    ],
+    "violations": [],
+    "notary": {
+      "algorithm": "Ed25519",
+      "publicKey": "-----BEGIN PUBLIC KEY-----\nMCowBQYDK2VwAyEAkxxEdF/a7MvMceSFXfWytxEUSvskB2h13roB0R8SWwY=\n-----END PUBLIC KEY-----\n",
+      "signature": "dkgzTXwRA6Q7oFRFCNIbegYpvLlLzHgOuFzOdYuk9RFVrUCTGdyISa1ANZhh7Lrg0HG2YDgPRWXL96_kM1lpBw"
+    }
+  }
+}

@@ -1,6 +1,8 @@
 .env
 api/data/*.jsonl
 api/data/*.pem
+api/data/analytics.json
+api/data/analytics.json.tmp
 coverage/
 node_modules/
 __pycache__/

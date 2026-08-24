@@ -1,0 +1,28 @@
+name: Implementation bug
+description: Report reproducible behavior in the API, verifier, SDK or adapter.
+title: "Bug: "
+body:
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options: [Protocol core, API, Web verifier, TypeScript SDK, Python SDK, MCP adapter, A2A adapter, Cloudflare deployment]
+    validations: { required: true }
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Remove private keys and sensitive evidence.
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: Expected behavior }
+    validations: { required: true }
+  - type: textarea
+    id: reproduce
+    attributes: { label: Minimal reproduction }
+    validations: { required: true }
+  - type: input
+    id: version
+    attributes: { label: Version or commit }
+    validations: { required: true }
