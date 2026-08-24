@@ -10,6 +10,8 @@ export const ANALYTICS_EVENTS = new Set([
   "a2a_started",
   "a2a_valid",
   "a2a_invalid",
+  "pilot_page_view",
+  "pilot_apply",
   "receipt_retrieved"
 ]);
 

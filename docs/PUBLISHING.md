@@ -26,6 +26,7 @@ Open these public URLs:
 - `https://notary-protocol.notary-labs.workers.dev/v1/stats`
 - `https://notary-protocol.notary-labs.workers.dev/activity.html`
 - `https://notary-protocol.notary-labs.workers.dev/privacy.html`
+- `https://notary-protocol.notary-labs.workers.dev/pilot.html`
 - `https://notary-protocol.notary-labs.workers.dev/llms.txt`
 
 The stats endpoint reports daily aggregate events only. It does not store IP

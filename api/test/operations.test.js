@@ -4,10 +4,11 @@ import { summarizeAdoption } from "../../scripts/adoption-report.js";
 import { runSmoke } from "../../scripts/live-smoke.js";
 
 test("adoption summary calculates aggregate conversion rates", () => {
-  const report = summarizeAdoption({ windowDays: 30, totals: { page_view: 20, verification_started: 5, verification_valid: 4, verification_invalid: 1 } }, { stargazers_count: 3, forks_count: 2, subscribers_count: 1, open_issues_count: 4 });
+  const report = summarizeAdoption({ windowDays: 30, totals: { page_view: 20, verification_started: 5, verification_valid: 4, verification_invalid: 1, pilot_page_view: 4, pilot_apply: 1 } }, { stargazers_count: 3, forks_count: 2, subscribers_count: 1, open_issues_count: 4 });
   assert.equal(report.site.visitorToVerificationPercent, 25);
   assert.equal(report.site.successfulVerificationPercent, 80);
   assert.equal(report.github.stars, 3);
+  assert.equal(report.site.pilotRequestPercent, 25);
 });
 
 test("live smoke completes the public verification sequence", async () => {

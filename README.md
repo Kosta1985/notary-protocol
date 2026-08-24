@@ -8,6 +8,8 @@ Open cryptographic verification and evidence protocol for transactions between A
 
 **Public activity:** https://notary-protocol.notary-labs.workers.dev/v1/stats
 
+**Free early access through 24 November 2026:** https://notary-protocol.notary-labs.workers.dev/pilot.html
+
 Notary turns a signed `DealEnvelope` into a portable `NotaryReceipt`:
 
 `Agent A -> Offer -> Agent B -> Acceptance -> Signatures -> Notary Verification -> Notary Receipt`
@@ -114,6 +116,8 @@ examples/        Runnable public integration examples
 - `ROADMAP.md` lists the path from public beta to a stable core.
 - `docs/AGENT_INTEGRATION.md` is the shortest agent integration guide.
 - `docs/EARLY_ADOPTER_GUIDE.md` lists practical first integrations and requested feedback.
+- `docs/COMMERCIAL_PILOT.md` defines free early access and the future bulk-export pricing hypothesis.
+- `docs/REVENUE_SETUP_AU.md` covers the operational path for invoicing the first Australian pilot.
 - `docs/PUBLISHING.md` covers the deployment and public-launch sequence.
 - `docs/LAUNCH_KIT.md` contains accurate public-beta messaging.
 - `protocol/test-vectors/` contains canonical payload, digest and signature fixtures.

@@ -9,6 +9,7 @@ import { ReceiptStore } from "./store.js";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 const webRoot = join(root, "web");
+const pilotIssueUrl = "https://github.com/Kosta1985/notary-protocol/issues/new?template=pilot.yml";
 const mimeTypes = { ".css": "text/css; charset=utf-8", ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".json": "application/json; charset=utf-8", ".svg": "image/svg+xml" };
 
 function createRateLimiter({ limit = 120, windowMs = 60_000 } = {}) {
@@ -111,6 +112,15 @@ export function createServer(options = {}) {
         return json(response, 200, createSignedDemo(), corsOrigin);
       }
       if (request.method === "GET" && url.pathname === "/v1/stats") return json(response, 200, analytics.summary(), corsOrigin);
+      if (request.method === "POST" && url.pathname === "/pilot/view") {
+        track("pilot_page_view");
+        return json(response, 200, { recorded: true }, corsOrigin);
+      }
+      if (request.method === "GET" && url.pathname === "/pilot/apply") {
+        track("pilot_apply");
+        response.writeHead(302, { location: pilotIssueUrl, "cache-control": "no-store" });
+        return response.end();
+      }
       if (request.method === "POST" && url.pathname === "/v1/verify") {
         track("verification_started");
         const envelope = await readJson(request);

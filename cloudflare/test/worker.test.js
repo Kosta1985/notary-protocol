@@ -33,6 +33,10 @@ test("Cloudflare Worker completes the public verification flow", async () => {
   assert.deepEqual(capabilities.protocolVersions, ["0.1"]);
   assert.equal(capabilities.endpoints.verify, "https://notary.example/v1/verify");
 
+  assert.equal((await worker.fetch(new Request("https://notary.example/pilot/view", { method: "POST" }), env)).status, 200);
+  const pilotRedirect = await worker.fetch(new Request("https://notary.example/pilot/apply"), env);
+  assert.equal(pilotRedirect.status, 302);
+
   const demoResponse = await worker.fetch(new Request("https://notary.example/v1/demo"), env);
   assert.equal(demoResponse.status, 200);
   const envelope = await demoResponse.json();
@@ -54,7 +58,10 @@ test("Cloudflare Worker completes the public verification flow", async () => {
   assert.equal((await signatureResponse.json()).valid, true);
 
   const statsResponse = await worker.fetch(new Request("https://notary.example/v1/stats"), env);
-  assert.equal((await statsResponse.json()).totals.verification_valid, 1);
+  const stats = await statsResponse.json();
+  assert.equal(stats.totals.verification_valid, 1);
+  assert.equal(stats.totals.pilot_page_view, 1);
+  assert.equal(stats.totals.pilot_apply, 1);
 });
 
 class MemoryD1 {

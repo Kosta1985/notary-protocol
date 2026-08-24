@@ -1,0 +1,45 @@
+name: Free early access integration
+description: Join the free 90-day early access with one AI-agent transaction workflow.
+title: "Early access: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Do not include credentials, private evidence, personal data or confidential commercial terms.
+  - type: input
+    id: project
+    attributes:
+      label: Project or organization
+      description: A public name or GitHub project is enough.
+    validations: { required: true }
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Agent transaction workflow
+      description: Describe the offer, acceptance and execution boundary you want to make verifiable.
+    validations: { required: true }
+  - type: dropdown
+    id: stack
+    attributes:
+      label: Integration path
+      options: ["REST API", "TypeScript SDK", "Python SDK", "A2A", "MCP", "Not sure"]
+    validations: { required: true }
+  - type: dropdown
+    id: timing
+    attributes:
+      label: Target start
+      options: ["Within 2 weeks", "Within 30 days", "This quarter", "Exploring"]
+    validations: { required: true }
+  - type: input
+    id: volume
+    attributes:
+      label: Expected monthly receipt volume
+      description: An estimate or range is enough.
+    validations: { required: true }
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope acknowledgement
+      options:
+        - label: I understand that Notary verifies cryptographic evidence and does not provide identity, legal, commercial, payment or delivery judgments.
+          required: true

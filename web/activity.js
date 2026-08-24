@@ -22,6 +22,8 @@ try {
   document.querySelector("#rate-verify").textContent = percentage(completed, attempts);
   document.querySelector("#rate-valid").textContent = percentage(valid, completed);
   document.querySelector("#rate-agents").textContent = percentage(agentAttempts, attempts);
+  document.querySelector("#metric-pilot-views").textContent = value(stats.totals, "pilot_page_view").toLocaleString();
+  document.querySelector("#metric-pilot-requests").textContent = value(stats.totals, "pilot_apply").toLocaleString();
   document.querySelector("#activity-updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
   const maximum = Math.max(1, ...stats.daily.map((row) => value(row, "verification_started")));

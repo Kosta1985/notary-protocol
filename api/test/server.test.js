@@ -19,6 +19,11 @@ test("HTTP flow creates and retrieves a receipt", async (context) => {
   assert.deepEqual(capabilities.protocolVersions, ["0.1"]);
   assert.equal(capabilities.endpoints.verify, `${baseUrl}/v1/verify`);
 
+  assert.equal((await fetch(`${baseUrl}/pilot/view`, { method: "POST" })).status, 200);
+  const pilotRedirect = await fetch(`${baseUrl}/pilot/apply`, { redirect: "manual" });
+  assert.equal(pilotRedirect.status, 302);
+  assert.match(pilotRedirect.headers.get("location"), /template=pilot\.yml/);
+
   assert.equal((await fetch(`${baseUrl}/`)).status, 200);
   const stats = await fetch(`${baseUrl}/v1/stats`).then((response) => response.json());
   assert.equal(stats.totals.page_view, 1);
@@ -49,4 +54,6 @@ test("HTTP flow creates and retrieves a receipt", async (context) => {
   assert.equal(a2aStats.totals.a2a_started, 1);
   assert.equal(a2aStats.totals.a2a_valid, 1);
   assert.equal(a2aStats.totals.verification_started, 2);
+  assert.equal(a2aStats.totals.pilot_page_view, 1);
+  assert.equal(a2aStats.totals.pilot_apply, 1);
 });

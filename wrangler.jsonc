@@ -9,6 +9,7 @@
     "directory": "cloudflare/public",
     "binding": "ASSETS",
     "run_worker_first": [
+      "/pilot/*",
       "/",
       "/health",
       "/v1/*",

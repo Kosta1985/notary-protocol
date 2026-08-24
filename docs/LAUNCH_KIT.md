@@ -26,15 +26,38 @@ Feedback on the envelope and receipt formats is especially useful.
 
 ## Show HN
 
-Title:
+Hacker News currently requires submission text to be written by the maker, not
+generated or edited by an LLM. The maintainer must write the title and first
+comment personally.
 
-`Show HN: Notary Protocol – cryptographic receipts for AI-agent transactions`
+Use the public verifier URL and cover these facts in the maintainer's own words:
 
-First comment:
+- why portable evidence between agents was worth building;
+- that anyone can load and tamper with the signed demo without signup;
+- the Ed25519, canonical JSON and signed negative-receipt design;
+- the narrow boundary: evidence verification, not legal or commercial judgment;
+- the specific protocol feedback being requested.
 
-`I built this to explore a narrow missing layer between agent communication and application logs: portable evidence that two agents signed the same offer and acceptance. The verifier checks structure, linkage, time constraints and Ed25519 signatures, then signs the result. It makes no commercial or legal judgment. The protocol is an early draft, so I would especially value criticism of the signing domains, canonical envelope and receipt format.`
+Do not lead with future pricing on Show HN. Do not request votes or coordinate
+comments. New HN accounts should participate in the community before posting.
 
-Submit the public verifier URL. Do not request votes or coordinate comments.
+## Product Hunt
+
+Name: `Notary Protocol`
+
+Tagline: `Cryptographic receipts for AI-agent transactions`
+
+Description:
+
+`An open protocol and live verifier that checks whether two agents signed the same offer and acceptance, then issues a portable signed receipt. Includes REST, TypeScript, Python, MCP and A2A integration paths.`
+
+First maker comment:
+
+`Notary Protocol focuses on one narrow problem: portable evidence of what two agents signed. The public verifier exposes every passed or failed check and requires no account. Protocol 0.1 is a draft, so feedback on replay resistance, key management and receipt portability is especially useful. All current features are free during a 90-day early-access period.`
+
+Website: https://notary-protocol.notary-labs.workers.dev
+
+GitHub: https://github.com/Kosta1985/notary-protocol
 
 ## LinkedIn
 
@@ -50,6 +73,8 @@ Try it: https://notary-protocol.notary-labs.workers.dev
 
 Source: https://github.com/Kosta1985/notary-protocol
 
+Free 90-day early access: https://notary-protocol.notary-labs.workers.dev/pilot.html
+
 #AIAgents #Cryptography #OpenSource #AgentInfrastructure
 
 ## X
@@ -62,6 +87,18 @@ It verifies evidence. It does not judge the deal.
 
 Live: https://notary-protocol.notary-labs.workers.dev
 Code: https://github.com/Kosta1985/notary-protocol
+
+Free early access for all current features through 24 November 2026.
+https://notary-protocol.notary-labs.workers.dev/pilot.html
+
+## Promotion queue
+
+- GitHub: repository, early-adopter issue and pilot intake are ready.
+- Product Hunt: needs the maintainer's personal account and final submission approval.
+- LinkedIn: needs the maintainer's personal account and post approval.
+- X: needs the maintainer's personal account and post approval.
+- Hacker News: needs a participating account and text written personally by the maintainer.
+- MCP Registry: needs npm authentication and namespace publication.
 
 ## Community posting policy
 

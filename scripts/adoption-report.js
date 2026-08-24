@@ -24,10 +24,13 @@ export function summarizeAdoption(stats = {}, repository = {}) {
       agentVerificationAttempts: totals.a2a_started ?? 0,
       validAgentVerifications: totals.a2a_valid ?? 0,
       invalidAgentVerifications: totals.a2a_invalid ?? 0,
+      pilotPageViews: totals.pilot_page_view ?? 0,
+      pilotRequests: totals.pilot_apply ?? 0,
       receiptsRetrieved: totals.receipt_retrieved ?? 0,
       visitorToVerificationPercent: rate(attempts, pageViews),
       successfulVerificationPercent: rate(valid, attempts),
-      agentSharePercent: rate(totals.a2a_started ?? 0, attempts)
+      agentSharePercent: rate(totals.a2a_started ?? 0, attempts),
+      pilotRequestPercent: rate(totals.pilot_apply ?? 0, totals.pilot_page_view ?? 0)
     },
     github: {
       stars: repository.stargazers_count ?? 0,

@@ -1,5 +1,6 @@
 const encoder = new TextEncoder();
 const SPKI_ED25519_PREFIX = hex("302a300506032b6570032100");
+const PILOT_ISSUE_URL = "https://github.com/Kosta1985/notary-protocol/issues/new?template=pilot.yml";
 
 export default {
   async fetch(request, env) {
@@ -29,6 +30,14 @@ export default {
           days.get(row.day)[row.event] = row.count;
         }
         return json({ windowDays: 30, totals, daily: [...days.values()], privacy: "Aggregate event counts only; no user identifiers are stored." });
+      }
+      if (request.method === "POST" && url.pathname === "/pilot/view") {
+        await recordAnalytics(env, "pilot_page_view", request);
+        return json({ recorded: true });
+      }
+      if (request.method === "GET" && url.pathname === "/pilot/apply") {
+        await recordAnalytics(env, "pilot_apply", request);
+        return Response.redirect(PILOT_ISSUE_URL, 302);
       }
       if (request.method === "POST" && url.pathname === "/v1/verify") {
         await recordAnalytics(env, "verification_started", request);
