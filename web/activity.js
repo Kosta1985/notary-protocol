@@ -10,16 +10,18 @@ try {
   const attempts = value(stats.totals, "verification_started");
   const valid = value(stats.totals, "verification_valid");
   const invalid = value(stats.totals, "verification_invalid");
+  const agentAttempts = value(stats.totals, "a2a_started");
   const completed = valid + invalid;
 
   document.querySelector("#metric-views").textContent = views.toLocaleString();
   document.querySelector("#metric-demos").textContent = demos.toLocaleString();
   document.querySelector("#metric-verifications").textContent = attempts.toLocaleString();
-  document.querySelector("#metric-valid").textContent = valid.toLocaleString();
+  document.querySelector("#metric-agents").textContent = agentAttempts.toLocaleString();
   document.querySelector("#metric-retrievals").textContent = value(stats.totals, "receipt_retrieved").toLocaleString();
   document.querySelector("#rate-demo").textContent = percentage(demos, views);
   document.querySelector("#rate-verify").textContent = percentage(completed, attempts);
   document.querySelector("#rate-valid").textContent = percentage(valid, completed);
+  document.querySelector("#rate-agents").textContent = percentage(agentAttempts, attempts);
   document.querySelector("#activity-updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
   const maximum = Math.max(1, ...stats.daily.map((row) => value(row, "verification_started")));

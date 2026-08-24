@@ -15,6 +15,10 @@ test("HTTP flow creates and retrieves a receipt", async (context) => {
   const health = await fetch(`${baseUrl}/health`).then((response) => response.json());
   assert.equal(health.status, "ok");
 
+  const capabilities = await fetch(`${baseUrl}/v1/capabilities`).then((response) => response.json());
+  assert.deepEqual(capabilities.protocolVersions, ["0.1"]);
+  assert.equal(capabilities.endpoints.verify, `${baseUrl}/v1/verify`);
+
   assert.equal((await fetch(`${baseUrl}/`)).status, 200);
   const stats = await fetch(`${baseUrl}/v1/stats`).then((response) => response.json());
   assert.equal(stats.totals.page_view, 1);
@@ -40,4 +44,9 @@ test("HTTP flow creates and retrieves a receipt", async (context) => {
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "message/send", params: { message: { parts: [{ data: { dealEnvelope: envelope } }] } } })
   }).then((response) => response.json());
   assert.equal(a2a.result.artifacts[0].parts[0].data.notaryReceipt.valid, true);
+
+  const a2aStats = await fetch(`${baseUrl}/v1/stats`).then((response) => response.json());
+  assert.equal(a2aStats.totals.a2a_started, 1);
+  assert.equal(a2aStats.totals.a2a_valid, 1);
+  assert.equal(a2aStats.totals.verification_started, 2);
 });

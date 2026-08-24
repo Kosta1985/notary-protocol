@@ -66,6 +66,13 @@ Generate a signed example on the command line:
 npm run demo
 ```
 
+Check the deployed service and print its aggregate adoption report:
+
+```bash
+npm run smoke:live
+npm run adoption:report
+```
+
 ## API
 
 ```bash
@@ -82,6 +89,7 @@ Endpoints:
 - `GET /v1/receipts/{id}` retrieves a receipt.
 - `POST /v1/receipts/verify` verifies a receipt signature against this notary key.
 - `GET /v1/notary-key` publishes the notary verification key.
+- `GET /v1/capabilities` publishes supported versions, cryptography, limits and endpoints.
 - `GET /v1/demo` creates a short-lived signed example.
 - `GET /openapi.json` serves the API description.
 - `POST /a2a` accepts an A2A JSON-RPC message containing a DealEnvelope.
@@ -105,6 +113,7 @@ examples/        Runnable public integration examples
 - `SECURITY.md` defines private vulnerability reporting expectations.
 - `ROADMAP.md` lists the path from public beta to a stable core.
 - `docs/AGENT_INTEGRATION.md` is the shortest agent integration guide.
+- `docs/EARLY_ADOPTER_GUIDE.md` lists practical first integrations and requested feedback.
 - `docs/PUBLISHING.md` covers the deployment and public-launch sequence.
 - `docs/LAUNCH_KIT.md` contains accurate public-beta messaging.
 - `protocol/test-vectors/` contains canonical payload, digest and signature fixtures.
@@ -112,6 +121,8 @@ examples/        Runnable public integration examples
 ## Production
 
 Persist `api/data` on durable storage and protect the generated `notary-key.pem`. Put the service behind TLS, set `CORS_ORIGIN`, and apply deployment-specific authentication and retention rules. See `docs/DEPLOYMENT.md`.
+
+The scheduled live smoke workflow runs every six hours. Synthetic checks identify themselves to the service and are excluded from aggregate activity counters.
 
 ## License
 

@@ -10,6 +10,7 @@ Notary verifies evidence only. It does not determine identity, authority, legali
 
 - Live verifier: https://notary-protocol.notary-labs.workers.dev/
 - OpenAPI: https://notary-protocol.notary-labs.workers.dev/openapi.json
+- Capabilities: https://notary-protocol.notary-labs.workers.dev/v1/capabilities
 - Notary public key: https://notary-protocol.notary-labs.workers.dev/v1/notary-key
 - A2A agent card: https://notary-protocol.notary-labs.workers.dev/.well-known/agent-card.json
 - Aggregate activity: https://notary-protocol.notary-labs.workers.dev/v1/stats

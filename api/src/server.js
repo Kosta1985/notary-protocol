@@ -86,6 +86,9 @@ export function createServer(options = {}) {
 
   return createHttpServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
+    const track = (event) => {
+      if (request.headers["x-notary-monitor"] !== "live-smoke") analytics.record(event);
+    };
     try {
       if (request.method === "OPTIONS") {
         response.writeHead(204, { "access-control-allow-origin": corsOrigin, "access-control-allow-methods": "GET,POST,OPTIONS", "access-control-allow-headers": "content-type" });
@@ -101,17 +104,18 @@ export function createServer(options = {}) {
         }
       }
       if (request.method === "GET" && url.pathname === "/health") return json(response, 200, { status: "ok", version: "0.1.0" }, corsOrigin);
+      if (request.method === "GET" && url.pathname === "/v1/capabilities") return json(response, 200, capabilities(`http://${request.headers.host ?? "127.0.0.1:8787"}`), corsOrigin);
       if (request.method === "GET" && url.pathname === "/v1/notary-key") return json(response, 200, { algorithm: "Ed25519", publicKey: notary.publicKey }, corsOrigin);
       if (request.method === "GET" && url.pathname === "/v1/demo") {
-        analytics.record("demo_loaded");
+        track("demo_loaded");
         return json(response, 200, createSignedDemo(), corsOrigin);
       }
       if (request.method === "GET" && url.pathname === "/v1/stats") return json(response, 200, analytics.summary(), corsOrigin);
       if (request.method === "POST" && url.pathname === "/v1/verify") {
-        analytics.record("verification_started");
+        track("verification_started");
         const envelope = await readJson(request);
         const receipt = store.save(notary.verify(envelope));
-        analytics.record(receipt.valid ? "verification_valid" : "verification_invalid");
+        track(receipt.valid ? "verification_valid" : "verification_invalid");
         return json(response, receipt.valid ? 200 : 422, receipt, corsOrigin);
       }
       if (request.method === "POST" && url.pathname === "/v1/receipts/verify") {
@@ -121,7 +125,7 @@ export function createServer(options = {}) {
       }
       if (request.method === "GET" && url.pathname.startsWith("/v1/receipts/")) {
         const receipt = store.get(decodeURIComponent(url.pathname.slice("/v1/receipts/".length)));
-        if (receipt) analytics.record("receipt_retrieved");
+        if (receipt) track("receipt_retrieved");
         return receipt ? json(response, 200, receipt, corsOrigin) : json(response, 404, { error: "receipt_not_found" }, corsOrigin);
       }
       if (request.method === "GET" && url.pathname === "/.well-known/agent-card.json") {
@@ -133,7 +137,11 @@ export function createServer(options = {}) {
         const message = requestBody.params?.message ?? requestBody.message;
         const envelope = message?.parts?.find((part) => part.data?.dealEnvelope)?.data?.dealEnvelope;
         if (!envelope) throw Object.assign(new Error("A2A message must include data.dealEnvelope"), { status: 400 });
+        track("verification_started");
+        track("a2a_started");
         const receipt = store.save(notary.verify(envelope));
+        track(receipt.valid ? "verification_valid" : "verification_invalid");
+        track(receipt.valid ? "a2a_valid" : "a2a_invalid");
         return json(response, 200, {
           jsonrpc: "2.0",
           id: requestBody.id ?? null,
@@ -156,13 +164,33 @@ export function createServer(options = {}) {
         const schema = JSON.parse(await readFile(join(root, "protocol/notary-receipt.schema.json"), "utf8"));
         return json(response, 200, schema, corsOrigin);
       }
-      if (request.method === "GET" && url.pathname === "/") analytics.record("page_view");
+      if (request.method === "GET" && url.pathname === "/") track("page_view");
       if (request.method === "GET" && await staticFile(url.pathname, response)) return;
       json(response, 404, { error: "not_found" }, corsOrigin);
     } catch (error) {
       json(response, error.status ?? 500, { error: error.status ? "invalid_request" : "internal_error", message: error.message }, corsOrigin);
     }
   });
+}
+
+function capabilities(origin) {
+  return {
+    service: "notary-protocol",
+    version: "0.1.0",
+    protocolVersions: ["0.1"],
+    evidenceType: "DealEnvelope",
+    receiptType: "NotaryReceipt",
+    cryptography: { signatures: ["Ed25519"], digests: ["SHA-256"], canonicalization: "notary-json-v0.1" },
+    limits: { maxRequestBytes: 1_048_576 },
+    endpoints: {
+      verify: `${origin}/v1/verify`,
+      verifyReceipt: `${origin}/v1/receipts/verify`,
+      notaryKey: `${origin}/v1/notary-key`,
+      openapi: `${origin}/openapi.json`,
+      a2aAgentCard: `${origin}/.well-known/agent-card.json`
+    },
+    scope: "Cryptographic evidence verification only; no identity, legal, commercial or delivery judgment."
+  };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

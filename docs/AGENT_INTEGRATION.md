@@ -22,6 +22,7 @@ Integrating agents remain responsible for key custody, party authorization, conf
 
 ## Discovery
 
+- Machine-readable capabilities: `/v1/capabilities`
 - OpenAPI: `/openapi.json`
 - Notary public key: `/v1/notary-key`
 - A2A compatibility card: `/.well-known/agent-card.json`

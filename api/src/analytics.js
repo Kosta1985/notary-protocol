@@ -7,6 +7,9 @@ export const ANALYTICS_EVENTS = new Set([
   "verification_started",
   "verification_valid",
   "verification_invalid",
+  "a2a_started",
+  "a2a_valid",
+  "a2a_invalid",
   "receipt_retrieved"
 ]);
 

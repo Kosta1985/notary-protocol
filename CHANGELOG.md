@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Machine-readable protocol capabilities endpoint.
+- Scheduled end-to-end public service monitoring that does not affect usage metrics.
+- Aggregate adoption report combining protocol activity and public GitHub signals.
+- Dedicated A2A verification counters for measuring agent integrations.
+
 ## 0.1.0 · 2026-08-24
 
 Initial public beta.

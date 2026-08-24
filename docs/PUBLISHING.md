@@ -22,6 +22,7 @@ the `analytics_daily` table and does not alter stored receipts.
 Open these public URLs:
 
 - `https://notary-protocol.notary-labs.workers.dev/health`
+- `https://notary-protocol.notary-labs.workers.dev/v1/capabilities`
 - `https://notary-protocol.notary-labs.workers.dev/v1/stats`
 - `https://notary-protocol.notary-labs.workers.dev/activity.html`
 - `https://notary-protocol.notary-labs.workers.dev/privacy.html`
@@ -29,6 +30,17 @@ Open these public URLs:
 
 The stats endpoint reports daily aggregate events only. It does not store IP
 addresses, user agents, cookies, fingerprints or submitted envelope contents.
+
+Run the complete public verification flow and print the current adoption report:
+
+```powershell
+npm.cmd run smoke:live
+npm.cmd run adoption:report
+```
+
+The scheduled GitHub workflow performs the same smoke test every six hours.
+Synthetic checks are excluded from activity totals. Before this update is live,
+the workflow automatically uses health-only mode.
 
 ## Notify search engines
 

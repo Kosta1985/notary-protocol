@@ -29,6 +29,10 @@ test("Cloudflare Worker completes the public verification flow", async () => {
 
   assert.equal((await worker.fetch(new Request("https://notary.example/"), env)).status, 200);
 
+  const capabilities = await worker.fetch(new Request("https://notary.example/v1/capabilities"), env).then((response) => response.json());
+  assert.deepEqual(capabilities.protocolVersions, ["0.1"]);
+  assert.equal(capabilities.endpoints.verify, "https://notary.example/v1/verify");
+
   const demoResponse = await worker.fetch(new Request("https://notary.example/v1/demo"), env);
   assert.equal(demoResponse.status, 200);
   const envelope = await demoResponse.json();

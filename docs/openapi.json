@@ -10,6 +10,9 @@
     "/health": {
       "get": { "operationId": "health", "responses": { "200": { "description": "Service is healthy" } } }
     },
+    "/v1/capabilities": {
+      "get": { "operationId": "getCapabilities", "responses": { "200": { "description": "Machine-readable protocol versions, cryptography, limits and endpoints" } } }
+    },
     "/v1/verify": {
       "post": {
         "operationId": "verifyEnvelope",

@@ -16,7 +16,9 @@
     "cf:prepare": "node scripts/prepare-cloudflare-assets.js",
     "cf:dev": "npm run cf:prepare && npx wrangler@latest dev",
     "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy",
-    "seo:submit": "node scripts/submit-indexnow.js"
+    "seo:submit": "node scripts/submit-indexnow.js",
+    "smoke:live": "node scripts/live-smoke.js",
+    "adoption:report": "node scripts/adoption-report.js"
   },
   "license": "MIT"
 }

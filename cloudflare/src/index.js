@@ -9,11 +9,14 @@ export default {
       if (request.method === "GET" && url.pathname === "/health") {
         return json({ status: "ok", version: "0.1.0", runtime: "cloudflare-workers" });
       }
+      if (request.method === "GET" && url.pathname === "/v1/capabilities") {
+        return json(capabilities(url.origin));
+      }
       if (request.method === "GET" && url.pathname === "/v1/notary-key") {
         return json({ algorithm: "Ed25519", publicKey: publicPem(env) });
       }
       if (request.method === "GET" && url.pathname === "/v1/demo") {
-        await recordAnalytics(env, "demo_loaded");
+        await recordAnalytics(env, "demo_loaded", request);
         return json(await createSignedDemo());
       }
       if (request.method === "GET" && url.pathname === "/v1/stats") {
@@ -28,11 +31,11 @@ export default {
         return json({ windowDays: 30, totals, daily: [...days.values()], privacy: "Aggregate event counts only; no user identifiers are stored." });
       }
       if (request.method === "POST" && url.pathname === "/v1/verify") {
-        await recordAnalytics(env, "verification_started");
+        await recordAnalytics(env, "verification_started", request);
         const envelope = await readJson(request);
         const receipt = await createReceipt(envelope, env);
         await saveReceipt(receipt, env);
-        await recordAnalytics(env, receipt.valid ? "verification_valid" : "verification_invalid");
+        await recordAnalytics(env, receipt.valid ? "verification_valid" : "verification_invalid", request);
         return json(receipt, receipt.valid ? 200 : 422);
       }
       if (request.method === "POST" && url.pathname === "/v1/receipts/verify") {
@@ -42,7 +45,7 @@ export default {
       if (request.method === "GET" && url.pathname.startsWith("/v1/receipts/")) {
         const id = decodeURIComponent(url.pathname.slice("/v1/receipts/".length));
         const row = await env.DB.prepare("SELECT receipt FROM receipts WHERE id = ?1").bind(id).first();
-        if (row) await recordAnalytics(env, "receipt_retrieved");
+        if (row) await recordAnalytics(env, "receipt_retrieved", request);
         return row ? json(JSON.parse(row.receipt)) : json({ error: "receipt_not_found" }, 404);
       }
       if (request.method === "GET" && url.pathname === "/.well-known/agent-card.json") {
@@ -70,8 +73,12 @@ export default {
         const message = body.params?.message ?? body.message;
         const envelope = message?.parts?.find((part) => part.data?.dealEnvelope)?.data?.dealEnvelope;
         if (!envelope) throw new RequestError("A2A message must include data.dealEnvelope", 400);
+        await recordAnalytics(env, "verification_started", request);
+        await recordAnalytics(env, "a2a_started", request);
         const receipt = await createReceipt(envelope, env);
         await saveReceipt(receipt, env);
+        await recordAnalytics(env, receipt.valid ? "verification_valid" : "verification_invalid", request);
+        await recordAnalytics(env, receipt.valid ? "a2a_valid" : "a2a_invalid", request);
         return json({
           jsonrpc: "2.0",
           id: body.id ?? null,
@@ -83,7 +90,7 @@ export default {
         });
       }
       if (request.method === "GET") {
-        if (url.pathname === "/") await recordAnalytics(env, "page_view");
+        if (url.pathname === "/") await recordAnalytics(env, "page_view", request);
         return withSecurityHeaders(await env.ASSETS.fetch(request));
       }
       return json({ error: "not_found" }, 404);
@@ -93,7 +100,28 @@ export default {
   }
 };
 
-async function recordAnalytics(env, event) {
+function capabilities(origin) {
+  return {
+    service: "notary-protocol",
+    version: "0.1.0",
+    protocolVersions: ["0.1"],
+    evidenceType: "DealEnvelope",
+    receiptType: "NotaryReceipt",
+    cryptography: { signatures: ["Ed25519"], digests: ["SHA-256"], canonicalization: "notary-json-v0.1" },
+    limits: { maxRequestBytes: 1_048_576 },
+    endpoints: {
+      verify: `${origin}/v1/verify`,
+      verifyReceipt: `${origin}/v1/receipts/verify`,
+      notaryKey: `${origin}/v1/notary-key`,
+      openapi: `${origin}/openapi.json`,
+      a2aAgentCard: `${origin}/.well-known/agent-card.json`
+    },
+    scope: "Cryptographic evidence verification only; no identity, legal, commercial or delivery judgment."
+  };
+}
+
+async function recordAnalytics(env, event, request) {
+  if (request?.headers.get("x-notary-monitor") === "live-smoke") return;
   try {
     await env.DB.prepare("INSERT INTO analytics_daily (day, event, count) VALUES (date('now'), ?1, 1) ON CONFLICT(day, event) DO UPDATE SET count = count + 1").bind(event).run();
   } catch {
