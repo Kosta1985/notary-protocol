@@ -105,6 +105,7 @@ examples/        Runnable public integration examples
 - `SECURITY.md` defines private vulnerability reporting expectations.
 - `ROADMAP.md` lists the path from public beta to a stable core.
 - `docs/AGENT_INTEGRATION.md` is the shortest agent integration guide.
+- `docs/PUBLISHING.md` covers the deployment and public-launch sequence.
 - `docs/LAUNCH_KIT.md` contains accurate public-beta messaging.
 - `protocol/test-vectors/` contains canonical payload, digest and signature fixtures.
 
