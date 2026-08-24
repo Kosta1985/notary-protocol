@@ -1,0 +1,22 @@
+services:
+  notary:
+    build: .
+    ports:
+      - "8787:8787"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 8787
+      NOTARY_DATA_DIR: /app/api/data
+      RATE_LIMIT: 120
+      RATE_LIMIT_WINDOW_MS: 60000
+    volumes:
+      - notary-data:/app/api/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8787/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  notary-data:

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Notary Protocol verifies cryptographic evidence for transactions between AI agents.">
+    <meta name="theme-color" content="#111411">
+    <meta property="og:title" content="Notary Protocol">
+    <meta property="og:description" content="Open cryptographic evidence for transactions between AI agents.">
+    <meta property="og:type" content="website">
+    <title>Notary Protocol — Verifiable agent transactions</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Notary Protocol home">
+        <span class="brand-mark" aria-hidden="true">N</span>
+        <span>NOTARY PROTOCOL</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#protocol">Protocol</a>
+        <a href="#verify">Verifier</a>
+        <a href="/openapi.json">API</a>
+        <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub</a>
+      </nav>
+      <div class="header-end">
+        <span class="network-status" id="network-status"><i aria-hidden="true"></i><span>Checking API</span></span>
+        <a class="header-action" href="#verify">Verify evidence</a>
+      </div>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-grid" aria-hidden="true"></div>
+        <div class="hero-copy">
+          <p class="eyebrow">Public beta · Protocol 0.1</p>
+          <h1 id="hero-title">Notary Protocol</h1>
+          <p class="hero-lede">A neutral, open evidence layer for transactions between AI agents.</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#verify">Open verifier <span aria-hidden="true">↘</span></a>
+            <a class="text-action" href="/openapi.json">Read the API spec <span aria-hidden="true">→</span></a>
+          </div>
+        </div>
+
+        <div class="evidence-plane" aria-label="Evidence verification sequence">
+          <div class="trace-line"></div>
+          <div class="trace-pulse"></div>
+          <div class="evidence-node node-a">
+            <span class="node-index">01</span>
+            <strong>AGENT A</strong>
+            <small>Ed25519 key</small>
+          </div>
+          <div class="evidence-node node-offer">
+            <span class="node-index">02</span>
+            <strong>OFFER</strong>
+            <small>Canonical JSON</small>
+          </div>
+          <div class="evidence-node node-b">
+            <span class="node-index">03</span>
+            <strong>AGENT B</strong>
+            <small>Acceptance</small>
+          </div>
+          <div class="evidence-node node-receipt">
+            <span class="receipt-sigil" aria-hidden="true">✓</span>
+            <strong>VERIFIED</strong>
+            <small>Signed receipt</small>
+          </div>
+          <p class="plane-caption">A deterministic trail from intent to receipt.</p>
+        </div>
+        <a class="scroll-cue" href="#protocol">How it works <span aria-hidden="true">↓</span></a>
+      </section>
+
+      <section class="proof-rail" aria-label="Protocol properties">
+        <p><span>Evidence</span><strong>SHA-256 bound</strong></p>
+        <p><span>Signatures</span><strong>Ed25519</strong></p>
+        <p><span>Verification</span><strong>16 explicit checks</strong></p>
+        <p><span>Output</span><strong>Portable receipt</strong></p>
+      </section>
+
+      <section class="protocol-section" id="protocol" aria-labelledby="protocol-title">
+        <div class="section-heading reveal">
+          <p class="eyebrow">Evidence, not judgment</p>
+          <h2 id="protocol-title">One transaction.<br>One verifiable trail.</h2>
+          <p>Notary checks structure, linkage, timestamps and signatures. It never decides whether the deal itself is good.</p>
+        </div>
+        <ol class="protocol-flow" aria-label="Protocol steps">
+          <li class="reveal"><span>01</span><strong>Offer</strong><p>Agent A signs canonical terms with a unique nonce.</p></li>
+          <li class="reveal"><span>02</span><strong>Accept</strong><p>Agent B binds acceptance to the exact offer.</p></li>
+          <li class="reveal"><span>03</span><strong>Verify</strong><p>Notary recomputes the evidence and verifies both keys.</p></li>
+          <li class="reveal"><span>04</span><strong>Receipt</strong><p>A signed result records every passed or failed check.</p></li>
+        </ol>
+      </section>
+
+      <section class="verifier-section" id="verify" aria-labelledby="verify-title">
+        <div class="verifier-heading">
+          <div>
+            <p class="eyebrow">Live workspace</p>
+            <h2 id="verify-title">Verify an envelope</h2>
+          </div>
+          <p>Paste a DealEnvelope or load a fresh signed example. Evidence stays visible and inspectable.</p>
+        </div>
+
+        <div class="verifier-toolbar">
+          <div class="mode-tabs" role="tablist" aria-label="Input mode">
+            <button class="tab active" type="button" role="tab" aria-selected="true">JSON</button>
+            <button class="tab" id="file-tab" type="button" role="tab" aria-selected="false">File</button>
+            <input id="file-input" type="file" accept="application/json,.json" hidden>
+          </div>
+          <button class="secondary-action" id="load-demo" type="button">Load signed demo</button>
+        </div>
+
+        <form class="receipt-lookup" id="receipt-lookup">
+          <label for="receipt-query">Retrieve a stored receipt</label>
+          <input id="receipt-query" type="text" autocomplete="off" placeholder="ntr_…" aria-label="Receipt ID">
+          <button class="text-action" type="submit">Find receipt <span aria-hidden="true">→</span></button>
+        </form>
+
+        <div class="verifier-workspace">
+          <div class="editor-pane">
+            <label for="envelope-input">DealEnvelope</label>
+            <textarea id="envelope-input" spellcheck="false" autocomplete="off" placeholder="Paste a DealEnvelope JSON object or drop a .json file…"></textarea>
+            <div class="editor-footer">
+              <span id="editor-status">Waiting for evidence</span>
+              <button class="primary-action" id="verify-button" type="button">Verify envelope <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+          <aside class="result-pane" aria-live="polite" aria-labelledby="result-title">
+            <div class="result-idle" id="result-idle">
+              <span class="result-glyph" aria-hidden="true">N</span>
+              <h3 id="result-title">No receipt yet</h3>
+              <p>Run verification to inspect signature and evidence checks.</p>
+            </div>
+            <div class="result-content" id="result-content" hidden>
+              <div class="result-summary">
+                <span class="result-icon" id="result-icon" aria-hidden="true"></span>
+                <div><p id="result-kicker"></p><h3 id="result-state"></h3></div>
+              </div>
+              <dl class="receipt-meta">
+                <div><dt>Receipt</dt><dd id="receipt-id"></dd></div>
+                <div><dt>Evidence SHA-256</dt><dd id="receipt-digest"></dd></div>
+                <div><dt>Verified</dt><dd id="receipt-time"></dd></div>
+                <div><dt>Notary signature</dt><dd id="receipt-signature">Checking…</dd></div>
+              </dl>
+              <div class="checks-heading"><span>Verification checks</span><span id="checks-count"></span></div>
+              <ul class="checks-list" id="checks-list"></ul>
+              <div class="receipt-actions">
+                <button class="text-action copy-action" id="copy-receipt" type="button">Copy JSON <span aria-hidden="true">□</span></button>
+                <button class="text-action copy-action" id="download-receipt" type="button">Download receipt <span aria-hidden="true">↓</span></button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section class="integration-section" aria-labelledby="integration-title">
+        <div>
+          <p class="eyebrow">Built to connect</p>
+          <h2 id="integration-title">One envelope across every agent boundary.</h2>
+        </div>
+        <div class="integration-list">
+          <a href="/openapi.json"><span>REST API</span><strong>POST /v1/verify</strong><b aria-hidden="true">→</b></a>
+          <a href="https://github.com/Kosta1985/notary-protocol/tree/main/sdk" target="_blank" rel="noreferrer"><span>SDKs</span><strong>TypeScript + Python</strong><b aria-hidden="true">→</b></a>
+          <a href="https://github.com/Kosta1985/notary-protocol/tree/main/adapters" target="_blank" rel="noreferrer"><span>Adapters</span><strong>MCP + A2A</strong><b aria-hidden="true">→</b></a>
+        </div>
+      </section>
+
+      <section class="final-section">
+        <p class="eyebrow">Make evidence portable</p>
+        <h2>Verify what happened.<br>Decide nothing else.</h2>
+        <div class="final-actions">
+          <a class="primary-action inverse" href="#verify">Try the verifier <span aria-hidden="true">↑</span></a>
+          <a class="text-action" href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">View source <span aria-hidden="true">→</span></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"><span class="brand-mark">N</span><span>NOTARY PROTOCOL</span></a>
+      <p>Open verification infrastructure · MIT License</p>
+      <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub ↗</a>
+    </footer>
+  </body>
+</html>

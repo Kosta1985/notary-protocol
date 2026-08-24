@@ -1,0 +1,30 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "notary-protocol",
+  "main": "cloudflare/src/index.js",
+  "compatibility_date": "2026-08-24",
+  "workers_dev": true,
+  "preview_urls": true,
+  "assets": {
+    "directory": "cloudflare/public",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/health",
+      "/v1/*",
+      "/a2a",
+      "/openapi.json",
+      "/.well-known/*"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "notary-protocol",
+      "database_id": "REPLACE_WITH_D1_DATABASE_ID",
+      "migrations_dir": "cloudflare/migrations"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+}

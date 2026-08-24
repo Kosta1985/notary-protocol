@@ -1,0 +1,19 @@
+{
+  "name": "Notary Protocol",
+  "description": "Verifies cryptographic evidence for AI-agent transactions.",
+  "url": "http://127.0.0.1:8787/a2a",
+  "protocolVersion": "0.3",
+  "preferredTransport": "JSONRPC",
+  "version": "0.1.0",
+  "capabilities": { "streaming": false, "pushNotifications": false },
+  "defaultInputModes": ["application/json"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "verify-deal-envelope",
+      "name": "Verify DealEnvelope",
+      "description": "Checks evidence structure and Ed25519 signatures and returns a signed receipt.",
+      "tags": ["verification", "evidence", "signatures"]
+    }
+  ]
+}

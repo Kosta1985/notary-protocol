@@ -1,0 +1,20 @@
+{
+  "name": "notary-protocol",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Open verification and evidence protocol for AI-agent transactions.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node --watch api/src/server.js",
+    "start": "node api/src/server.js",
+    "test": "node --test",
+    "demo": "node scripts/create-demo.js",
+    "cf:prepare": "node scripts/prepare-cloudflare-assets.js",
+    "cf:dev": "npm run cf:prepare && npx wrangler@latest dev",
+    "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy"
+  },
+  "license": "MIT"
+}

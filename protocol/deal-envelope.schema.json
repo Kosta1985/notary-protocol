@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notaryprotocol.dev/schemas/deal-envelope-0.1.json",
+  "title": "DealEnvelope",
+  "type": "object",
+  "required": ["version", "id", "createdAt", "initiator", "counterparty", "offer", "acceptance", "signatures"],
+  "additionalProperties": false,
+  "properties": {
+    "version": { "const": "0.1" },
+    "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "expiresAt": { "type": ["string", "null"], "format": "date-time" },
+    "initiator": { "$ref": "#/$defs/party" },
+    "counterparty": { "$ref": "#/$defs/party" },
+    "offer": {
+      "type": "object",
+      "required": ["id", "createdAt", "nonce", "terms"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "nonce": { "type": "string", "minLength": 16, "maxLength": 200 },
+        "terms": { "type": "object" }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "required": ["offerId", "acceptedAt", "nonce"],
+      "additionalProperties": false,
+      "properties": {
+        "offerId": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "acceptedAt": { "type": "string", "format": "date-time" },
+        "nonce": { "type": "string", "minLength": 16, "maxLength": 200 }
+      }
+    },
+    "signatures": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/signature" }
+    }
+  },
+  "$defs": {
+    "party": {
+      "type": "object",
+      "required": ["id", "publicKey"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "publicKey": { "type": "string", "minLength": 32, "maxLength": 1000 }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "required": ["role", "algorithm", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "role": { "enum": ["initiator", "counterparty"] },
+        "algorithm": { "const": "Ed25519" },
+        "value": { "type": "string", "minLength": 80, "maxLength": 100 }
+      }
+    }
+  }
+}
