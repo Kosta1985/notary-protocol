@@ -1,0 +1,47 @@
+name: One-time agent marketplace audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/marketplace-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Inspect A2A Registry submission client
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://www.a2a-registry.org"
+          page="$(mktemp)"
+          curl --fail --silent --show-error --location "$base/submit" -o "$page"
+          echo "A2A submit page: $(wc -c < "$page") bytes"
+          grep -Eo 'src="[^"]+\.js[^"]*"' "$page" | sed -E 's/^src="//;s/"$//' | sort -u > /tmp/a2a-scripts.txt || true
+          while IFS= read -r src; do
+            case "$src" in
+              http*) url="$src" ;;
+              /*) url="$base$src" ;;
+              *) url="$base/$src" ;;
+            esac
+            js="$(mktemp)"
+            curl --fail --silent --show-error --location "$url" -o "$js" || continue
+            tr ';' '\n' < "$js" | grep -Eo '.{0,180}(api\.a2a-registry\.org|/api/[^"[:space:]]+|scan|submit|agent-card).{0,280}' | head -80 || true
+          done < /tmp/a2a-scripts.txt
+
+      - name: Probe public Moltbook discovery
+        shell: bash
+        run: |
+          set -u
+          for url in             "https://www.moltbook.com/u/AccordTrace"             "https://www.moltbook.com/api/v1/agents?search=AccordTrace"             "https://www.moltbook.com/api/v1/search?q=AccordTrace"; do
+            body="$(mktemp)"
+            code="$(curl --silent --show-error --location -o "$body" -w '%{http_code}' "$url" || true)"
+            printf 'Moltbook %s HTTP %s\n' "$url" "$code"
+            head -c 3000 "$body"
+            printf '\n'
+          done
