@@ -1,0 +1,22 @@
+{
+  "proof_id": "atp_XAaO4uqdJ7XbWnDqjypnwCAL",
+  "hash": "sha256:1680e6b3b64b2664679ce07429610bb80d67a8981b8ec9d37a012a722c27b2be",
+  "hash_algorithm": "sha256",
+  "canonicalization": "rfc8785-json",
+  "timestamp": "2026-08-25T21:49:03.200Z",
+  "metadata": {
+    "record_type": "external_agent_validation_receipt",
+    "source": "accordtrace-founding-agent-program"
+  },
+  "issuer": "https://accordtrace.notary-labs.workers.dev",
+  "attestation": {
+    "algorithm": "ES256",
+    "key_id": "accord-trace-2026-08",
+    "payload_hash": "sha256:b9ebf30ea10b05126d4c587ce0bbbe34e944b70e5a28bd0b792c536ede8ee3ff",
+    "signature": "yy6JPiZ1r5Aw8bJCbW0o2zxGfW8ng03oaVzsUmrMcY6Ct81l1BYAQh8sfEBWuRdiacNTlT0ZeZ36TtsCVOWCXA"
+  },
+  "verification_url": "https://accordtrace.notary-labs.workers.dev/verify.html?proof_id=atp_XAaO4uqdJ7XbWnDqjypnwCAL",
+  "verification_endpoint": "https://accordtrace.notary-labs.workers.dev/api/v1/verify",
+  "status": "created",
+  "guarantee": "Accord Trace attests that this evidence hash was recorded at the stated service time. It does not establish truth, authorship, legal validity, or independent time authority."
+}
