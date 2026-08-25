@@ -14,8 +14,8 @@ function numericSummary(value) {
 }
 
 export async function probeAccordTrace(fetcher = fetch) {
-  const openapiResponse = await fetcher(`${base}/openapi.json`);
-  const openapi = openapiResponse.ok ? await openapiResponse.json() : {};
+  const [openapiResponse, homepageResponse] = await Promise.all([fetcher(`${base}/openapi.json`), fetcher(`${base}/`)]);
+  const openapi = openapiResponse.ok ? await openapiResponse.json() : {};\n  const homepage = homepageResponse.ok ? await homepageResponse.text() : "";
   const endpoints = Object.keys(openapi.paths || {});
   const candidates = ["/api/v1/stats", "/v1/stats", "/api/v1/proofs?limit=0"];
   const probes = {};
@@ -25,7 +25,7 @@ export async function probeAccordTrace(fetcher = fetch) {
     if (response.ok) summary = numericSummary(await response.json().catch(() => ({})));
     probes[path] = { status: response.status, summary };
   }
-  return { generatedAt: new Date().toISOString(), service: base, openapiPaths: endpoints, probes };
+  return { generatedAt: new Date().toISOString(), service: base, homepage: { status: homepageResponse.status, accordTraceBrand: /AccordTrace/i.test(homepage), oldNotaryHeadline: /<h1[^>]*>Notary Protocol<\\/h1>/i.test(homepage) }, openapiPaths: endpoints, probes };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
