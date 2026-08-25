@@ -22,7 +22,7 @@ jobs:
           for service in accordtrace accord-trace notary-protocol; do
             base="https://${service}.notary-labs.workers.dev"
             echo "## ${service}" >> "$GITHUB_STEP_SUMMARY"
-            for path in / /health /v1/stats /.well-known/agent-card.json; do
+            for path in / /health /v1/stats /api/v1/stats "/api/v1/proofs?limit=0" /.well-known/agent-card.json /openapi.json; do
               body_file="$(mktemp)"
               code="$(curl --silent --show-error -H 'x-notary-monitor: live-smoke' -o "$body_file" -w '%{http_code}' "${base}${path}" || true)"
               body="$(cat "$body_file")"
