@@ -1,0 +1,47 @@
+name: One-time Agent Reputation receipt attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/agent-reputation-receipt-proof.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create AccordTrace proof
+        id: proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          jq -n --slurpfile receipt partners/receipts/agent-reputation-20260825-01.json             '{data:$receipt[0],metadata:{source:"accordtrace-founding-agent-program",record_type:"external_feedback_receipt"}}'             > proof-request.json
+          result="$(curl --silent --show-error -X POST             https://accordtrace.notary-labs.workers.dev/api/v1/proofs             -H "content-type: application/json"             --data-binary @proof-request.json             -w '\nHTTP_STATUS:%{http_code}')"
+          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
+          printf '%s' "$result" | sed '/^HTTP_STATUS:/d' > proof-response.json
+          printf 'http=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
+          jq -e '.proof_id != null' proof-response.json >/dev/null
+
+      - name: Summarize
+        run: |
+          {
+            echo "## Agent Reputation receipt attestation"
+            echo "- HTTP: ${{ steps.proof.outputs.http }}"
+            echo "- Proof ID: $(jq -r '.proof_id' proof-response.json)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve proof
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-reputation-receipt-proof
+          path: |
+            proof-request.json
+            proof-response.json
+          retention-days: 30
