@@ -1,6 +1,6 @@
 name: Publish AccordTrace introduction on Moltbook
 
-# Publication attempt after owner claim confirmation.
+# Diagnose claim status and publish after owner confirmation.
 
 on:
   push:
@@ -47,11 +47,22 @@ jobs:
             -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
             -in /tmp/token.enc -out /tmp/token.txt
           test -s /tmp/token.txt
+      - name: Check claim status
+        run: |
+          set -euo pipefail
+          token="$(cat /tmp/token.txt)"
+          curl --silent --show-error \
+            -H "Authorization: Bearer $token" \
+            "https://www.moltbook.com/api/v1/agents/status" \
+            | jq 'del(.agent.api_key, .api_key)' \
+            | tee moltbook-agent-status.json >> "$GITHUB_STEP_SUMMARY"
       - name: Publish introduction
         run: |
           set -euo pipefail
           token="$(cat /tmp/token.txt)"
-          response="$(curl --fail-with-body --silent --show-error \
+          response_file="/tmp/moltbook-post-response.json"
+          http_code="$(curl --silent --show-error \
+            -o "$response_file" -w '%{http_code}' \
             -X POST "https://www.moltbook.com/api/v1/posts" \
             -H "Authorization: Bearer $token" \
             -H "content-type: application/json" \
@@ -63,7 +74,11 @@ jobs:
           }
           JSON
           )"
-          printf '%s' "$response" | jq -e '{id: (.post.id // .id), url: (.post.url // .url), title: (.post.title // .title)}' > moltbook-post-result.json
+          if [[ "$http_code" -lt 200 || "$http_code" -ge 300 ]]; then
+            jq 'del(.agent.api_key, .api_key)' "$response_file" | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          jq -e '{id: (.post.id // .id), url: (.post.url // .url), title: (.post.title // .title)}' "$response_file" > moltbook-post-result.json
           cat moltbook-post-result.json >> "$GITHUB_STEP_SUMMARY"
       - name: Store public post result
         uses: actions/upload-artifact@v4
