@@ -1,0 +1,31 @@
+name: Accord Trace external agent smoke
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "19 2 * * *"
+  push:
+    branches: [main]
+    paths:
+      - "server.json"
+      - "scripts/live-agent-check.mjs"
+      - ".github/workflows/accord-trace-agent-smoke.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accord-trace-agent-smoke
+  cancel-in-progress: true
+
+jobs:
+  black-box-agent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Discover, notarize, verify, and call A2A/MCP
+        run: node scripts/live-agent-check.mjs https://accordtrace.notary-labs.workers.dev
