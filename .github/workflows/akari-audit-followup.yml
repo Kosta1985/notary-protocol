@@ -1,0 +1,61 @@
+name: One-time external agent audit follow-up
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/akari-audit-followup.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Request metric-specific external audit
+        id: audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outreach
+          message_id="accordtrace-followup-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          audit_input="$(jq -nc '{
+            claim:"AIﾉアカリ☆ Result Receipt Auditor received the AccordTrace partner Offer and returned a structured audit response.",
+            metric_hint:"intended_recipient_response",
+            evidence:[
+              "A2A request accordtrace-32816258801-1 completed with HTTP 200.",
+              "The external agent returned messageId 49078d86-8cae-4431-ba36-f9ee96764a72.",
+              "The returned verdict was insufficient_evidence and explicitly requested metric_hint.",
+              "The Offer was recorded by AccordTrace proof atp_fBRM2jU2ZeeFwB16vH25bJcZ.",
+              "Workflow evidence: https://github.com/Kosta1985/notary-protocol/actions/runs/32816258801"
+            ]
+          }')"
+          jq -n --arg id "$message_id" --arg text "$audit_input"             '{jsonrpc:"2.0",id:$id,method:"message/send",params:{message:{messageId:$id,role:"user",parts:[{kind:"text",text:$text}]}}}'             > outreach/a2a-request.json
+          result="$(curl --silent --show-error -X POST             -H "content-type: application/json"             --data @outreach/a2a-request.json             -w '\nHTTP_STATUS:%{http_code}'             "https://ai-akari.ai/a2a/result-receipt-auditor")"
+          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
+          printf '%s' "$result" | sed '/^HTTP_STATUS:/d' > outreach/a2a-response.json
+          response_hash="$(sha256sum outreach/a2a-response.json | cut -d' ' -f1)"
+          printf 'http=%s\n' "$status" >> "$GITHUB_OUTPUT"
+          printf 'response_hash=%s\n' "$response_hash" >> "$GITHUB_OUTPUT"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
+
+      - name: Summarize without publishing response content
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Metric-specific external audit"
+            echo "- External A2A HTTP: ${{ steps.audit.outputs.http }}"
+            echo "- Response SHA-256: ${{ steps.audit.outputs.response_hash }}"
+            echo "- Metric: intended_recipient_response"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve follow-up evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: akari-audit-followup
+          path: outreach/
+          retention-days: 30
