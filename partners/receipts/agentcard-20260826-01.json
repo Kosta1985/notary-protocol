@@ -1,0 +1,49 @@
+{
+  "receipt_version": "accordtrace-partner-receipt/0.1",
+  "receipt_id": "partner_rcpt_agentcard_20260826_01",
+  "deduplication_key": "agentcard-response:0b612739ed76ec9c43b407bb2818f796055350519541aea7de2729c81947f35f",
+  "offer_id": "offer_accordtrace_agentcard_validation_20260826_01",
+  "observed_at": "2026-08-25T21:45:10Z",
+  "parties": {
+    "proposer": "accordtrace",
+    "counterparty": "agentcard-net-toolkit"
+  },
+  "outcome": {
+    "result_type": "external_agent_discovery_validation",
+    "external_http": 200,
+    "primary_agent_card_valid": true,
+    "error_count": 0,
+    "warning_count": 0,
+    "pass_count": 11,
+    "legacy_alias_available": false,
+    "counted_as_result": true
+  },
+  "discovery": {
+    "primary_path": {
+      "url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "valid": true
+    },
+    "legacy_path": {
+      "url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent.json",
+      "status": 404,
+      "valid": false
+    }
+  },
+  "evidence": {
+    "offer_proof_id": "atp_sYn4hj2MOYaHXwCgJCav-YDf",
+    "workflow_run": "https://github.com/Kosta1985/notary-protocol/actions/runs/32902650404",
+    "request_sha256": "sha256:a38c63a8638d6d079954f0a9f4cea302b8116213311299e0de0e8a7014cefdca",
+    "response_sha256": "sha256:0b612739ed76ec9c43b407bb2818f796055350519541aea7de2729c81947f35f",
+    "artifact_sha256": "sha256:921938202213ef0763454ba9a0cba1728f02c3f1d8c4e3a118bd3fb2d0ee5efd"
+  },
+  "partnership": {
+    "offer_sent": true,
+    "external_task_completed": true,
+    "program_acceptance_received": false,
+    "notary_acceptance_signature_received": false,
+    "public_attribution": false
+  },
+  "boundary": "This receipt records one public, read-only discovery validation performed by the AgentCard.net API. It does not claim partnership acceptance, endorsement, identity, truth, legality, or commercial quality."
+}
