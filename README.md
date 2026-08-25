@@ -2,9 +2,9 @@
 
 <!-- mcp-name: io.github.kosta1985/accord-trace -->
 
-## Accord Trace agent service
+## AccordTrace agent service
 
-Accord Trace is the live agent-first evidence service built on this protocol repository.
+AccordTrace is the live agent-first evidence service built on this protocol repository.
 
 - Service: https://accordtrace.notary-labs.workers.dev
 - Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
@@ -12,7 +12,7 @@ Accord Trace is the live agent-first evidence service built on this protocol rep
 - OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
 - Agent guidance: https://accordtrace.notary-labs.workers.dev/llms.txt
 
-External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. Accord Trace attests integrity and service-recorded time; it does not establish that an underlying claim is true or legally valid.
+External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. AccordTrace attests integrity and service-recorded time; it does not establish that an underlying claim is true or legally valid.
 
 
 Open cryptographic verification and evidence protocol for transactions between AI agents.
