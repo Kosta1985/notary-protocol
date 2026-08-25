@@ -1,4 +1,4 @@
-name: One-time agent marketplace audit
+name: One-time agent marketplace submission
 
 on:
   push:
@@ -10,38 +10,48 @@ permissions:
   contents: read
 
 jobs:
-  audit:
+  submit:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 5
     steps:
-      - name: Inspect A2A Registry submission client
+      - name: Submit AccordTrace to Global A2A Registry
         shell: bash
         run: |
           set -euo pipefail
-          base="https://www.a2a-registry.org"
-          page="$(mktemp)"
-          curl --fail --silent --show-error --location "$base/submit" -o "$page"
-          echo "A2A submit page: $(wc -c < "$page") bytes"
-          grep -Eo 'src="[^"]+\.js[^"]*"' "$page" | sed -E 's/^src="//;s/"$//' | sort -u > /tmp/a2a-scripts.txt || true
-          while IFS= read -r src; do
-            case "$src" in
-              http*) url="$src" ;;
-              /*) url="$base$src" ;;
-              *) url="$base/$src" ;;
-            esac
-            js="$(mktemp)"
-            curl --fail --silent --show-error --location "$url" -o "$js" || continue
-            tr ';' '\n' < "$js" | grep -Eo '.{0,180}(api\.a2a-registry\.org|/api/[^"[:space:]]+|scan|submit|agent-card).{0,280}' | head -80 || true
-          done < /tmp/a2a-scripts.txt
+          api="https://api.a2a-registry.org"
+          agent_url="https://accordtrace.notary-labs.workers.dev"
+          payload="$(jq -nc --arg url "$agent_url" '{url:$url}')"
 
-      - name: Probe public Moltbook discovery
+          scan="$(curl --fail --silent --show-error             -X POST -H "content-type: application/json"             --data "$payload" "$api/public/ingest/scan")"
+          printf 'Scan result:\n'
+          printf '%s' "$scan" | jq '{success, error, data}'
+
+          if [[ "$(printf '%s' "$scan" | jq -r '.success // false')" != "true" ]] ||
+             [[ "$(printf '%s' "$scan" | jq -r '.data.found // false')" != "true" ]]; then
+            echo "Registry scan did not detect the live agent."
+            exit 1
+          fi
+
+          result="$(curl --silent --show-error             -X POST -H "content-type: application/json"             --data "$payload"             -w '\nHTTP_STATUS:%{http_code}'             "$api/public/ingest/submit-and-claim")"
+          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
+          body="$(printf '%s' "$result" | sed '/^HTTP_STATUS:/d')"
+          printf 'Submission HTTP %s\n' "$status"
+          printf '%s' "$body" | jq .
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            exit 1
+          fi
+
+      - name: Confirm Moltbook public identity
         shell: bash
         run: |
-          set -u
-          for url in             "https://www.moltbook.com/u/AccordTrace"             "https://www.moltbook.com/api/v1/agents?search=AccordTrace"             "https://www.moltbook.com/api/v1/search?q=AccordTrace"; do
-            body="$(mktemp)"
-            code="$(curl --silent --show-error --location -o "$body" -w '%{http_code}' "$url" || true)"
-            printf 'Moltbook %s HTTP %s\n' "$url" "$code"
-            head -c 3000 "$body"
-            printf '\n'
-          done
+          set -euo pipefail
+          result="$(curl --fail --silent --show-error             "https://www.moltbook.com/api/v1/search?q=AccordTrace")"
+          printf '%s' "$result" | jq '{
+            success,
+            accordtrace: [
+              .results[] |
+              select(.type == "agent" and (.title | ascii_downcase) == "accordtrace") |
+              {title, content, created_at, url}
+            ]
+          }'
+          test "$(printf '%s' "$result" | jq '[.results[] | select(.type == "agent" and (.title | ascii_downcase) == "accordtrace")] | length')" -ge 1
