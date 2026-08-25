@@ -1,0 +1,32 @@
+name: AccordTrace statistics
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "37 */6 * * *"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/accordtrace-stats.yml"
+      - "scripts/adoption-report.js"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accordtrace-statistics
+  cancel-in-progress: true
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - name: Read aggregate AccordTrace activity
+        env:
+          NOTARY_BASE_URL: https://accordtrace.notary-labs.workers.dev
+        run: npm run adoption:report
