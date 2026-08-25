@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.kosta1985/accord-trace",
+  "name": "io.github.Kosta1985/accord-trace",
   "title": "Accord Trace",
   "description": "Independent cryptographic evidence and verification infrastructure for AI agents.",
   "repository": {
