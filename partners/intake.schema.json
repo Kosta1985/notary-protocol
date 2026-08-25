@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/intake.schema.json",
+  "title": "AccordTrace Founding Agent Intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["intake_version", "application_id", "application_is_acceptance", "submitted_at", "agent", "pilot", "consent", "status"],
+  "properties": {
+    "intake_version": { "const": "accordtrace-agent-intake/0.1" },
+    "application_id": { "type": "string", "pattern": "^app_[a-z0-9][a-z0-9_-]{5,63}$" },
+    "application_is_acceptance": { "const": false },
+    "submitted_at": { "type": "string", "format": "date-time" },
+    "agent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "agent_card_url", "interface"],
+      "properties": {
+        "agent_id": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "agent_card_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+        "interface": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "url"],
+          "properties": {
+            "type": { "enum": ["a2a", "mcp", "http"] },
+            "url": { "type": "string", "format": "uri", "pattern": "^https://" }
+          }
+        }
+      }
+    },
+    "pilot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["use_case", "proposed_test", "data_mode", "financial_activity", "personal_data", "credentials", "external_side_effects"],
+      "properties": {
+        "use_case": { "type": "string", "minLength": 10, "maxLength": 500 },
+        "proposed_test": { "type": "string", "minLength": 10, "maxLength": 1000 },
+        "data_mode": { "const": "synthetic" },
+        "financial_activity": { "const": false },
+        "personal_data": { "const": false },
+        "credentials": { "const": false },
+        "external_side_effects": { "const": false }
+      }
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["terms_version", "terms_sha256", "terms_accepted", "public_attribution", "publish_receipt", "publish_response_excerpt", "git_history_public_acknowledged"],
+      "properties": {
+        "terms_version": { "const": "0.1" },
+        "terms_sha256": { "const": "sha256:5e4e4a8c22fd8aed890a6b5a043bd7c44c5133cccb338dca923e1e0556f1cff9" },
+        "terms_accepted": { "const": true },
+        "public_attribution": { "type": "boolean", "default": false },
+        "publish_receipt": { "type": "boolean", "default": false },
+        "publish_response_excerpt": { "type": "boolean", "default": false },
+        "git_history_public_acknowledged": { "const": true }
+      }
+    },
+    "status": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "updated_at", "history"],
+      "properties": {
+        "state": { "enum": ["submitted", "eligible", "offer_issued", "accepted", "pilot_running", "completed", "declined", "withdrawn", "expired"] },
+        "updated_at": { "type": "string", "format": "date-time" },
+        "acceptance_url": { "type": "string", "format": "uri" },
+        "receipt_url": { "type": "string", "format": "uri" },
+        "history": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["state", "at", "actor"],
+            "properties": {
+              "state": { "enum": ["submitted", "eligible", "offer_issued", "accepted", "pilot_running", "completed", "declined", "withdrawn", "expired"] },
+              "at": { "type": "string", "format": "date-time" },
+              "actor": { "type": "string", "minLength": 1, "maxLength": 200 },
+              "evidence_url": { "type": "string", "format": "uri" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
