@@ -1,4 +1,4 @@
-name: One-time AgentCard discovery validation
+name: One-time corrected AgentCard receipt attestation
 
 on:
   push:
@@ -10,104 +10,32 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  attest:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
 
-      - name: Attest offer
+      - name: Attest corrected receipt
         shell: bash
         run: |
           set -euo pipefail
-          jq -n --slurpfile offer partners/offers/agentcard-discovery-validation.json             '{data:$offer[0],metadata:{source:"accordtrace-founding-agent-program",record_type:"external_agent_offer"}}'             > offer-proof-request.json
-          curl --silent --show-error --fail-with-body -X POST             https://accordtrace.notary-labs.workers.dev/api/v1/proofs             -H "content-type: application/json"             --data-binary @offer-proof-request.json > offer-proof-response.json
-          jq -e '.proof_id != null' offer-proof-response.json >/dev/null
-
-      - name: Invoke external AgentCard skill
-        id: external
-        shell: bash
-        run: |
-          set -euo pipefail
-          jq -n '{
-            skillId:"check-well-known-discovery",
-            input:{url:"https://accordtrace.notary-labs.workers.dev"}
-          }' > external-request.json
-          result="$(curl --silent --show-error -X POST             https://www.agentcard.net/api/agent-card             -H "content-type: application/json"             --data-binary @external-request.json             -w '\nHTTP_STATUS:%{http_code}')"
-          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
-          printf '%s' "$result" | sed '/^HTTP_STATUS:/d' > external-response.json
-          printf 'http=%s\n' "$status" >> "$GITHUB_OUTPUT"
-          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
-          jq -e 'type == "object"' external-response.json >/dev/null
-
-      - name: Build and attest bounded receipt
-        shell: bash
-        run: |
-          set -euo pipefail
-          request_hash="$(sha256sum external-request.json | cut -d' ' -f1)"
-          response_hash="$(sha256sum external-response.json | cut -d' ' -f1)"
-          offer_proof_id="$(jq -r '.proof_id' offer-proof-response.json)"
-          valid="$(jq -r '(.result.validation.valid // .validation.valid // .output.validation.valid // null)' external-response.json)"
-          errors="$(jq -r '[(.result.validation.errors // .validation.errors // .output.validation.errors // [])[]] | length' external-response.json)"
-          warnings="$(jq -r '[(.result.validation.warnings // .validation.warnings // .output.validation.warnings // [])[]] | length' external-response.json)"
-          passes="$(jq -r '[(.result.validation.passes // .validation.passes // .output.validation.passes // [])[]] | length' external-response.json)"
-          jq -n             --arg offer_proof_id "$offer_proof_id"             --arg request_hash "$request_hash"             --arg response_hash "$response_hash"             --arg valid "$valid"             --argjson errors "$errors"             --argjson warnings "$warnings"             --argjson passes "$passes"             --arg workflow "https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"             '{
-              receipt_version:"accordtrace-partner-receipt/0.1",
-              receipt_id:"partner_rcpt_agentcard_20260826_01",
-              deduplication_key:("agentcard-response:"+$response_hash),
-              offer_id:"offer_accordtrace_agentcard_validation_20260826_01",
-              observed_at:(now|todateiso8601),
-              parties:{proposer:"accordtrace",counterparty:"agentcard-net-toolkit"},
-              outcome:{
-                result_type:"external_agent_discovery_validation",
-                external_http:200,
-                validation_valid:(if $valid=="true" then true elif $valid=="false" then false else null end),
-                error_count:$errors,
-                warning_count:$warnings,
-                pass_count:$passes,
-                counted_as_result:true
-              },
-              evidence:{
-                offer_proof_id:$offer_proof_id,
-                workflow_run:$workflow,
-                request_sha256:("sha256:"+$request_hash),
-                response_sha256:("sha256:"+$response_hash)
-              },
-              partnership:{
-                offer_sent:true,
-                external_task_completed:true,
-                program_acceptance_received:false,
-                notary_acceptance_signature_received:false,
-                public_attribution:false
-              },
-              boundary:"This receipt records one public, read-only discovery validation performed by the AgentCard.net API. It does not claim partnership acceptance, endorsement, identity, truth, legality, or commercial quality."
-            }' > receipt.json
-          jq -n --slurpfile receipt receipt.json             '{data:$receipt[0],metadata:{source:"accordtrace-founding-agent-program",record_type:"external_agent_validation_receipt"}}'             > receipt-proof-request.json
+          jq -n --slurpfile receipt partners/receipts/agentcard-20260826-01.json             '{data:$receipt[0],metadata:{source:"accordtrace-founding-agent-program",record_type:"external_agent_validation_receipt"}}'             > receipt-proof-request.json
           curl --silent --show-error --fail-with-body -X POST             https://accordtrace.notary-labs.workers.dev/api/v1/proofs             -H "content-type: application/json"             --data-binary @receipt-proof-request.json > receipt-proof-response.json
           jq -e '.proof_id != null' receipt-proof-response.json >/dev/null
 
       - name: Summarize
-        if: always()
         run: |
           {
-            echo "## AgentCard discovery validation"
-            echo "- External HTTP: ${{ steps.external.outputs.http }}"
-            echo "- Offer proof: $(jq -r '.proof_id // "unavailable"' offer-proof-response.json 2>/dev/null || true)"
-            echo "- Receipt proof: $(jq -r '.proof_id // "unavailable"' receipt-proof-response.json 2>/dev/null || true)"
-            echo "- Validation result: $(jq -r '.outcome.validation_valid // "not exposed"' receipt.json 2>/dev/null || true)"
+            echo "## Corrected AgentCard receipt attestation"
+            echo "- Proof ID: $(jq -r '.proof_id' receipt-proof-response.json)"
           } >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Preserve transaction
-        if: always()
+      - name: Preserve proof
         uses: actions/upload-artifact@v4
         with:
-          name: agentcard-discovery-validation
+          name: agentcard-corrected-receipt-proof
           path: |
-            offer-proof-request.json
-            offer-proof-response.json
-            external-request.json
-            external-response.json
-            receipt.json
             receipt-proof-request.json
             receipt-proof-response.json
           retention-days: 30
