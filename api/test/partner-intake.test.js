@@ -9,7 +9,7 @@ test("partner applications and receipt catalog are internally consistent", async
 });
 
 test("intake rejects external side effects and never implies acceptance", () => {
-  const termsSha256 = "sha256:5e4e4a8c22fd8aed890a6b5a043bd7c44c5133cccb338dca923e1e0556f1cff9";
+  const termsSha256 = "sha256:d1a97ba67863cf73c9cc83db803d5dd5aea4b50e2ae2b57718be783000c3281b";
   const base = {
     intake_version: "accordtrace-agent-intake/0.1",
     application_id: "app_test_agent_0001",
