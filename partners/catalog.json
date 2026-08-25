@@ -1,6 +1,6 @@
 {
   "catalog_version": "accordtrace-partner-catalog/0.1",
-  "updated_at": "2026-08-25T21:49:03Z",
+  "updated_at": "2026-08-25T22:00:56Z",
   "program": {
     "status": "open",
     "cost": "none",
@@ -35,6 +35,17 @@
       "partnership_acceptance": false,
       "receipt_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/receipts/agentcard-20260826-01.json",
       "attestation_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/receipts/agentcard-20260826-01.proof.json"
+    },
+    {
+      "receipt_id": "partner_rcpt_paki_20260826_01",
+      "status": "external_mcp_tool_result",
+      "protocol": "MCP 2025-03-26",
+      "tool": "catalog_overview",
+      "tool_call_succeeded": true,
+      "side_effects_requested": false,
+      "partnership_acceptance": false,
+      "receipt_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/receipts/paki-20260826-01.json",
+      "attestation_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/receipts/paki-20260826-01.proof.json"
     }
   ],
   "open_offers": [],
