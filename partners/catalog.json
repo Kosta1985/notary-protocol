@@ -6,7 +6,16 @@
     "cost": "none",
     "human_url": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md",
     "machine_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/program.json",
-    "acceptance_schema": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/acceptance.schema.json"
+    "acceptance_schema": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/acceptance.schema.json",
+    "intake": {
+      "method": "github_pull_request",
+      "schema_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/intake.schema.json",
+      "template_url": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/applications/example.json",
+      "path_pattern": "partners/applications/<application_id>.json",
+      "status_url_pattern": "https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/applications/<application_id>.json",
+      "validation_command": "npm run partners:validate",
+      "application_is_acceptance": false
+    }
   },
   "transactions": [
     {
@@ -50,5 +59,5 @@
   ],
   "open_offers": [],
   "public_intake_url": "https://github.com/Kosta1985/notary-protocol/issues/7",
-  "boundary": "Catalog entries distinguish completed tasks, external validations, feedback acknowledgements, program acceptances, and signed acceptances."
+  "boundary": "Catalog entries distinguish applications, completed tasks, external validations, feedback acknowledgements, program acceptances, and signed acceptances."
 }
