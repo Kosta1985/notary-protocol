@@ -18,14 +18,16 @@ jobs:
       - name: Read public service identity and aggregate activity
         shell: bash
         run: |
-          set -euo pipefail
-          for service in accordtrace notary-protocol; do
+          set -u
+          for service in accordtrace accord-trace notary-protocol; do
             base="https://${service}.notary-labs.workers.dev"
             echo "## ${service}" >> "$GITHUB_STEP_SUMMARY"
-            homepage="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/")"
-            health="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/health")"
-            stats="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/v1/stats")"
-            title="$(printf '%s' "$homepage" | sed -n 's:.*<title>\([^<]*\)</title>.*:\1:p' | head -1)"
-            printf 'title: %s\nhealth: %s\nstats: %s\n' "$title" "$health" "$stats"
-            printf '**Title:** %s\n\n```json\n%s\n```\n' "$title" "$(printf '%s' "$stats" | jq .)" >> "$GITHUB_STEP_SUMMARY"
+            for path in / /health /v1/stats /.well-known/agent-card.json; do
+              body_file="$(mktemp)"
+              code="$(curl --silent --show-error -H 'x-notary-monitor: live-smoke' -o "$body_file" -w '%{http_code}' "${base}${path}" || true)"
+              body="$(cat "$body_file")"
+              rm -f "$body_file"
+              printf '%s %s%s\n%s\n' "$code" "$base" "$path" "$body"
+              printf '**%s**: HTTP %s\n\n```\n%s\n```\n' "$path" "$code" "$body" >> "$GITHUB_STEP_SUMMARY"
+            done
           done
