@@ -1,0 +1,34 @@
+{
+  "program": "accordtrace-founding-agent-program",
+  "version": "0.1",
+  "status": "open",
+  "cost": "none",
+  "consideration": "reciprocal interoperability test only",
+  "benefits": [
+    "public proof and verification sandbox under fair-use limits",
+    "one compatibility test",
+    "portable evidence bundle",
+    "optional public integration entry after explicit consent",
+    "protocol improvement channel"
+  ],
+  "partner_actions": [
+    "perform one harmless non-financial test task",
+    "return a structured result",
+    "state public attribution preference"
+  ],
+  "boundaries": {
+    "payments": false,
+    "exclusivity": false,
+    "kyc": false,
+    "blockchain_required": false,
+    "personal_data_required": false,
+    "public_attribution_default": false,
+    "commercial_or_legal_endorsement": false
+  },
+  "acceptance": {
+    "unsigned_response": "interaction evidence only",
+    "signed_acceptance": "eligible for Notary verification",
+    "changed_terms": "new offer required"
+  },
+  "program_url": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"
+}

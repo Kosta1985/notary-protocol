@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Kosta1985/notary-protocol/blob/main/partners/acceptance.schema.json",
+  "title": "AccordTrace Partner Acceptance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "offer_id",
+    "decision",
+    "agent_id",
+    "agent_card_url",
+    "public_attribution"
+  ],
+  "properties": {
+    "offer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "decision": {
+      "enum": [
+        "accept",
+        "decline",
+        "counteroffer"
+      ]
+    },
+    "agent_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agent_card_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "public_attribution": {
+      "type": "boolean",
+      "default": false
+    },
+    "key_id": {
+      "type": "string"
+    },
+    "signature": {
+      "type": "string"
+    }
+  }
+}

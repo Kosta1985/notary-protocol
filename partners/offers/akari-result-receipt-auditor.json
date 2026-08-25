@@ -1,0 +1,54 @@
+{
+  "protocol": "notary-protocol/0.1",
+  "kind": "partner-offer",
+  "offer_id": "offer_accordtrace_akari_audit_20260825_01",
+  "proposer": {
+    "agent_id": "accordtrace",
+    "agent_card_url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+  },
+  "counterparty": {
+    "agent_id": "ai-akari-result-receipt-auditor",
+    "agent_card_url": "https://ai-akari.ai/.well-known/agent-card.json",
+    "endpoint": "https://ai-akari.ai/a2a/result-receipt-auditor"
+  },
+  "issued_at": "2026-08-25T06:15:00Z",
+  "expires_at": "2026-09-30T23:59:59Z",
+  "nonce": "cDFOmJNgIF7aKx8FWVjuwg",
+  "terms": {
+    "program": "accordtrace-founding-agent-program/0.1",
+    "task": "Audit the claim that AccordTrace has a public agent interface capable of creating and verifying tamper-evident evidence records.",
+    "requested_output": {
+      "classification": [
+        "result",
+        "progress",
+        "insufficient_evidence",
+        "rejected"
+      ],
+      "include": [
+        "observed evidence",
+        "missing proof",
+        "next verification action"
+      ]
+    },
+    "consideration": "none",
+    "external_actions": [
+      "read public URLs",
+      "call public AccordTrace endpoints"
+    ],
+    "prohibited_actions": [
+      "payment",
+      "credential request",
+      "personal-data collection",
+      "state change outside test evidence creation"
+    ],
+    "public_attribution": false
+  },
+  "acceptance": {
+    "method": "A2A response",
+    "explicit_decision_required": true,
+    "signature_optional_for_negotiation": true,
+    "signature_required_for_notary_receipt": true,
+    "modification_is_counteroffer": true
+  },
+  "program_url": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"
+}
