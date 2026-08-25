@@ -3,19 +3,19 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="AccordTrace verifies cryptographic evidence for transactions between AI agents.">
+    <meta name="description" content="AccordTrace creates portable, tamper-evident proof records for AI-agent actions and handoffs.">
     <meta name="theme-color" content="#111411">
     <meta property="og:title" content="AccordTrace">
-    <meta property="og:description" content="Open cryptographic evidence for transactions between AI agents.">
+    <meta property="og:description" content="Portable cryptographic evidence for AI-agent actions and handoffs.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://accordtrace.notary-labs.workers.dev/">
     <meta property="og:image" content="https://accordtrace.notary-labs.workers.dev/social-card.png">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="AccordTrace">
-    <meta name="twitter:description" content="Open cryptographic evidence for transactions between AI agents.">
+    <meta name="twitter:description" content="Portable cryptographic evidence for AI-agent actions and handoffs.">
     <meta name="twitter:image" content="https://accordtrace.notary-labs.workers.dev/social-card.png">
     <link rel="canonical" href="https://accordtrace.notary-labs.workers.dev/">
-    <title>AccordTrace — Verifiable agent transactions</title>
+    <title>AccordTrace · Portable evidence for agent handoffs</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
     <script type="module" src="/app.js"></script>
@@ -27,15 +27,15 @@
         <span>ACCORDTRACE</span>
       </a>
       <nav aria-label="Primary navigation">
-        <a href="#protocol">Protocol</a>
-        <a href="#verify">Verifier</a>
-        <a href="/pilot.html">Pilot</a>
-        <a href="/openapi.json">API</a>
+        <a href="#protocol">How it works</a>
+        <a href="#integration">Proof API</a>
+        <a href="#verify">Advanced verifier</a>
+        <a href="/pilot.html">Founding agents</a>
         <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
       <div class="header-end">
         <span class="network-status" id="network-status"><i aria-hidden="true"></i><span>Checking API</span></span>
-        <a class="header-action" href="#verify">Verify evidence</a>
+        <a class="header-action" href="#integration">Create a proof</a>
       </div>
     </header>
 
@@ -43,71 +43,84 @@
       <section class="hero" aria-labelledby="hero-title">
         <div class="hero-grid" aria-hidden="true"></div>
         <div class="hero-copy">
-          <p class="eyebrow">Public beta · Notary Protocol 0.1</p>
+          <p class="eyebrow">Public beta · Agent-first evidence API</p>
           <h1 id="hero-title">AccordTrace</h1>
-          <p class="hero-lede">Powered by Notary Protocol: a neutral, open evidence layer for transactions between AI agents.</p>
+          <p class="hero-lede">Create a tamper-evident record for any agent action, verify it later, and carry the evidence across vendor boundaries.</p>
           <div class="hero-actions">
-            <a class="primary-action" href="#verify">Open verifier <span aria-hidden="true">↘</span></a>
+            <a class="primary-action" href="#integration">Create your first proof <span aria-hidden="true">↘</span></a>
             <a class="text-action" href="/openapi.json">Read the API spec <span aria-hidden="true">→</span></a>
           </div>
         </div>
 
-        <div class="evidence-plane" aria-label="Evidence verification sequence">
+        <div class="evidence-plane" aria-label="Evidence attestation sequence">
           <div class="trace-line"></div>
           <div class="trace-pulse"></div>
           <div class="evidence-node node-a">
             <span class="node-index">01</span>
-            <strong>AGENT A</strong>
-            <small>Ed25519 key</small>
+            <strong>ACTION</strong>
+            <small>Agent event</small>
           </div>
           <div class="evidence-node node-offer">
             <span class="node-index">02</span>
-            <strong>OFFER</strong>
+            <strong>HASH</strong>
             <small>Canonical JSON</small>
           </div>
           <div class="evidence-node node-b">
             <span class="node-index">03</span>
-            <strong>AGENT B</strong>
-            <small>Acceptance</small>
+            <strong>ATTEST</strong>
+            <small>ES256 signature</small>
           </div>
           <div class="evidence-node node-receipt">
             <span class="receipt-sigil" aria-hidden="true">✓</span>
-            <strong>VERIFIED</strong>
-            <small>Signed receipt</small>
+            <strong>VERIFY</strong>
+            <small>Portable proof</small>
           </div>
-          <p class="plane-caption">A deterministic trail from intent to receipt.</p>
+          <p class="plane-caption">One durable evidence trail for every agent boundary.</p>
         </div>
         <a class="scroll-cue" href="#protocol">How it works <span aria-hidden="true">↓</span></a>
       </section>
 
-      <section class="proof-rail" aria-label="Protocol properties">
+      <section class="proof-rail" aria-label="AccordTrace properties">
         <p><span>Evidence</span><strong>SHA-256 bound</strong></p>
-        <p><span>Signatures</span><strong>Ed25519</strong></p>
-        <p><span>Verification</span><strong>16 explicit checks</strong></p>
-        <p><span>Output</span><strong>Portable receipt</strong></p>
+        <p><span>Canonicalization</span><strong>RFC 8785 JSON</strong></p>
+        <p><span>Attestation</span><strong>ES256 signed</strong></p>
+        <p><span>Access</span><strong>REST · MCP · A2A</strong></p>
       </section>
 
       <section class="protocol-section" id="protocol" aria-labelledby="protocol-title">
         <div class="section-heading reveal">
           <p class="eyebrow">Evidence, not judgment</p>
-          <h2 id="protocol-title">One transaction.<br>One verifiable trail.</h2>
-          <p>Notary checks structure, linkage, timestamps and signatures. It never decides whether the deal itself is good.</p>
+          <h2 id="protocol-title">Record once.<br>Verify anywhere.</h2>
+          <p>AccordTrace binds evidence to a service-recorded time and signs the result. It never decides whether the underlying action was true, legal or commercially good.</p>
         </div>
-        <ol class="protocol-flow" aria-label="Protocol steps">
-          <li class="reveal"><span>01</span><strong>Offer</strong><p>Agent A signs canonical terms with a unique nonce.</p></li>
-          <li class="reveal"><span>02</span><strong>Accept</strong><p>Agent B binds acceptance to the exact offer.</p></li>
-          <li class="reveal"><span>03</span><strong>Verify</strong><p>Notary recomputes the evidence and verifies both keys.</p></li>
-          <li class="reveal"><span>04</span><strong>Receipt</strong><p>A signed result records every passed or failed check.</p></li>
+        <ol class="protocol-flow" aria-label="Proof steps">
+          <li class="reveal"><span>01</span><strong>Record</strong><p>Send the agent event or handoff data you want to make tamper-evident.</p></li>
+          <li class="reveal"><span>02</span><strong>Canonicalize</strong><p>AccordTrace normalizes JSON and computes a stable SHA-256 digest.</p></li>
+          <li class="reveal"><span>03</span><strong>Attest</strong><p>The service signs the evidence record and returns a proof ID.</p></li>
+          <li class="reveal"><span>04</span><strong>Verify</strong><p>Any later system can check the proof through REST, MCP, A2A or the web.</p></li>
         </ol>
+      </section>
+
+      <section class="integration-section" id="integration" aria-labelledby="integration-title">
+        <div>
+          <p class="eyebrow">Start in one request</p>
+          <h2 id="integration-title">Create portable evidence without an account.</h2>
+        </div>
+        <div class="integration-list">
+          <a href="/openapi.json"><span>Create proof</span><strong>POST /api/v1/proofs</strong><b aria-hidden="true">→</b></a>
+          <a href="/verify.html"><span>Verify proof</span><strong>Web + POST /api/v1/verify</strong><b aria-hidden="true">→</b></a>
+          <a href="/.well-known/agent-card.json"><span>Agent discovery</span><strong>A2A Agent Card</strong><b aria-hidden="true">→</b></a>
+          <a href="/mcp"><span>Tool integration</span><strong>Remote MCP endpoint</strong><b aria-hidden="true">→</b></a>
+        </div>
       </section>
 
       <section class="verifier-section" id="verify" aria-labelledby="verify-title">
         <div class="verifier-heading">
           <div>
-            <p class="eyebrow">Live workspace</p>
-            <h2 id="verify-title">Verify an envelope</h2>
+            <p class="eyebrow">Advanced protocol profile</p>
+            <h2 id="verify-title">Verify a signed DealEnvelope</h2>
           </div>
-          <p>Paste a DealEnvelope or load a fresh signed example. Evidence stays visible and inspectable.</p>
+          <p>Notary Protocol adds bilateral offer, acceptance and signature checks when a simple proof record is not enough.</p>
         </div>
 
         <div class="verifier-toolbar">
@@ -120,7 +133,7 @@
         </div>
 
         <form class="receipt-lookup" id="receipt-lookup">
-          <label for="receipt-query">Retrieve a stored receipt</label>
+          <label for="receipt-query">Retrieve a protocol receipt</label>
           <input id="receipt-query" type="text" autocomplete="off" placeholder="ntr_…" aria-label="Receipt ID">
           <button class="text-action" type="submit">Find receipt <span aria-hidden="true">→</span></button>
         </form>
@@ -128,7 +141,7 @@
         <div class="verifier-workspace">
           <div class="editor-pane">
             <label for="envelope-input">DealEnvelope</label>
-            <textarea id="envelope-input" spellcheck="false" autocomplete="off" placeholder="Paste a DealEnvelope JSON object or drop a .json file…"></textarea>
+            <textarea id="envelope-input" spellcheck="false" autocomplete="off" placeholder="Paste a signed DealEnvelope JSON object or drop a .json file…"></textarea>
             <div class="editor-footer">
               <span id="editor-status">Waiting for evidence</span>
               <button class="primary-action" id="verify-button" type="button">Verify envelope <span aria-hidden="true">→</span></button>
@@ -162,34 +175,22 @@
         </div>
       </section>
 
-      <section class="integration-section" aria-labelledby="integration-title">
-        <div>
-          <p class="eyebrow">Built to connect</p>
-          <h2 id="integration-title">One envelope across every agent boundary.</h2>
-        </div>
-        <div class="integration-list">
-          <a href="/openapi.json"><span>REST API</span><strong>POST /v1/verify</strong><b aria-hidden="true">→</b></a>
-          <a href="https://github.com/Kosta1985/notary-protocol/tree/main/sdk" target="_blank" rel="noreferrer"><span>SDKs</span><strong>TypeScript + Python</strong><b aria-hidden="true">→</b></a>
-          <a href="https://github.com/Kosta1985/notary-protocol/tree/main/adapters" target="_blank" rel="noreferrer"><span>Adapters</span><strong>MCP + A2A</strong><b aria-hidden="true">→</b></a>
-        </div>
-      </section>
-
       <section class="final-section">
         <p class="eyebrow">Make evidence portable</p>
-        <h2>Verify what happened.<br>Decide nothing else.</h2>
+        <h2>Record what happened.<br>Decide nothing else.</h2>
         <div class="final-actions">
-          <a class="primary-action inverse" href="#verify">Try the verifier <span aria-hidden="true">↑</span></a>
-          <a class="text-action" href="/pilot.html">Integration pilot <span aria-hidden="true">→</span></a>
+          <a class="primary-action inverse" href="#integration">Create a proof <span aria-hidden="true">↑</span></a>
+          <a class="text-action" href="/pilot.html">Founding Agent Program <span aria-hidden="true">→</span></a>
         </div>
       </section>
     </main>
 
     <footer>
       <a class="brand" href="#top"><span class="brand-mark">A</span><span>ACCORDTRACE</span></a>
-      <p>Open verification infrastructure · MIT License</p>
+      <p>Portable evidence for agent handoffs · Open core</p>
       <div class="footer-links">
         <a href="/activity.html">Activity</a>
-        <a href="/pilot.html">Pilot</a>
+        <a href="/pilot.html">Founding agents</a>
         <a href="/privacy.html">Privacy</a>
         <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub ↗</a>
       </div>
