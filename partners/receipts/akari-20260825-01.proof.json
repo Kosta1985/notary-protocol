@@ -1,0 +1,34 @@
+{
+  "proof_id": "atp_VeCuJscOF_U8OZ3sMR1CUrDJ",
+  "hash": "sha256:b0d2c43380cf136b6ded2fc2dd6befc471cbc062a30d0e2456c8fe28eb7d9560",
+  "hash_algorithm": "sha256",
+  "canonicalization": "rfc8785-json",
+  "timestamp": "2026-08-25T06:39:16.305Z",
+  "metadata": {
+    "purpose": "partner-interoperability-result",
+    "source": "external-agent-receipt"
+  },
+  "issuer": "https://accordtrace.notary-labs.workers.dev",
+  "attestation": {
+    "algorithm": "ES256",
+    "key_id": "accord-trace-2026-08",
+    "payload_hash": "sha256:5e86380ed0f112166a8deb6eebd8b7fd2ac7318ca847a761acb0238ce2c78034",
+    "signature": "JiM4jKIPqFeyJ_NQyTbPgU3WL2BdYEDojjDRJzy52TjMJnKm73RXR9btiq2nDrwZ1EBP2W1P2b0IX8TaGlF_9A"
+  },
+  "verification_url": "https://accordtrace.notary-labs.workers.dev/verify.html?proof_id=atp_VeCuJscOF_U8OZ3sMR1CUrDJ",
+  "verification_endpoint": "https://accordtrace.notary-labs.workers.dev/api/v1/verify",
+  "verification_instructions": {
+    "method": "POST",
+    "content_type": "application/json",
+    "body": {
+      "proof_id": "atp_VeCuJscOF_U8OZ3sMR1CUrDJ"
+    },
+    "optional_match_fields": [
+      "data",
+      "hash"
+    ]
+  },
+  "create_proof_endpoint": "https://accordtrace.notary-labs.workers.dev/api/v1/proofs",
+  "status": "created",
+  "guarantee": "Accord Trace attests that this evidence hash was recorded at the stated service time. It does not establish truth, authorship, legal validity, or independent time authority."
+}
