@@ -1,0 +1,57 @@
+name: Register AccordTrace on Moltbook
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/register-moltbook.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  register:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Register agent and encrypt credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail-with-body --silent --show-error \
+            -X POST "https://www.moltbook.com/api/v1/agents/register" \
+            -H "content-type: application/json" \
+            --data '{"name":"AccordTrace","description":"Agent-first service for creating and verifying tamper-evident proof records through REST, MCP and A2A. Verifies content integrity and service-recorded time, not truth or legal validity."}')"
+          printf '%s' "$response" | jq -e -c '{
+            api_key: .agent.api_key,
+            claim_url: .agent.claim_url,
+            verification_code: .agent.verification_code
+          } | select(.api_key and .claim_url)' > /tmp/registration.json
+          cat > /tmp/moltbook-public.pem <<'PUBLIC_KEY'
+          -----BEGIN PUBLIC KEY-----
+          MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAm1CkX4j3VDasi1js1qXX
+          0mDBsjH5rRFLDkwkgBcUzVayb9DJJtvesL35L0PPI8fm+WneHuK+DyBI1S9BuP0F
+          TP7J9yGvPx+0xwZIWjGLsViZGGflet0HfYTnILdyeocrr9YReI4aoYLGWEzfpNpy
+          MbIIqD1CwENb7JbuMTrJk5Mwek5AHIHj9Qm8n4pMIsL6J+dejOULORMpfYjXdWgi
+          TeJnIiY6HpT7ef3K8gAH2uYYmr+DBRu6FZXItS7vGdQ/FpkOlVBL4cxjQR5MvBMH
+          Zekl2MTOc4c/kKoR7ga6bt1WMrgK3bDFHb5215bXUiXW7cDhbXphW1AFctkyzycB
+          ixjCSCQMkkMx0mw1rQTJY2yHXaqnueF2xvyVr4VFOWApPTcAVkb0okbjVPlS76og
+          NZRs8OP0q9ys+ZLwesNPwkY0iRl3a5CEJ4cvQw1o9REMJssP4r+MwowNLMUKnodD
+          mlrl0ftye5AY3UiptRWCTj+4LCNlb3mT363JUqbQVVwxgl1CnPKt5QfaJD2RKSE8
+          RaobNhV/OKLrpFXk/S9CyCedduT1C+a2uWUpXX9/2OpbajYWXmL+9MEXDvHcY9mo
+          T9xY1B1SGY4hi9cjioRKhtGH/6FomjKsQPzPS2pfY/9aNs9vKdqFGossJeVpuUwj
+          9GQ9PikTfJlHWL00eK6EbC0CAwEAAQ==
+          -----END PUBLIC KEY-----
+          PUBLIC_KEY
+          sed -i 's/^          //' /tmp/moltbook-public.pem
+          openssl pkeyutl -encrypt -pubin -inkey /tmp/moltbook-public.pem \
+            -pkeyopt rsa_padding_mode:oaep -pkeyopt rsa_oaep_md:sha256 \
+            -in /tmp/registration.json -out moltbook-registration.bin
+          rm -f /tmp/registration.json
+      - name: Store encrypted registration response
+        uses: actions/upload-artifact@v4
+        with:
+          name: moltbook-registration
+          path: moltbook-registration.bin
+          if-no-files-found: error
+          retention-days: 1
