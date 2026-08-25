@@ -8,7 +8,7 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/accordtrace-stats.yml"
-      - "scripts/adoption-report.js"
+      - "scripts/accordtrace-stats.js"
 
 permissions:
   contents: read
@@ -27,6 +27,4 @@ jobs:
         with:
           node-version: 24
       - name: Read aggregate AccordTrace activity
-        env:
-          NOTARY_BASE_URL: https://accordtrace.notary-labs.workers.dev
-        run: npm run adoption:report
+        run: node scripts/accordtrace-stats.js
