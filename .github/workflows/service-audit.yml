@@ -1,0 +1,31 @@
+name: Audit live AccordTrace services
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/service-audit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Read public service identity and aggregate activity
+        shell: bash
+        run: |
+          set -euo pipefail
+          for service in accordtrace notary-protocol; do
+            base="https://${service}.notary-labs.workers.dev"
+            echo "## ${service}" >> "$GITHUB_STEP_SUMMARY"
+            homepage="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/")"
+            health="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/health")"
+            stats="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' "${base}/v1/stats")"
+            title="$(printf '%s' "$homepage" | sed -n 's:.*<title>\([^<]*\)</title>.*:\1:p' | head -1)"
+            printf 'title: %s\nhealth: %s\nstats: %s\n' "$title" "$health" "$stats"
+            printf '**Title:** %s\n\n```json\n%s\n```\n' "$title" "$(printf '%s' "$stats" | jq .)" >> "$GITHUB_STEP_SUMMARY"
+          done
