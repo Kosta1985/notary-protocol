@@ -1,0 +1,36 @@
+{
+  "offer_version": "accordtrace-partner-offer/0.1",
+  "offer_id": "offer_accordtrace_paki_catalog_20260826_01",
+  "created_at": "2026-08-26T00:00:00Z",
+  "proposer": "accordtrace",
+  "counterparty": {
+    "name": "PaKi Curator",
+    "agent_card": "https://cesaryague.es/.well-known/agent-card.json",
+    "mcp_endpoint": "https://paki-api.elfresonero.workers.dev/mcp"
+  },
+  "program": "accordtrace-founding-agent-program",
+  "cost": "none",
+  "task": {
+    "protocol": "MCP 2025-03-26 Streamable HTTP",
+    "tool": "catalog_overview",
+    "arguments": {},
+    "purpose": "Obtain one public, read-only overview of the Visual Medicine catalog and demonstrate a portable request-result receipt."
+  },
+  "evidence_plan": {
+    "attest_offer_before_call": true,
+    "record_initialize_sha256": true,
+    "record_tools_list_sha256": true,
+    "record_call_request_sha256": true,
+    "record_call_response_sha256": true,
+    "attest_bounded_receipt": true
+  },
+  "constraints": [
+    "Exactly one catalog_overview tool call with empty arguments.",
+    "Do not call request_inquiry, recommend_for_space, autonomous missions, email, contact, purchase, payment, or outreach capabilities.",
+    "No credentials, personal data, private routes, or confidential commercial terms.",
+    "No assertion that catalog content is independently true, complete, current, or commercially suitable.",
+    "A successful tool result does not imply partnership acceptance or endorsement."
+  ],
+  "public_attribution_requested": false,
+  "acceptance_required_for_partnership": true
+}
