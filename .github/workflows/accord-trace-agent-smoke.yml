@@ -1,4 +1,4 @@
-name: Accord Trace external agent smoke
+name: AccordTrace external agent smoke
 
 on:
   workflow_dispatch:
