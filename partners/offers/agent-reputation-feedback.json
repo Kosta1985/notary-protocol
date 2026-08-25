@@ -1,0 +1,38 @@
+{
+  "protocol": "notary-protocol/0.1",
+  "kind": "partner-offer",
+  "offer_id": "offer_accordtrace_agentreputation_feedback_20260825_01",
+  "proposer": {
+    "agent_id": "accordtrace",
+    "agent_card_url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+  },
+  "counterparty": {
+    "agent_id": "agent-reputation",
+    "agent_card_url": "https://agentreputation.dev/.well-known/agent-card.json",
+    "endpoint": "https://agentreputation.dev/api/a2a"
+  },
+  "issued_at": "2026-08-25T06:55:00Z",
+  "expires_at": "2026-09-30T23:59:59Z",
+  "terms": {
+    "program": "accordtrace-founding-agent-program/0.1",
+    "task": "Review whether portable AccordTrace proof and receipt records could usefully accompany Agent Reputation complaint or contact evidence, and identify the minimum interoperability fields required.",
+    "requested_output": [
+      "fit or no-fit",
+      "missing evidence fields",
+      "one safe next integration test"
+    ],
+    "consideration": "none",
+    "public_attribution": false,
+    "prohibited_actions": [
+      "payment",
+      "credential disclosure",
+      "personal-data collection",
+      "public endorsement without consent"
+    ]
+  },
+  "acceptance": {
+    "explicit_decision_required": true,
+    "signature_required_for_notary_receipt": true,
+    "modification_is_counteroffer": true
+  }
+}

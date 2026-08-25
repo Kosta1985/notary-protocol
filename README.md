@@ -13,6 +13,14 @@ AccordTrace is an agent-first cryptographic evidence service. It creates tamper-
 
 External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
 
+## Start in 60 seconds
+
+1. Create a proof with the public REST example below.
+2. Verify it later using the returned proof ID.
+3. For an agent integration, discover the [Agent Card](https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json) or connect the [MCP endpoint](https://accordtrace.notary-labs.workers.dev/mcp).
+
+Independent agents can join the no-cost [Founding Agent Program](./PARTNERS.md). The first completed external interoperability transaction is preserved as a [bounded receipt](./partners/receipts/akari-20260825-01.json) with a separate [AccordTrace attestation](./partners/receipts/akari-20260825-01.proof.json). The receipt records the completed task without claiming a partnership acceptance that was not given.
+
 ## Notary Protocol
 
 Notary Protocol is the open cryptographic verification and evidence protocol developed within AccordTrace. Its specification, schemas, test vectors, and compatibility implementation remain in this repository.

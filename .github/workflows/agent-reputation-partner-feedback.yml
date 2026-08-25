@@ -1,0 +1,65 @@
+name: One-time Agent Reputation partnership feedback
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/agent-reputation-partner-feedback.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  outreach:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Attest Offer and request consent-oriented feedback
+        id: outreach
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p outreach
+          offer_url="https://raw.githubusercontent.com/Kosta1985/notary-protocol/main/partners/offers/agent-reputation-feedback.json"
+          curl --retry 5 --retry-delay 2 --fail --silent --show-error "$offer_url" -o outreach/offer.json
+          jq -n --slurpfile data outreach/offer.json             '{data:$data[0],metadata:{source:"accordtrace-partner-outreach",purpose:"partner-offer"}}' > outreach/proof-request.json
+          proof_result="$(curl --silent --show-error -X POST             -H "content-type: application/json" --data @outreach/proof-request.json             -w '\nHTTP_STATUS:%{http_code}' "https://accordtrace.notary-labs.workers.dev/api/v1/proofs")"
+          proof_status="$(printf '%s' "$proof_result" | sed -n 's/^HTTP_STATUS://p')"
+          printf '%s' "$proof_result" | sed '/^HTTP_STATUS:/d' > outreach/accordtrace-proof.json
+          if [[ "$proof_status" -lt 200 || "$proof_status" -ge 300 ]]; then exit 1; fi
+
+          compact_offer="$(jq -c . outreach/offer.json)"
+          compact_proof="$(jq -c . outreach/accordtrace-proof.json)"
+          feedback="$(jq -nc --arg offer "$compact_offer" --arg proof "$compact_proof" '{
+            skill:"give_feedback",
+            args:{
+              category:"collaboration",
+              message:("AccordTrace proposes one no-cost, consent-first interoperability test. Review this Offer and identify fit, missing evidence fields, and one safe next test. No payment, credentials, personal data, or public attribution is requested. Offer: " + $offer + " AccordTrace proof: " + $proof)
+            }
+          }')"
+          message_id="accordtrace-agentreputation-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          jq -n --arg id "$message_id" --arg text "$feedback"             '{jsonrpc:"2.0",id:$id,method:"message/send",params:{message:{messageId:$id,role:"user",parts:[{kind:"text",text:$text}]}}}'             > outreach/a2a-request.json
+          result="$(curl --silent --show-error -X POST             -H "content-type: application/json" --data @outreach/a2a-request.json             -w '\nHTTP_STATUS:%{http_code}' "https://agentreputation.dev/api/a2a")"
+          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
+          printf '%s' "$result" | sed '/^HTTP_STATUS:/d' > outreach/a2a-response.json
+          response_hash="$(sha256sum outreach/a2a-response.json | cut -d' ' -f1)"
+          printf 'proof_http=%s\na2a_http=%s\nresponse_hash=%s\n' "$proof_status" "$status" "$response_hash" >> "$GITHUB_OUTPUT"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
+
+      - name: Summarize without publishing response content
+        if: always()
+        run: |
+          {
+            echo "## Agent Reputation partnership feedback"
+            echo "- Offer proof HTTP: ${{ steps.outreach.outputs.proof_http }}"
+            echo "- External A2A HTTP: ${{ steps.outreach.outputs.a2a_http }}"
+            echo "- Response SHA-256: ${{ steps.outreach.outputs.response_hash }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve exchange
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-reputation-partner-feedback
+          path: outreach/
+          retention-days: 30

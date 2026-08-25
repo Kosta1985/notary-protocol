@@ -1,0 +1,37 @@
+{
+  "schema_version": "ai-catalog/0.1",
+  "name": "AccordTrace",
+  "description": "Portable tamper-evident proof records for AI-agent handoffs.",
+  "homepage": "https://accordtrace.notary-labs.workers.dev",
+  "resources": [
+    {
+      "type": "a2a-agent",
+      "name": "AccordTrace",
+      "url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json",
+      "intents": [
+        "create tamper-evident proof",
+        "verify evidence record",
+        "retain agent transaction receipt"
+      ]
+    },
+    {
+      "type": "mcp-server",
+      "name": "AccordTrace MCP",
+      "url": "https://accordtrace.notary-labs.workers.dev/mcp",
+      "intents": [
+        "notarize agent evidence",
+        "verify proof identifier"
+      ]
+    },
+    {
+      "type": "openapi",
+      "name": "AccordTrace REST API",
+      "url": "https://accordtrace.notary-labs.workers.dev/openapi.json",
+      "intents": [
+        "create proof",
+        "verify proof"
+      ]
+    }
+  ],
+  "partner_program": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"
+}
