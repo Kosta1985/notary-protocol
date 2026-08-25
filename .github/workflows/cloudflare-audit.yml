@@ -61,9 +61,10 @@ jobs:
             databases="$(curl --fail --silent --show-error -H "Authorization: Bearer $token" "$api/accounts/$account_id/d1/database?per_page=100")"
             printf '%s' "$databases" | jq -r '.result[]? | "database: \(.name) [\(.uuid)]"'
             while IFS=$'\t' read -r database_id database_name; do
+              schema_payload="$(jq -nc --arg sql "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name" '{sql:$sql}')"
               schema="$(curl --fail --silent --show-error -X POST \
                 -H "Authorization: Bearer $token" -H "content-type: application/json" \
-                --data '{"sql":"SELECT name FROM sqlite_schema WHERE type = '''table''' AND name NOT LIKE '''sqlite_%''' ORDER BY name"}' \
+                --data "$schema_payload" \
                 "$api/accounts/$account_id/d1/database/$database_id/query")"
               tables="$(printf '%s' "$schema" | jq -r '.result[]?.results[]?.name // empty')"
               while IFS= read -r table; do
