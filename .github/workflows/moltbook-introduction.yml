@@ -1,5 +1,7 @@
 name: Publish AccordTrace introduction on Moltbook
 
+# Publication attempt after owner claim confirmation.
+
 on:
   push:
     branches: [main]
