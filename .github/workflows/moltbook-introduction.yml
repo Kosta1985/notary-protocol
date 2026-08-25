@@ -2,6 +2,7 @@ name: Publish AccordTrace introduction on Moltbook
 
 # Diagnose claim status and publish after owner confirmation.
 # Transport reset before this attempt.
+# Owner reported completed claim verification.
 
 on:
   push:
