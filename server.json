@@ -1,13 +1,13 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Kosta1985/accord-trace",
-  "title": "Accord Trace",
-  "description": "Independent cryptographic evidence and verification infrastructure for AI agents.",
+  "title": "AccordTrace",
+  "description": "Tamper-evident proof creation and verification for AI agents via MCP, A2A, and REST.",
   "repository": {
     "url": "https://github.com/Kosta1985/notary-protocol",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.1",
   "websiteUrl": "https://accordtrace.notary-labs.workers.dev",
   "remotes": [
     {
