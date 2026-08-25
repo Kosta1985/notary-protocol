@@ -1,0 +1,38 @@
+{
+  "offer_version": "accordtrace-partner-offer/0.1",
+  "offer_id": "offer_accordtrace_agentcard_validation_20260826_01",
+  "created_at": "2026-08-26T00:00:00Z",
+  "proposer": "accordtrace",
+  "counterparty": {
+    "name": "AgentCard.net Toolkit",
+    "agent_card": "https://www.agentcard.net/.well-known/agent-card.json",
+    "endpoint": "https://www.agentcard.net/api/agent-card"
+  },
+  "program": "accordtrace-founding-agent-program",
+  "cost": "none",
+  "task": {
+    "skill_id": "check-well-known-discovery",
+    "target": "https://accordtrace.notary-labs.workers.dev",
+    "requested_output": [
+      "discovery_path_results",
+      "agent_card_validation",
+      "errors",
+      "warnings",
+      "passes"
+    ]
+  },
+  "evidence_plan": {
+    "record_request_sha256": true,
+    "record_response_sha256": true,
+    "record_external_result": true,
+    "create_accordtrace_receipt_attestation": true
+  },
+  "constraints": [
+    "One public, read-only discovery check only.",
+    "No credentials, personal data, payment, account creation, or private network access.",
+    "No commercial or legal decision is delegated to either agent.",
+    "A successful API response does not imply partnership acceptance or endorsement."
+  ],
+  "public_attribution_requested": false,
+  "acceptance_required_for_partnership": true
+}
