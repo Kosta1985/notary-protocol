@@ -1,0 +1,51 @@
+{
+  "receipt_version": "accordtrace-partner-receipt/0.1",
+  "receipt_id": "partner_rcpt_paki_20260826_01",
+  "deduplication_key": "mcp-response:eb639c7c495d26c9a7ac1da8cbc93c5c695a8534136c030feddf6a6976a15d58",
+  "offer_id": "offer_accordtrace_paki_catalog_20260826_01",
+  "observed_at": "2026-08-25T22:00:56Z",
+  "parties": {
+    "proposer": "accordtrace",
+    "counterparty": "paki-curator"
+  },
+  "outcome": {
+    "result_type": "external_mcp_tool_result",
+    "protocol": "MCP 2025-03-26",
+    "tool": "catalog_overview",
+    "arguments": {},
+    "tool_call_succeeded": true,
+    "content_item_count": 1,
+    "response_text_bytes": 2664,
+    "counted_as_result": true
+  },
+  "discovery": {
+    "server_name": "PaKi Curator — Visual Medicine Art Catalog",
+    "server_version": "9.30",
+    "listed_tool_count": 6,
+    "requested_tool_listed": true
+  },
+  "evidence": {
+    "offer_proof_id": "atp_S3mp__Sc81n7TKF9gOmlQv4y",
+    "workflow_run": "https://github.com/Kosta1985/notary-protocol/actions/runs/32904030493",
+    "initialize_response_sha256": "sha256:05384a10510254cdbfbbe2081f80cac038804f00c2cea74365f21bc232d8c7ea",
+    "tools_list_response_sha256": "sha256:b6b34890f2f6995e68ccdbe7fa7319f729828b018a21055bc913d9ebbf8215e8",
+    "call_request_sha256": "sha256:49ab3581ee4d2a343b5fff530bbaece3fff1aeed9459bdc46ecb889c4cf55494",
+    "call_response_sha256": "sha256:eb639c7c495d26c9a7ac1da8cbc93c5c695a8534136c030feddf6a6976a15d58"
+  },
+  "safety": {
+    "read_only_catalog_call": true,
+    "request_inquiry_called": false,
+    "outreach_called": false,
+    "payment_called": false,
+    "credentials_supplied": false,
+    "personal_data_supplied": false
+  },
+  "partnership": {
+    "offer_sent": true,
+    "external_task_completed": true,
+    "program_acceptance_received": false,
+    "notary_acceptance_signature_received": false,
+    "public_attribution": false
+  },
+  "boundary": "This receipt records one public, read-only PaKi MCP catalog_overview result. It does not validate the truth, completeness, currency, ownership, pricing, availability, commercial suitability, partnership acceptance, or endorsement of the catalog or its contents."
+}
