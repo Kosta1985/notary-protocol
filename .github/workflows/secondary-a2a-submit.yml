@@ -1,0 +1,35 @@
+name: One-time secondary A2A registry submission
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/secondary-a2a-submit.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  submit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Register AccordTrace
+        shell: bash
+        run: |
+          set -euo pipefail
+          card="https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+          payload="$(jq -nc --arg wellKnownURI "$card" '{wellKnownURI:$wellKnownURI}')"
+          result="$(curl --silent --show-error -X POST             -H "content-type: application/json" --data "$payload"             -w '\nHTTP_STATUS:%{http_code}'             "https://a2aregistry.org/api/agents/register")"
+          status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
+          body="$(printf '%s' "$result" | sed '/^HTTP_STATUS:/d')"
+          printf 'Registration HTTP %s\n' "$status"
+          printf '%s' "$body" | jq . || printf '%s\n' "$body"
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
+
+      - name: Verify search
+        shell: bash
+        run: |
+          set -euo pipefail
+          sleep 3
+          curl --fail --silent --show-error             "https://a2aregistry.org/api/agents?search=AccordTrace" | jq .
