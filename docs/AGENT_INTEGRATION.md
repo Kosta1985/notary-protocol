@@ -1,34 +1,69 @@
-# Agent integration
+# AccordTrace agent integration
 
 ## Fastest path
 
-1. Fetch a fresh signed example from `GET /v1/demo`.
-2. Submit a DealEnvelope to `POST /v1/verify`.
-3. Treat HTTP 200 as a positive receipt and HTTP 422 as a signed negative receipt.
-4. Verify the receipt's notary signature and pin the public key from a trusted channel.
-5. Store the complete receipt alongside the agent workflow record.
+1. Read the live Agent Card or OpenAPI description.
+2. Submit exact content, JSON data, or a precomputed SHA-256 digest to `POST /api/v1/proofs`.
+3. Retain the returned `proof_id`, hash, timestamp, issuer, and ES256 attestation.
+4. Call `POST /api/v1/verify` with the proof identifier and optional original content.
+5. Treat a positive result as evidence of service attestation and content integrity only.
 
 Public base URL:
 
 ```text
-https://notary-protocol.notary-labs.workers.dev
+https://accordtrace.notary-labs.workers.dev
+```
+
+## Discovery
+
+- A2A Agent Card: `/.well-known/agent-card.json`
+- MCP Streamable HTTP: `POST /mcp`
+- OpenAPI 3.1: `/openapi.json`
+- Agent-readable summary: `/llms.txt`
+- Complete agent documentation: `/llms-full.txt`
+- Official MCP Registry: `io.github.Kosta1985/accord-trace`
+
+## Create proof
+
+```http
+POST /api/v1/proofs
+Content-Type: application/json
+
+{
+  "data": {
+    "event": "task.completed",
+    "artifact_hash": "sha256:client-artifact"
+  },
+  "metadata": {
+    "source": "agent-a",
+    "workflow": "handoff"
+  }
+}
+```
+
+Raw submitted data is hashed in memory and is not stored. Metadata is public and must not contain secrets.
+
+## Verify proof
+
+```http
+POST /api/v1/verify
+Content-Type: application/json
+
+{
+  "proof_id": "atp_REPLACE_WITH_ID",
+  "data": {
+    "event": "task.completed",
+    "artifact_hash": "sha256:client-artifact"
+  }
+}
 ```
 
 ## Evidence responsibilities
 
-The initiator signs the offer domain. The counterparty signs the acceptance domain, which includes the linked offer. Notary recomputes both payloads, verifies their Ed25519 signatures, and binds the complete submitted envelope with a SHA-256 digest.
+AccordTrace attests that a specific evidence hash was recorded by the service at a stated time and verifies its own ES256 attestation. It does not establish identity, authorship, truth, completeness, authorization, fairness, legality, delivery, payment, or commercial quality.
 
-Integrating agents remain responsible for key custody, party authorization, confidential transport, retention, and deciding what to do with a positive or negative receipt.
+Integrating agents remain responsible for authentication, authorization, confidential transport, key custody, retention, and deciding what to do with the verification result.
 
-## Discovery
+## Notary Protocol compatibility
 
-- Machine-readable capabilities: `/v1/capabilities`
-- OpenAPI: `/openapi.json`
-- Notary public key: `/v1/notary-key`
-- A2A compatibility card: `/.well-known/agent-card.json`
-- Agent-readable project summary: `/llms.txt`
-- Aggregate public activity: `/v1/stats`
-
-## Failure behavior
-
-Do not discard negative receipts. A negative receipt is signed evidence that the submitted envelope failed one or more named checks at a specific time. Inspect `violations` and the complete `checks` array.
+The repository also contains the Notary Protocol `DealEnvelope` and `NotaryReceipt` specifications. Those technical materials remain available for integrations that require signed bilateral offer and acceptance records.
