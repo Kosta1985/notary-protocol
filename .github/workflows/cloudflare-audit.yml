@@ -51,8 +51,13 @@ jobs:
           set -euo pipefail
           token="$(cat /tmp/token.txt)"
           api="https://api.cloudflare.com/client/v4"
-          accounts="$(curl --fail --silent --show-error -H "Authorization: Bearer $token" "$api/accounts")"
-          printf '%s' "$accounts" | jq -e '.success == true' >/dev/null
+          verify="$(curl --silent --show-error -H "Authorization: Bearer $token" "$api/user/tokens/verify")"
+          printf '%s' "$verify" | jq '{success, status: .result.status, errors: [.errors[]? | {code, message}]}'
+          accounts="$(curl --silent --show-error -H "Authorization: Bearer $token" "$api/accounts")"
+          printf '%s' "$accounts" | jq '{success, accounts: [.result[]? | {id, name}], errors: [.errors[]? | {code, message}]}'
+          if [[ "$(printf '%s' "$accounts" | jq -r '.success')" != "true" ]]; then
+            exit 2
+          fi
           printf '%s' "$accounts" | jq -r '.result[] | "account: \(.name) [\(.id)]"'
           while IFS=$'\t' read -r account_id account_name; do
             echo "## Account: $account_name" >> "$GITHUB_STEP_SUMMARY"
