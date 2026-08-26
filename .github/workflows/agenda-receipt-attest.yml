@@ -1,0 +1,42 @@
+name: One-time corrected Agenda receipt attestation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/agenda-receipt-attest.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  attest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attest corrected receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p agenda-attestation
+          jq -c '{
+            data: .,
+            metadata: {
+              synthetic: true,
+              client: "accordtrace-agenda-pilot",
+              evidence_type: "external_a2a_receipt",
+              partnership_acceptance: false,
+              corrected_receipt: true
+            }
+          }' partners/receipts/agenda-20260826-01.json > agenda-attestation/request.json
+          status="$(curl --silent --show-error             --output agenda-attestation/proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-attestation/request.json             'https://accordtrace.notary-labs.workers.dev/api/v1/proofs')"
+          test "$status" = "201"
+          jq -e '.proof_id | startswith("atp_")' agenda-attestation/proof.json >/dev/null
+          jq . agenda-attestation/proof.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agenda-corrected-receipt-proof
+          path: agenda-attestation/proof.json
+          if-no-files-found: error
+          retention-days: 30
