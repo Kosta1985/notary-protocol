@@ -1,19 +1,40 @@
 {
-  "name": "Notary Protocol",
-  "description": "Verifies cryptographic evidence for AI-agent transactions.",
-  "url": "http://127.0.0.1:8787/a2a",
-  "protocolVersion": "0.3",
+  "name": "Accord Trace",
+  "description": "Tamper-evident cryptographic receipts for AI-agent actions, artifacts, approvals and workflow handoffs. Create, hand off, verify.",
+  "url": "https://accordtrace.notary-labs.workers.dev/a2a",
+  "protocolVersion": "1.0",
   "preferredTransport": "JSONRPC",
-  "version": "0.1.0",
-  "capabilities": { "streaming": false, "pushNotifications": false },
-  "defaultInputModes": ["application/json"],
-  "defaultOutputModes": ["application/json"],
+  "version": "0.2.1",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false
+  },
+  "defaultInputModes": ["application/json", "text/plain"],
+  "defaultOutputModes": ["application/json", "text/plain"],
   "skills": [
     {
-      "id": "verify-deal-envelope",
-      "name": "Verify DealEnvelope",
-      "description": "Checks evidence structure and Ed25519 signatures and returns a signed receipt.",
-      "tags": ["verification", "evidence", "signatures"]
+      "id": "notarize_evidence",
+      "name": "Create cryptographic receipt",
+      "description": "Create a tamper-evident timestamped cryptographic receipt before handing an artifact, approval, action result or workflow checkpoint to another AI agent. The receipt attests submitted evidence integrity and service-recorded time; it does not prove truth, identity, authorship, authority or legality.",
+      "tags": ["agent-evidence", "cryptographic-receipt", "agent-handoff", "workflow-checkpoint", "artifact-integrity", "provenance", "attestation", "sha-256"]
+    },
+    {
+      "id": "verify_proof",
+      "name": "Verify Accord Trace receipt",
+      "description": "Verify an Accord Trace receipt received from another AI agent and optionally confirm that supplied content or a SHA-256 digest matches the evidence recorded by the service.",
+      "tags": ["verification", "artifact-integrity", "agent-handoff", "audit-trail", "tamper-evident"]
+    },
+    {
+      "id": "get_proof",
+      "name": "Retrieve proof metadata",
+      "description": "Retrieve public metadata and machine-readable verification information for an Accord Trace proof identifier.",
+      "tags": ["proof", "receipt", "provenance", "verification"]
+    },
+    {
+      "id": "hash_content",
+      "name": "Hash evidence content",
+      "description": "Generate or use a canonical SHA-256 digest suitable for privacy-preserving evidence registration when raw private content should not be submitted.",
+      "tags": ["sha-256", "privacy", "artifact-integrity", "evidence"]
     }
   ]
 }
