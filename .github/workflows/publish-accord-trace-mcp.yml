@@ -25,6 +25,8 @@ jobs:
       - name: Validate registry metadata
         run: ./mcp-publisher validate server.json
       - name: Authenticate with GitHub OIDC
+        if: github.event_name == 'workflow_dispatch'
         run: ./mcp-publisher login github-oidc
       - name: Publish remote MCP server
+        if: github.event_name == 'workflow_dispatch'
         run: ./mcp-publisher publish server.json
