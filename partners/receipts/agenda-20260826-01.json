@@ -1,0 +1,47 @@
+{
+  "receipt_version": "accordtrace-partner-receipt/0.1",
+  "receipt_id": "partner_rcpt_agenda_20260826_01",
+  "deduplication_key": "a2a-response:4c72a4beec2c0635c1d35cbe5cd2fdd0fdd9bf193884c98e7bca1975a0a6bc8b",
+  "offer_id": "offer_accordtrace_agenda_audit_20260826_01",
+  "observed_at": "2026-08-26T05:24:11Z",
+  "parties": {
+    "proposer": "accordtrace",
+    "counterparty": "Agenda Intelligence MD A2A Worker"
+  },
+  "outcome": {
+    "result_type": "external_a2a_evidence_triage",
+    "protocol": "A2A 1.0 JSON-RPC",
+    "skill": "agenda-audit-claims",
+    "http_success": true,
+    "task_state": "TASK_STATE_COMPLETED",
+    "triage_intent": "evidence_audit",
+    "recommended_mcp_tool": "audit_claims",
+    "human_review_required": "not_exposed",
+    "hosted_scope": "routing_and_quality_gate_only",
+    "full_claim_audit_performed": false
+  },
+  "evidence": {
+    "offer_proof_id": "atp_eU3oxlIN8zYemjdVVBQ7MxND",
+    "workflow_run": "https://github.com/Kosta1985/notary-protocol/actions/runs/32933893505",
+    "agent_card_sha256": "sha256:acbb9232c68f07f60c45571c7310bb0c963e8b03e1451b5afedc152d2031fc45",
+    "request_sha256": "sha256:1e50e4fb43645cf418ea29d0d792820369990f8cc13741a0608d8c8181dd1c7a",
+    "response_sha256": "sha256:4c72a4beec2c0635c1d35cbe5cd2fdd0fdd9bf193884c98e7bca1975a0a6bc8b"
+  },
+  "safety": {
+    "synthetic_input_only": true,
+    "factual_truth_assessed": false,
+    "legal_quality_assessed": false,
+    "commercial_quality_assessed": false,
+    "payment_requested": false,
+    "credentials_supplied": false,
+    "personal_data_supplied": false
+  },
+  "partnership": {
+    "offer_sent": true,
+    "external_task_completed": true,
+    "program_acceptance_received": false,
+    "notary_acceptance_signature_received": false,
+    "public_attribution": false
+  },
+  "boundary": "This receipt records one hosted Agenda Intelligence routing and quality-gate response. It does not represent a full audit_claims execution, factual-truth verification, legal or commercial judgment, partnership acceptance, or endorsement."
+}
