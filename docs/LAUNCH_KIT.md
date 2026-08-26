@@ -1,77 +1,105 @@
-# AccordTrace launch kit
+# AccordTrace campaign kit
+
+Campaign: 15-minute agent handoff interoperability challenge.
+
+Canonical CTA: https://github.com/Kosta1985/notary-protocol/issues/7
 
 Service: https://accordtrace.notary-labs.workers.dev
-
-Source and open protocol: https://github.com/Kosta1985/notary-protocol
 
 Status: public beta.
 
-## One sentence
+## Positioning
 
-AccordTrace gives AI agents a public API for creating and verifying tamper-evident proof records, with MCP, A2A, REST and OpenAPI discovery.
+AccordTrace lets one AI agent create tamper-evident evidence for an action or artifact and lets a different agent verify the exact handoff later through REST, MCP, or A2A.
+
+It attests evidence integrity and service-recorded time. It does not establish truth, identity, authorship, authorization, legality, fairness, delivery, payment, or commercial quality.
+
+## Proof before promotion
+
+Before publishing a channel post, verify:
+
+- CI is green on the linked examples;
+- production REST, MCP, and A2A discovery endpoints are reachable;
+- Official MCP Registry still resolves `io.github.Kosta1985/accord-trace`;
+- the challenge issue is open;
+- no claim implies partnership, endorsement, legal notarization, identity verification, or independent truth verification.
 
 ## Short launch post
 
-AI agents need portable evidence of what they exchanged, not another system that decides whether a deal was good.
+Can Agent B verify the exact handoff evidence created by Agent A without trusting Agent A's storage or vendor?
 
-AccordTrace lets an agent record content, receive a stable proof identifier, and later verify that the content still matches the evidence. It is available now through REST, MCP and A2A, with no sales contact or manual onboarding.
+AccordTrace has a 15-minute interoperability challenge for REST, MCP, A2A, OpenAI remote MCP, and Claude's MCP connector. Create a proof in one client, pass the proof ID and synthetic evidence to another, then report whether `valid` and `hash_match` survive the boundary.
 
-AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, legality, fairness, delivery or payment.
+Successes and concrete incompatibilities are both useful. No account, payment, private data, or production access is required.
 
-Try it: https://accordtrace.notary-labs.workers.dev
-Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
-MCP: https://accordtrace.notary-labs.workers.dev/mcp
-OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
-Source: https://github.com/Kosta1985/notary-protocol
+Run it: https://github.com/Kosta1985/notary-protocol/issues/7
 
 ## LinkedIn
 
-AccordTrace is now available as a public beta for AI agents that need tamper-evident transaction records.
+We are testing one narrow infrastructure question:
 
-Agents can create a proof, receive a stable identifier, and verify the content later through REST, MCP or A2A. The service is built on the open Notary Protocol and is available without manual onboarding.
+Can one AI agent create evidence for a handoff and a different agent verify the exact data later without trusting the first agent's storage or vendor?
 
-The boundary is deliberate: AccordTrace verifies integrity and service-recorded time. It does not decide whether a claim is true or a transaction is legally or commercially good.
+The AccordTrace interoperability challenge takes about 15 minutes. It includes runnable REST, MCP, A2A, OpenAI remote MCP, and Claude MCP connector examples.
 
-Service: https://accordtrace.notary-labs.workers.dev
-Source: https://github.com/Kosta1985/notary-protocol
+A useful result can be a success or a concrete incompatibility. Use synthetic public data only; no account, payment, credentials, or production access is needed.
 
-#AIAgents #MCP #OpenSource #AgentInfrastructure
+AccordTrace verifies evidence integrity and service-recorded time. It does not decide whether the underlying claim is true, authorized, legal, or commercially good.
+
+Challenge: https://github.com/Kosta1985/notary-protocol/issues/7
+
+#AIAgents #MCP #A2A #OpenSource
 
 ## X
 
-AccordTrace public beta is live: tamper-evident proof records for AI agents through REST, MCP and A2A.
+Can Agent B verify the exact handoff evidence created by Agent A?
 
-Create proof -> receive ID -> verify later.
+Try the 15-minute AccordTrace challenge: REST, MCP, A2A, OpenAI remote MCP, or Claude MCP. Successes and incompatibilities welcome.
 
-Service: https://accordtrace.notary-labs.workers.dev
-Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
-Code: https://github.com/Kosta1985/notary-protocol
+https://github.com/Kosta1985/notary-protocol/issues/7
 
 ## Reddit and developer communities
 
-Title: AccordTrace: an open evidence service for AI-agent transactions
+Title: Can two different AI-agent clients verify the same handoff evidence?
 
 Body:
 
-I am building AccordTrace, a public service for creating and verifying tamper-evident records between AI agents. It exposes REST, MCP and A2A interfaces and is backed by the open Notary Protocol.
+I am testing a narrow interoperability problem with AccordTrace: Agent A creates tamper-evident evidence for a synthetic handoff, then Agent B verifies the exact data through a different client or protocol.
 
-The service verifies content integrity and service-recorded time. It deliberately does not claim to prove identity, truth, legality, delivery or payment.
+The challenge includes dependency-free REST, MCP, and A2A examples, plus OpenAI remote MCP and Claude MCP connector examples. It should take about 15 minutes.
 
-The public interface requires no manual onboarding:
-https://accordtrace.notary-labs.workers.dev
+I am looking for reproducible results, including failures caused by protocol negotiation, tool discovery, payload shape, or client behavior. No signup, payment, credentials, private data, or production side effects are required.
 
-Technical feedback on the proof format, agent discovery and integration ergonomics is welcome:
-https://github.com/Kosta1985/notary-protocol
+AccordTrace attests evidence integrity and service-recorded time. It does not prove truth, identity, authorization, legality, delivery, or commercial quality.
+
+Challenge and result template:
+https://github.com/Kosta1985/notary-protocol/issues/7
+
+## Direct outreach
+
+Use only when a project exposes a public integration or feedback channel and AccordTrace is relevant to a real A2A/MCP handoff.
+
+Subject: Cross-client handoff verification test for <project>
+
+Message:
+
+I found <specific public interface or workflow> in <project>. AccordTrace is running a no-cost 15-minute interoperability test: one client creates evidence for a synthetic handoff and a different client verifies it through REST, MCP, or A2A.
+
+Would a bounded read-only test against <specific interface> be useful? I would use synthetic data, make no payment or state-changing call, and publish attribution only with explicit permission.
+
+Challenge: https://github.com/Kosta1985/notary-protocol/issues/7
+
+Do not send a generic version of this message. Name the exact interface and why cross-client evidence is relevant.
 
 ## Product Hunt
 
 Name: `AccordTrace`
 
-Tagline: `Tamper-evident proof records for AI agents`
+Tagline: `Tamper-evident handoff evidence for AI agents`
 
 Description:
 
-`A public agent-first service for creating and verifying tamper-evident records through REST, MCP and A2A, built on the open Notary Protocol.`
+`Create evidence in one AI-agent client and verify the exact handoff later through REST, MCP, or A2A. Built on the open Notary Protocol.`
 
 Website: https://accordtrace.notary-labs.workers.dev
 
@@ -79,28 +107,33 @@ GitHub: https://github.com/Kosta1985/notary-protocol
 
 ## Hacker News
 
-Hacker News requires the maker to write the submission text personally. Use the service URL and explain, in your own words:
+The maker must write the submission personally. Use the service URL and explain:
 
-- why portable evidence between agents matters;
-- how an agent creates a proof and verifies it later;
-- the REST, MCP and A2A interfaces;
-- the narrow boundary: integrity evidence, not legal or commercial judgment;
-- what technical feedback you want.
+- the concrete Agent A to Agent B failure mode;
+- what the proof ID binds;
+- how verification works across REST, MCP, and A2A;
+- the limits of the attestation;
+- what interoperability feedback is requested.
 
 Do not request votes or coordinate comments.
 
-## Promotion status
+## Publication status
 
-- GitHub: repository and public launch discussion are live.
-- MCP Registry: automatic publication is configured from `server.json`.
-- A2A: public Agent Card is live.
-- AI discovery: `llms.txt` and OpenAPI are published.
-- LinkedIn, X, Reddit and Product Hunt: publication requires an account controlled by the maintainer.
-- Hacker News: the submission must be written personally by the maker.
+- GitHub challenge: published.
+- GitHub README CTA: published.
+- Official MCP Registry: published as `io.github.Kosta1985/accord-trace`.
+- Global A2A Registry: published, unclaimed.
+- LinkedIn, X, Reddit, Product Hunt, and Hacker News: maintainer-controlled accounts required.
+- Moltbook: posting remains blocked until the owner claim is completed.
 
-## Community policy
+## Measurement
 
-- Prefer useful technical context over repetitive promotion.
-- Clearly describe the product as a public beta.
-- Do not claim legal validity, identity verification, immutability or production certification.
-- Do not coordinate votes or post duplicate messages across unrelated communities.
+For this campaign, count:
+
+1. external challenge responses;
+2. distinct public clients or agents tested;
+3. proofs created by one declared client and verified by another;
+4. actionable incompatibilities;
+5. repeat tests from the same integration.
+
+Do not treat impressions, page views, CI runs, self-tests, registry listings, or unaccepted outreach as customer adoption.
