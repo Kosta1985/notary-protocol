@@ -1,0 +1,153 @@
+name: One-time Agenda Intelligence A2A triage pilot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/agenda-triage-pilot.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run bounded external A2A pilot
+        shell: bash
+        env:
+          ACCORDTRACE_BASE: https://accordtrace.notary-labs.workers.dev
+          AGENDA_BASE: https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev
+        run: |
+          set -euo pipefail
+          mkdir -p agenda-pilot
+
+          card_status="$(curl --silent --show-error --location             --output agenda-pilot/agent-card.json             --write-out '%{http_code}'             "$AGENDA_BASE/.well-known/agent-card.json")"
+          test "$card_status" = "200"
+          jq -e '
+            (.name | type == "string" and length > 0) and
+            (.skills | type == "array" and length > 0)
+          ' agenda-pilot/agent-card.json >/dev/null
+
+          jq -c '{
+            data: .,
+            metadata: {
+              synthetic: true,
+              client: "accordtrace-agenda-pilot",
+              evidence_type: "partner_offer",
+              partnership_acceptance: false
+            }
+          }' partners/offers/agenda-claims-audit.json > agenda-pilot/offer-proof-request.json
+          offer_status="$(curl --silent --show-error             --output agenda-pilot/offer-proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-pilot/offer-proof-request.json             "$ACCORDTRACE_BASE/api/v1/proofs")"
+          test "$offer_status" = "201"
+          jq -e '.proof_id | startswith("atp_")' agenda-pilot/offer-proof.json >/dev/null
+
+          jq -n '{
+            jsonrpc: "2.0",
+            id: "accordtrace-agenda-audit-20260826-01",
+            method: "SendMessage",
+            params: {
+              message: {
+                messageId: "accordtrace-agenda-audit-20260826-01",
+                role: "ROLE_USER",
+                parts: [{
+                  text: "Audit this synthetic claim/evidence handoff for linkage and provenance only. Claim c1: AccordTrace records a SHA-256 digest for a submitted payload. Evidence e1: a synthetic receipt declares the same digest. Claim c1 references e1 and declares support level direct. Claim c2: the transaction was legally approved. Claim c2 references no evidence and must remain unsupported. Return the lightweight quality-gate routing, evidence gaps, recommended MCP tool, and required human-review next actions. Do not assess factual truth, legality, identity, payment, authorization, or commercial quality."
+                }]
+              }
+            }
+          }' > agenda-pilot/request.json
+
+          response_status="$(curl --silent --show-error             --output agenda-pilot/response.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --header 'A2A-Version: 1.0'             --data-binary @agenda-pilot/request.json             "$AGENDA_BASE/message/send")"
+          printf '%s\n' "$response_status" > agenda-pilot/response-http-status.txt
+          if [[ "$response_status" -lt 200 || "$response_status" -ge 300 ]]; then
+            jq . agenda-pilot/response.json || true
+            exit 1
+          fi
+          jq -e '.error == null and .result != null' agenda-pilot/response.json >/dev/null
+
+          state="$(jq -r '.result.status.state // .result.task.status.state // "not_exposed"' agenda-pilot/response.json)"
+          intent="$(jq -r '.result.metadata.triage.intent // .result.task.metadata.triage.intent // "not_exposed"' agenda-pilot/response.json)"
+          recommended="$(jq -r '.result.metadata.triage.signal_screen.recommended_mcp_tool // .result.metadata.triage.recommended_mcp_tool // .result.task.metadata.triage.signal_screen.recommended_mcp_tool // "not_exposed"' agenda-pilot/response.json)"
+          human_review="$(jq -r '.result.metadata.human_review_required // .result.metadata.triage.human_review_required // .result.task.metadata.human_review_required // "not_exposed"' agenda-pilot/response.json)"
+          observed_at="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          run_url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          card_hash="sha256:$(sha256sum agenda-pilot/agent-card.json | cut -d' ' -f1)"
+          request_hash="sha256:$(sha256sum agenda-pilot/request.json | cut -d' ' -f1)"
+          response_hash="sha256:$(sha256sum agenda-pilot/response.json | cut -d' ' -f1)"
+          offer_proof_id="$(jq -r '.proof_id' agenda-pilot/offer-proof.json)"
+
+          jq -n             --arg observed_at "$observed_at"             --arg state "$state"             --arg intent "$intent"             --arg recommended "$recommended"             --arg human_review "$human_review"             --arg offer_proof_id "$offer_proof_id"             --arg run_url "$run_url"             --arg card_hash "$card_hash"             --arg request_hash "$request_hash"             --arg response_hash "$response_hash"             '{
+              receipt_version: "accordtrace-partner-receipt/0.1",
+              receipt_id: "partner_rcpt_agenda_20260826_01",
+              deduplication_key: ("a2a-response:" + ($response_hash | sub("^sha256:"; ""))),
+              offer_id: "offer_accordtrace_agenda_audit_20260826_01",
+              observed_at: $observed_at,
+              parties: {
+                proposer: "accordtrace",
+                counterparty: "Agenda Intelligence MD A2A Worker"
+              },
+              outcome: {
+                result_type: "external_a2a_evidence_triage",
+                protocol: "A2A 1.0 JSON-RPC",
+                skill: "agenda-audit-claims",
+                http_success: true,
+                task_state: $state,
+                triage_intent: $intent,
+                recommended_mcp_tool: $recommended,
+                human_review_required: $human_review,
+                hosted_scope: "routing_and_quality_gate_only",
+                full_claim_audit_performed: false
+              },
+              evidence: {
+                offer_proof_id: $offer_proof_id,
+                workflow_run: $run_url,
+                agent_card_sha256: $card_hash,
+                request_sha256: $request_hash,
+                response_sha256: $response_hash
+              },
+              safety: {
+                synthetic_input_only: true,
+                factual_truth_assessed: false,
+                legal_quality_assessed: false,
+                commercial_quality_assessed: false,
+                payment_requested: false,
+                credentials_supplied: false,
+                personal_data_supplied: false
+              },
+              partnership: {
+                offer_sent: true,
+                external_task_completed: ($state == "TASK_STATE_COMPLETED"),
+                program_acceptance_received: false,
+                notary_acceptance_signature_received: false,
+                public_attribution: false
+              },
+              boundary: "This receipt records one hosted Agenda Intelligence routing and quality-gate response. It does not represent a full audit_claims execution, factual-truth verification, legal or commercial judgment, partnership acceptance, or endorsement."
+            }' > agenda-pilot/receipt.json
+
+          jq -c '{
+            data: .,
+            metadata: {
+              synthetic: true,
+              client: "accordtrace-agenda-pilot",
+              evidence_type: "external_a2a_receipt",
+              partnership_acceptance: false
+            }
+          }' agenda-pilot/receipt.json > agenda-pilot/receipt-proof-request.json
+          receipt_status="$(curl --silent --show-error             --output agenda-pilot/receipt-proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-pilot/receipt-proof-request.json             "$ACCORDTRACE_BASE/api/v1/proofs")"
+          test "$receipt_status" = "201"
+          jq -e '.proof_id | startswith("atp_")' agenda-pilot/receipt-proof.json >/dev/null
+
+          jq . agenda-pilot/response.json
+          jq . agenda-pilot/receipt.json
+          jq . agenda-pilot/receipt-proof.json
+
+      - name: Upload immutable pilot evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: agenda-triage-pilot
+          path: agenda-pilot/
+          if-no-files-found: error
+          retention-days: 30
