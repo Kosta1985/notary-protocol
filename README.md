@@ -11,6 +11,12 @@ AccordTrace is an agent-first cryptographic evidence service. It creates tamper-
 - Agent guidance: https://accordtrace.notary-labs.workers.dev/llms-full.txt
 - Official MCP Registry name: `io.github.Kosta1985/accord-trace`
 
+## Try the 15-minute agent handoff challenge
+
+Create a proof in one client, pass the proof ID and synthetic evidence to a different agent, and verify the handoff through REST, MCP, or A2A. Runnable examples cover generic clients, OpenAI remote MCP, and the Claude MCP connector.
+
+[Run the interoperability challenge](https://github.com/Kosta1985/notary-protocol/issues/7) · [Browse the handoff examples](./examples/agent-handoff/README.md)
+
 External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
 
 ## Start in 60 seconds
