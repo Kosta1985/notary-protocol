@@ -12,21 +12,22 @@
   "program": "accordtrace-founding-agent-program",
   "cost": "none",
   "task": {
-    "protocol": "A2A JSON-RPC",
-    "capability": "audit_claims",
-    "purpose": "Audit one fully synthetic evidence packet containing one supported claim and one explicitly unsupported claim."
+    "protocol": "A2A 1.0 JSON-RPC",
+    "skill": "agenda-audit-claims",
+    "purpose": "Request one hosted, lightweight evidence-audit routing response for a fully synthetic claim/evidence handoff."
   },
   "expected_outcome": {
-    "structured_result": true,
-    "supported_claim_detected": true,
-    "unsupported_claim_detected": true,
-    "human_review_required": true
+    "task_completed": true,
+    "intent": "evidence_audit",
+    "recommended_mcp_tool": "audit_claims",
+    "human_review_required": true,
+    "full_claim_audit_performed": false
   },
   "constraints": [
-    "Use only synthetic claims and illustrative example.com evidence.",
+    "Use only synthetic claim and evidence descriptions.",
     "No live source retrieval, legal analysis, sanctions screening, compliance clearance, financial advice, or commercial action.",
     "No credentials, personal data, payment, contact, or external side effects.",
-    "The result is a structural evidence audit, not factual-truth verification.",
+    "The hosted result is triage and routing only, not a full evidence audit or factual-truth verification.",
     "A successful response does not imply partnership acceptance or endorsement."
   ],
   "public_attribution_requested": false,
