@@ -1,0 +1,250 @@
+{
+  "name": "Agenda Intelligence MD",
+  "description": "Live A2A wrapper for Agenda Intelligence MD, an evidence-discipline MCP layer for strategic-risk agents. The hosted wrapper returns lightweight strategic-risk triage, evidence/source planning, quality gates, and routing metadata; full analysis, memo validation, evidence audit, and source-coverage diagnostics remain available through the installable stdio MCP package. Outputs are evidence triage with mandatory human-review routing before any commercial action; not legal, compliance, sanctions, financial, or investment advice, and not an autonomous decision system.",
+  "provider": {
+    "organization": "Vassiliy Lakhonin",
+    "url": "https://vassiliylakhonin.github.io/"
+  },
+  "version": "1.6.0",
+  "documentationUrl": "https://github.com/vassiliylakhonin/agenda-intelligence-md/blob/main/MCP.md",
+  "supportedInterfaces": [
+    {
+      "url": "https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev/message/send",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "securityRequirements": [],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "extendedAgentCard": false,
+    "extensions": [
+      {
+        "uri": "https://vassiliylakhonin.github.io/a2a/extensions/agenda-intelligence/v1",
+        "description": "Wrapper scope, product contract, boundaries, support channel and provider identity for this agent. Descriptive only: reading it is never required to call the agent.",
+        "required": false,
+        "params": {
+          "support": {
+            "email": "vassiliy.lakhonin@gmail.com",
+            "documentationUrl": "https://github.com/vassiliylakhonin/agenda-intelligence-md/blob/main/MCP.md",
+            "hours_local": "Mon–Fri 09:00–18:00 Asia/Almaty (UTC+5)",
+            "timezone": "Asia/Almaty",
+            "response_sla": "Best-effort response within 2 business days. Solo maintainer (not a company); not a paid support channel."
+          },
+          "x_agenda_intelligence": {
+            "hosted_wrapper": true,
+            "wrapper_scope": "A2A/JSON-RPC discovery, lightweight triage, and routing response only",
+            "jsonrpc_endpoint": "https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev/message/send",
+            "protocol_version": "1.0",
+            "public_endpoint": true,
+            "optional_client_identifier_header": "X-Client-Id",
+            "ai_catalog": "https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev/.well-known/ai-catalog.json",
+            "repository": "https://github.com/vassiliylakhonin/agenda-intelligence-md",
+            "package": "https://pypi.org/project/agenda-intelligence-md/",
+            "mcp": {
+              "transport": "stdio",
+              "server_command": "agenda-intelligence-mcp",
+              "install": "pip install agenda-intelligence-md"
+            },
+            "boundaries": [
+              "No payments or wallet rails.",
+              "No autonomous live source retrieval.",
+              "No factual-truth verification.",
+              "No legal, financial, compliance, investment, or trading advice."
+            ]
+          },
+          "provider": {
+            "legalEntity": {
+              "type": "individual",
+              "name": "Vassiliy Lakhonin",
+              "url": "https://vassiliylakhonin.github.io/verification.json",
+              "sameAs": [
+                "https://github.com/vassiliylakhonin",
+                "https://pypi.org/project/agenda-intelligence-md/",
+                "https://glama.ai/mcp/servers/vassiliylakhonin/agenda-intelligence-md",
+                "https://agenstry.com/agents/agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "defaultInputModes": [
+    "application/json",
+    "text/plain",
+    "text/markdown"
+  ],
+  "defaultOutputModes": [
+    "application/json",
+    "text/markdown"
+  ],
+  "skills": [
+    {
+      "id": "agenda-signal-screen",
+      "name": "Sanctions and policy risk signal triage",
+      "description": "Returns a free live A2A signal screen for sanctions, policy, corridor, and regulatory-risk questions: risk signal, affected regions, required source categories, evidence gaps, watch-next indicators, and recommended MCP tool.",
+      "tags": [
+        "sanctions",
+        "policy-risk",
+        "regulatory-risk",
+        "geopolitical-signals",
+        "source-coverage",
+        "watch-next",
+        "free"
+      ],
+      "examples": [
+        "Screen sanctions and policy risk for Red Sea shipping disruption and Kazakhstan transit exposure.",
+        "Find evidence gaps and watch-next indicators for EU sanctions around a Central Asia corridor."
+      ],
+      "inputModes": [
+        "application/json",
+        "text/plain"
+      ],
+      "outputModes": [
+        "application/json",
+        "text/markdown"
+      ]
+    },
+    {
+      "id": "agenda-analyze",
+      "name": "Strategic-risk signal triage",
+      "description": "Returns lightweight A2A triage for geopolitical, policy, sanctions, trade, regulation, and market-risk questions: relevant modules, decision framing, unknowns, watch-next signals, and the MCP analyze path for full memo assembly.",
+      "tags": [
+        "strategic-risk",
+        "geopolitical-risk",
+        "policy-analysis",
+        "signal-triage",
+        "decision-intelligence",
+        "memo",
+        "mcp"
+      ],
+      "examples": [
+        "Analyze how Red Sea shipping disruption changes risk for a Central Asia logistics corridor.",
+        "Prepare a structured sanctions-risk memo with uncertainties and watch-next signals."
+      ],
+      "inputModes": [
+        "application/json",
+        "text/plain"
+      ],
+      "outputModes": [
+        "application/json",
+        "text/markdown"
+      ]
+    },
+    {
+      "id": "agenda-validate-memo",
+      "name": "Strategic-risk memo validation",
+      "description": "Routes callers to the packaged validate_memo MCP tool, which validates strategic-risk memos against the agenda-memo JSON schema and returns contract errors before analyst or agent handoff.",
+      "tags": [
+        "schema-validation",
+        "memo-validation",
+        "quality-gate",
+        "strategic-risk"
+      ],
+      "examples": [
+        "Validate this strategic-risk memo before it is sent to an analyst workflow."
+      ],
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "agenda-audit-claims",
+      "name": "Policy evidence quality gate",
+      "description": "Routes callers to the packaged audit_claims MCP tool for claim-level evidence structure, support-level distribution, orphan evidence references, unsupported claims, and provenance discipline.",
+      "tags": [
+        "evidence-audit",
+        "claim-support",
+        "provenance",
+        "quality-gate",
+        "strategic-risk"
+      ],
+      "examples": [
+        "Audit whether each claim in this memo is linked to evidence ids and labelled by support level."
+      ],
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "agenda-source-coverage",
+      "name": "Sanctions and regulatory source coverage",
+      "description": "Returns source-planning guidance and routes callers to the packaged source_coverage MCP tool for sanctions, trade, regulation, energy, conflict, cyber, ESG, and technology-AI evidence packs.",
+      "tags": [
+        "source-planning",
+        "evidence-coverage",
+        "sanctions",
+        "trade",
+        "regulation"
+      ],
+      "examples": [
+        "Check whether this sanctions evidence pack covers the required source categories."
+      ],
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "agenda-quote-verification",
+      "name": "Quote and excerpt presence check",
+      "description": "Routes callers to the packaged verify_quotes MCP tool, which checks whether cited quote fragments appear in caller-supplied source text without claiming live source discovery or factual-truth verification.",
+      "tags": [
+        "quote-checking",
+        "evidence-discipline",
+        "local-verification",
+        "provenance"
+      ],
+      "examples": [
+        "Confirm that each quoted excerpt appears in the provided source text."
+      ],
+      "inputModes": [
+        "application/json",
+        "text/plain"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "agenda-signals",
+      "name": "Geopolitical signal archive lookup",
+      "description": "Routes callers to the packaged list_signals and get_signal MCP tools for strategic-risk signal archive entries, watch-next monitoring, and policy-analysis context vendored from the Global Think Tank Analyst method snapshot.",
+      "tags": [
+        "signals",
+        "geopolitical-signals",
+        "strategic-intelligence",
+        "archive",
+        "watch-next",
+        "policy-analysis"
+      ],
+      "examples": [
+        "List available signal records relevant to a regional-risk workflow."
+      ],
+      "inputModes": [
+        "application/json",
+        "text/plain"
+      ],
+      "outputModes": [
+        "application/json",
+        "text/markdown"
+      ]
+    }
+  ],
+  "signatures": [
+    {
+      "protected": "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpPU0UiLCJqa3UiOiJodHRwczovL2FnZW5kYS1pbnRlbGxpZ2VuY2UtYTJhLnZhc3NpbGl5LWxha2hvbmluLndvcmtlcnMuZGV2Ly53ZWxsLWtub3duL2p3a3MuanNvbiIsImtpZCI6ImFnZW5kYS1pbnRlbGxpZ2VuY2UtbWQtMjAyNi0wNS0yNy0yNmYwZDAxNiJ9",
+      "signature": "-N2vCDdmJURnDu6-44sHJOE8KwbIzvwAQIOSjCE6wa6AfFYBMT2wwESmGjYzVoOAU2EtoeW416R8XmabwEnMnQ"
+    }
+  ]
+}
