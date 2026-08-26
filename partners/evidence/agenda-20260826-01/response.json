@@ -1,0 +1,213 @@
+{
+  "jsonrpc": "2.0",
+  "id": "accordtrace-agenda-audit-20260826-01",
+  "result": {
+    "task": {
+      "id": "31c7e9e2-e8a9-4420-b205-4074b63f39b8",
+      "status": {
+        "state": "TASK_STATE_COMPLETED",
+        "timestamp": "2026-08-26T05:24:11.659Z"
+      },
+      "artifacts": [
+        {
+          "artifactId": "agenda-intelligence-routing-note",
+          "name": "Agenda Intelligence routing note",
+          "parts": [
+            {
+              "text": "Agenda Intelligence MD live wrapper is responding.\nThis endpoint is a free, no-payment A2A/JSON-RPC wrapper for discovery, uptime, lightweight strategic-risk triage, and routing. Full product behavior is in the installable MCP server:\n```bash\npip install agenda-intelligence-md\nagenda-intelligence-mcp\n```\nDetected intent: evidence_audit\nSignal screen:\nRisk signal: Strategic-risk question requires source-backed triage before raising confidence.\nAffected regions:\n- Global/cross-border\nRequired source categories:\n- primary official source\n- independent context source\n- dated retrieval note\nEvidence gaps:\n- No caller-supplied primary official source evidence in this live A2A request.\n- No caller-supplied independent context source evidence in this live A2A request.\n- No caller-supplied dated retrieval note evidence in this live A2A request.\nWatch next:\n- new primary-source update that changes the triggering fact\n- contradictory official statement or implementation guidance\nRecommended MCP tool: audit_claims — runs in the installable stdio server (pip install agenda-intelligence-md). This host's /mcp endpoint serves: strategic_risk_triage.\nSuggested modules:\n- global-think-tank-analyst: reasoning_method\nEvidence/source plan:\n- primary official source for the triggering event or rule\n- independent secondary context that does not replace the primary source\n- dated retrieval notes so stale-risk can be reviewed later\nQuality gates:\n- Check source-category coverage before treating the evidence pack as complete.\n- Separate facts, assessments, assumptions, and unknowns.\n- Attach evidence ids to load-bearing claims.\n- Mark unsupported claims instead of smoothing them away.\n- State what would change the judgment.\nNext actions:\n- Run audit_claims with the memo and evidence pack.\n- Review unsupported_claims and orphan evidence references before publishing the analysis.\nBoundaries: no live retrieval, no factual-truth verification, no legal/financial/compliance advice.\n\nGates that take a structured request on this subject:\n- Kazakhstan / Middle Corridor Deal Risk Gate — use when a route/cargo/counterparties deal along the Middle Corridor needs a pre-signature evidence-completeness read. A2A: https://middle-corridor-deal-risk-gate-a2a.vassiliy-lakhonin.workers.dev\n- CIS Secondary-Sanctions Exposure — use when a CIS / Caucasus / Central Asia counterparty needs secondary-sanctions exposure triage for EU / UK / UAE / Singapore due diligence. A2A: https://cis-secondary-sanctions-a2a.vassiliy-lakhonin.workers.dev\n- Gulf Maritime Exposure Gate — use when a vessel/voyage through the Gulf, Strait of Hormuz, Bab-el-Mandeb, or Red Sea needs sanctions/chokepoint exposure triage. A2A: https://gulf-maritime-exposure-a2a.vassiliy-lakhonin.workers.dev\n- Kazakhstan Market-Entry Readiness Gate — use when a Kazakhstan market-entry file (distribution, import, EPC, energy, infrastructure, partner) needs a readiness gate. A2A: https://kazakhstan-market-entry-readiness-a2a.vassiliy-lakhonin.workers.dev\n\nPerson-led work:\nPerson-led review of a corridor, counterparty, or evidence pack, scoped and quoted before work starts.\nEmail a one-line description of the route, counterparty, or document and the next decision it feeds. Fit, scope, fee, and timing are confirmed before work starts.\nContact: vassiliy.lakhonin@gmail.com (Mon–Fri 09:00–18:00 Asia/Almaty (UTC+5)). Page for a person to read: https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev\n\nReceived prompt excerpt:\n\n> Audit this synthetic claim/evidence handoff for linkage and provenance only. Claim c1: AccordTrace records a SHA-256 digest for a submitted payload. Evidence e1: a synthetic receipt declares the same digest. Claim c1 references e1 and declares support level direct. Claim c2: the transaction was legally approved. Claim c2 references no evidence and must remain unsupported. Return the lightweight quality-gate routing, evidence gaps, recommended MCP tool, and required human-review next actions. Do ",
+              "mediaType": "text/markdown"
+            },
+            {
+              "data": {
+                "intent": "evidence_audit",
+                "modules": [
+                  {
+                    "module": "global-think-tank-analyst",
+                    "role": "reasoning_method"
+                  }
+                ],
+                "signal_screen": {
+                  "intent": "evidence_audit",
+                  "risk_signal": "Strategic-risk question requires source-backed triage before raising confidence.",
+                  "affected_regions": [
+                    "Global/cross-border"
+                  ],
+                  "source_categories_required": [
+                    "primary official source",
+                    "independent context source",
+                    "dated retrieval note"
+                  ],
+                  "evidence_gaps": [
+                    "No caller-supplied primary official source evidence in this live A2A request.",
+                    "No caller-supplied independent context source evidence in this live A2A request.",
+                    "No caller-supplied dated retrieval note evidence in this live A2A request."
+                  ],
+                  "watch_next": [
+                    "new primary-source update that changes the triggering fact",
+                    "contradictory official statement or implementation guidance"
+                  ],
+                  "recommended_mcp_tool": "audit_claims",
+                  "confidence": "triage_only_no_live_retrieval"
+                },
+                "deal_risk_gate": null,
+                "deal_risk_contract": null,
+                "source_plan": [
+                  "primary official source for the triggering event or rule",
+                  "independent secondary context that does not replace the primary source",
+                  "dated retrieval notes so stale-risk can be reviewed later"
+                ],
+                "quality_gates": [
+                  "Check source-category coverage before treating the evidence pack as complete.",
+                  "Separate facts, assessments, assumptions, and unknowns.",
+                  "Attach evidence ids to load-bearing claims.",
+                  "Mark unsupported claims instead of smoothing them away.",
+                  "State what would change the judgment."
+                ],
+                "next_actions": [
+                  "Run audit_claims with the memo and evidence pack.",
+                  "Review unsupported_claims and orphan evidence references before publishing the analysis."
+                ],
+                "install": {
+                  "package": "https://pypi.org/project/agenda-intelligence-md/",
+                  "command": "pip install agenda-intelligence-md",
+                  "mcp_server_command": "agenda-intelligence-mcp"
+                }
+              },
+              "mediaType": "application/json"
+            }
+          ]
+        }
+      ],
+      "metadata": {
+        "agent_card": "https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev/.well-known/agent-card.json",
+        "repository": "https://github.com/vassiliylakhonin/agenda-intelligence-md",
+        "package": "https://pypi.org/project/agenda-intelligence-md/",
+        "mcp_transport": "stdio",
+        "mcp_server_command": "agenda-intelligence-mcp",
+        "modules_used": [
+          {
+            "module": "global-think-tank-analyst",
+            "role": "reasoning_method"
+          }
+        ],
+        "triage": {
+          "intent": "evidence_audit",
+          "modules": [
+            {
+              "module": "global-think-tank-analyst",
+              "role": "reasoning_method"
+            }
+          ],
+          "signal_screen": {
+            "intent": "evidence_audit",
+            "risk_signal": "Strategic-risk question requires source-backed triage before raising confidence.",
+            "affected_regions": [
+              "Global/cross-border"
+            ],
+            "source_categories_required": [
+              "primary official source",
+              "independent context source",
+              "dated retrieval note"
+            ],
+            "evidence_gaps": [
+              "No caller-supplied primary official source evidence in this live A2A request.",
+              "No caller-supplied independent context source evidence in this live A2A request.",
+              "No caller-supplied dated retrieval note evidence in this live A2A request."
+            ],
+            "watch_next": [
+              "new primary-source update that changes the triggering fact",
+              "contradictory official statement or implementation guidance"
+            ],
+            "recommended_mcp_tool": "audit_claims",
+            "confidence": "triage_only_no_live_retrieval"
+          },
+          "deal_risk_gate": null,
+          "deal_risk_contract": null,
+          "source_plan": [
+            "primary official source for the triggering event or rule",
+            "independent secondary context that does not replace the primary source",
+            "dated retrieval notes so stale-risk can be reviewed later"
+          ],
+          "quality_gates": [
+            "Check source-category coverage before treating the evidence pack as complete.",
+            "Separate facts, assessments, assumptions, and unknowns.",
+            "Attach evidence ids to load-bearing claims.",
+            "Mark unsupported claims instead of smoothing them away.",
+            "State what would change the judgment."
+          ],
+          "next_actions": [
+            "Run audit_claims with the memo and evidence pack.",
+            "Review unsupported_claims and orphan evidence references before publishing the analysis."
+          ],
+          "install": {
+            "package": "https://pypi.org/project/agenda-intelligence-md/",
+            "command": "pip install agenda-intelligence-md",
+            "mcp_server_command": "agenda-intelligence-mcp"
+          }
+        },
+        "signal_screen": {
+          "intent": "evidence_audit",
+          "risk_signal": "Strategic-risk question requires source-backed triage before raising confidence.",
+          "affected_regions": [
+            "Global/cross-border"
+          ],
+          "source_categories_required": [
+            "primary official source",
+            "independent context source",
+            "dated retrieval note"
+          ],
+          "evidence_gaps": [
+            "No caller-supplied primary official source evidence in this live A2A request.",
+            "No caller-supplied independent context source evidence in this live A2A request.",
+            "No caller-supplied dated retrieval note evidence in this live A2A request."
+          ],
+          "watch_next": [
+            "new primary-source update that changes the triggering fact",
+            "contradictory official statement or implementation guidance"
+          ],
+          "recommended_mcp_tool": "audit_claims",
+          "confidence": "triage_only_no_live_retrieval"
+        },
+        "wrapper_scope": "discovery, lightweight triage, and routing response only",
+        "product_profile": "agenda",
+        "related_agents": [
+          {
+            "name": "Kazakhstan / Middle Corridor Deal Risk Gate",
+            "use_when": "a route/cargo/counterparties deal along the Middle Corridor needs a pre-signature evidence-completeness read",
+            "a2a": "https://middle-corridor-deal-risk-gate-a2a.vassiliy-lakhonin.workers.dev",
+            "profile": "middle_corridor_deal_risk"
+          },
+          {
+            "name": "CIS Secondary-Sanctions Exposure",
+            "use_when": "a CIS / Caucasus / Central Asia counterparty needs secondary-sanctions exposure triage for EU / UK / UAE / Singapore due diligence",
+            "a2a": "https://cis-secondary-sanctions-a2a.vassiliy-lakhonin.workers.dev",
+            "profile": "cis_secondary_sanctions"
+          },
+          {
+            "name": "Gulf Maritime Exposure Gate",
+            "use_when": "a vessel/voyage through the Gulf, Strait of Hormuz, Bab-el-Mandeb, or Red Sea needs sanctions/chokepoint exposure triage",
+            "a2a": "https://gulf-maritime-exposure-a2a.vassiliy-lakhonin.workers.dev",
+            "profile": "gulf_maritime_exposure"
+          },
+          {
+            "name": "Kazakhstan Market-Entry Readiness Gate",
+            "use_when": "a Kazakhstan market-entry file (distribution, import, EPC, energy, infrastructure, partner) needs a readiness gate",
+            "a2a": "https://kazakhstan-market-entry-readiness-a2a.vassiliy-lakhonin.workers.dev",
+            "profile": "kazakhstan_market_entry_readiness"
+          }
+        ],
+        "hosted_mcp_tools": [
+          "strategic_risk_triage"
+        ],
+        "engagement": {
+          "offer": "Person-led review of a corridor, counterparty, or evidence pack, scoped and quoted before work starts.",
+          "contact_email": "vassiliy.lakhonin@gmail.com",
+          "support_hours": "Mon–Fri 09:00–18:00 Asia/Almaty (UTC+5)",
+          "next_step": "Email a one-line description of the route, counterparty, or document and the next decision it feeds. Fit, scope, fee, and timing are confirmed before work starts.",
+          "human_page": "https://agenda-intelligence-a2a.vassiliy-lakhonin.workers.dev"
+        }
+      },
+      "contextId": "022d6ec9-2565-44a3-8ace-edd19b001ec3"
+    }
+  }
+}
