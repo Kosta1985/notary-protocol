@@ -1,0 +1,12 @@
+{
+  "name": "Accord Trace",
+  "description": "Cryptographic receipts for AI-agent actions, artifacts, approvals, and workflow handoffs.",
+  "version": "0.2.1",
+  "transport": "streamable-http",
+  "url": "https://accordtrace.notary-labs.workers.dev/mcp",
+  "registry": {
+    "server": "io.github.Kosta1985/accord-trace"
+  },
+  "documentation": "https://accordtrace.notary-labs.workers.dev/docs.html",
+  "agentCard": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+}
