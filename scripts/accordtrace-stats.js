@@ -12,6 +12,22 @@ async function readJson(url, fetcher) {
   };
 }
 
+function normalizeAgentMetrics(stats) {
+  const agents = stats?.agents ?? stats?.agentMetrics ?? null;
+  if (!agents) return null;
+  const active = agents.active ?? agents.identified ?? {};
+  return {
+    active24h: active.active24h ?? active.daily ?? null,
+    active7d: active.active7d ?? active.weekly ?? null,
+    active30d: active.active30d ?? active.monthly ?? null,
+    new7d: active.new7d ?? null,
+    returning7d: active.returning7d ?? null,
+    identifiedRequests: agents.requests?.identified ?? null,
+    anonymousRequests: agents.requests?.anonymous ?? null,
+    protocols: agents.protocols ?? null
+  };
+}
+
 export async function probeAccordTrace(fetcher = fetch) {
   const [homepage, agentCard, accordTraceStats, legacyStats] = await Promise.all([
     fetcher(`${accordTraceBase}/`, { headers: monitorHeaders }),
@@ -20,12 +36,16 @@ export async function probeAccordTrace(fetcher = fetch) {
     readJson(`${legacyBase}/v1/stats`, fetcher)
   ]);
   const homepageText = homepage.ok ? await homepage.text() : "";
+  const agentMetrics = normalizeAgentMetrics(accordTraceStats.body);
 
   return {
     generatedAt: new Date().toISOString(),
     attribution: {
-      supported: false,
-      note: "Current aggregate counters do not identify humans, bots, or third-party agents."
+      supported: Boolean(agentMetrics),
+      method: agentMetrics ? "pseudonymous client identifier; server stores one-way hash" : null,
+      note: agentMetrics
+        ? "Identified agent counts exclude anonymous requests; IP addresses are not used to manufacture unique-agent counts."
+        : "Current aggregate counters do not identify humans, bots, or third-party agents."
     },
     accordTrace: {
       service: accordTraceBase,
@@ -35,7 +55,8 @@ export async function probeAccordTrace(fetcher = fetch) {
       agentName: agentCard.body?.name ?? null,
       publicStatsStatus: accordTraceStats.status,
       publicStats: accordTraceStats.body,
-      verifiedProofCount: accordTraceStats.body?.totals?.verification_valid ?? null,
+      agentMetrics,
+      verifiedProofCount: accordTraceStats.body?.totals?.verification_valid ?? accordTraceStats.body?.totals?.proof_verified ?? null,
       note: accordTraceStats.status === 200
         ? null
         : "AccordTrace does not currently expose a public aggregate statistics endpoint."
