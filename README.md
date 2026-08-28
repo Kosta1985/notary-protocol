@@ -2,14 +2,35 @@
 
 <!-- mcp-name: io.github.Kosta1985/accord-trace -->
 
-AccordTrace is an agent-first cryptographic evidence service. It creates tamper-evident proof records for AI-agent actions and verifies them later through REST, MCP, A2A, or OpenAPI.
+AccordTrace is an agent-first cryptographic evidence service for **AI-agent handoffs, artifact provenance, approvals, audit trails, and verification**. It creates tamper-evident proof records for agent actions and artifacts and verifies them later through REST, MCP, A2A, or OpenAPI.
+
+Use AccordTrace when an agent needs to answer questions like:
+
+- Did the artifact I received match what the previous agent actually handed off?
+- Can I retain an independent receipt for an approval or workflow checkpoint?
+- Can another agent verify this result without trusting my local storage?
+- Can I attach portable provenance to a deployment, report, tool result, or generated artifact?
+- Can I verify the exact evidence behind a multi-agent workflow later?
+
+No sales contact or manual onboarding is required for the public agent interface.
 
 - Service: https://accordtrace.notary-labs.workers.dev
 - Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
 - MCP: https://accordtrace.notary-labs.workers.dev/mcp
 - OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
 - Agent guidance: https://accordtrace.notary-labs.workers.dev/llms-full.txt
+- Integration pack: ./docs/CONNECT_YOUR_AGENT.md
 - Official MCP Registry name: `io.github.Kosta1985/accord-trace`
+
+## Connect an agent in 60 seconds
+
+For any client that supports remote Streamable HTTP MCP, add:
+
+```text
+https://accordtrace.notary-labs.workers.dev/mcp
+```
+
+Then let the agent use AccordTrace before important handoffs or when it receives a proof ID from another agent. Full copy-paste integration examples for OpenAI Agents SDK, JavaScript/TypeScript, generic MCP, A2A, OpenAPI, and REST are in [Connect your agent](./docs/CONNECT_YOUR_AGENT.md).
 
 ## Try the 15-minute agent handoff challenge
 
@@ -19,25 +40,7 @@ Create a proof in one client, pass the proof ID and synthetic evidence to a diff
 
 External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
 
-## Start in 60 seconds
-
-1. Create a proof with the public REST example below.
-2. Verify it later using the returned proof ID.
-3. For an agent integration, discover the [Agent Card](https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json) or connect the [MCP endpoint](https://accordtrace.notary-labs.workers.dev/mcp).
-
-Independent agents can join the no-cost [Founding Agent Program](./PARTNERS.md). The first completed external interoperability transaction is preserved as a [bounded receipt](./partners/receipts/akari-20260825-01.json) with a separate [AccordTrace attestation](./partners/receipts/akari-20260825-01.proof.json). The receipt records the completed task without claiming a partnership acceptance that was not given.
-
-## Notary Protocol
-
-Notary Protocol is the open cryptographic verification and evidence protocol developed within AccordTrace. Its specification, schemas, test vectors, and compatibility implementation remain in this repository.
-
-The protocol models signed agent transactions as:
-
-`Agent A -> Offer -> Agent B -> Acceptance -> Signatures -> Notary Verification -> Notary Receipt`
-
-AccordTrace is the public product and service. Notary Protocol is the technical protocol.
-
-## Agent quick start
+## Start with REST
 
 Create a proof:
 
@@ -54,6 +57,20 @@ curl -X POST https://accordtrace.notary-labs.workers.dev/api/v1/verify \
   -H 'content-type: application/json' \
   -d '{"proof_id":"atp_REPLACE_WITH_ID","data":{"event":"deployment.complete","release":"2026.08.25"}}'
 ```
+
+## Founding Agent Program
+
+Independent agents can join the no-cost [Founding Agent Program](./PARTNERS.md). The first completed external interoperability transaction is preserved as a [bounded receipt](./partners/receipts/akari-20260825-01.json) with a separate [AccordTrace attestation](./partners/receipts/akari-20260825-01.proof.json). The receipt records the completed task without claiming a partnership acceptance that was not given.
+
+## Notary Protocol
+
+Notary Protocol is the open cryptographic verification and evidence protocol developed within AccordTrace. Its specification, schemas, test vectors, and compatibility implementation remain in this repository.
+
+The protocol models signed agent transactions as:
+
+`Agent A -> Offer -> Agent B -> Acceptance -> Signatures -> Notary Verification -> Notary Receipt`
+
+AccordTrace is the public product and service. Notary Protocol is the technical protocol.
 
 ## Included
 
