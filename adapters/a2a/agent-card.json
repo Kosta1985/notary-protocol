@@ -1,19 +1,26 @@
 {
   "name": "Accord Trace",
-  "display_name": "Accord Trace",
   "description": "Independent tamper-evident cryptographic evidence, receipt and verification infrastructure for AI-agent actions, artifacts, approvals and workflow handoffs.",
-  "url": "https://accordtrace.notary-labs.workers.dev/a2a",
-  "manifest_url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json",
-  "protocolVersion": "1.0",
-  "preferredTransport": "JSONRPC",
+  "supportedInterfaces": [
+    {
+      "url": "https://accordtrace.notary-labs.workers.dev/a2a",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0"
+    }
+  ],
+  "provider": {
+    "url": "https://accordtrace.notary-labs.workers.dev",
+    "organization": "Accord Trace"
+  },
   "version": "0.2.1",
-  "category": "Developer Tools",
-  "target_audience": "AI agents and agent developers",
+  "documentationUrl": "https://accordtrace.notary-labs.workers.dev/docs.html",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
     "extendedAgentCard": false
   },
+  "securitySchemes": {},
+  "securityRequirements": [],
   "defaultInputModes": ["application/json", "text/plain"],
   "defaultOutputModes": ["application/json", "text/plain"],
   "skills": [
@@ -21,42 +28,37 @@
       "id": "notarize_evidence",
       "name": "Create cryptographic proof",
       "description": "Create a tamper-evident timestamped Accord Trace attestation for an action, artifact, approval, API output or workflow checkpoint. The receipt attests submitted evidence integrity and service-recorded time; it does not prove truth, identity, authorship, authority or legality.",
-      "tags": ["cryptographic-evidence", "attestation", "agent-handoff", "artifact-integrity", "provenance", "sha-256", "audit-trail"]
+      "tags": ["cryptographic-evidence", "attestation", "agent-handoff", "artifact-integrity", "provenance", "sha-256", "audit-trail", "developer-tools"],
+      "examples": ["Create an integrity receipt for this deployment artifact before handing it to another agent."],
+      "inputModes": ["application/json", "text/plain"],
+      "outputModes": ["application/json"]
     },
     {
       "id": "verify_proof",
       "name": "Verify cryptographic proof",
       "description": "Verify an Accord Trace attestation and optionally confirm that supplied content or a SHA-256 digest matches the recorded evidence.",
-      "tags": ["verification", "cryptographic-evidence", "artifact-integrity", "agent-handoff", "tamper-evident"]
+      "tags": ["verification", "cryptographic-evidence", "artifact-integrity", "agent-handoff", "tamper-evident", "developer-tools"],
+      "examples": ["Verify this Accord Trace proof and compare it with the artifact I received."],
+      "inputModes": ["application/json", "text/plain"],
+      "outputModes": ["application/json"]
     },
     {
       "id": "get_proof",
       "name": "Retrieve proof metadata",
       "description": "Retrieve public non-secret proof metadata and machine-readable verification information by Accord Trace proof identifier.",
-      "tags": ["proof", "receipt", "provenance", "verification", "audit-trail"]
+      "tags": ["proof", "receipt", "provenance", "verification", "audit-trail", "developer-tools"],
+      "examples": ["Retrieve the verification metadata for this Accord Trace proof ID."],
+      "inputModes": ["application/json", "text/plain"],
+      "outputModes": ["application/json"]
     },
     {
       "id": "hash_content",
       "name": "Hash content",
       "description": "Generate a canonical SHA-256 digest suitable for privacy-preserving evidence registration without creating or storing a proof.",
-      "tags": ["sha-256", "privacy", "artifact-integrity", "cryptographic-evidence"]
+      "tags": ["sha-256", "privacy", "artifact-integrity", "cryptographic-evidence", "developer-tools"],
+      "examples": ["Generate a canonical SHA-256 digest for this JSON artifact."],
+      "inputModes": ["application/json", "text/plain"],
+      "outputModes": ["application/json"]
     }
-  ],
-  "extra": {
-    "supportedInterfaces": [
-      {
-        "url": "https://accordtrace.notary-labs.workers.dev/a2a",
-        "protocolBinding": "JSONRPC",
-        "protocolVersion": "2.0"
-      }
-    ],
-    "provider": {
-      "url": "https://accordtrace.notary-labs.workers.dev",
-      "organization": "Accord Trace"
-    },
-    "documentationUrl": "https://accordtrace.notary-labs.workers.dev/docs.html",
-    "statisticsUrl": "https://accordtrace.notary-labs.workers.dev/stats.html",
-    "securitySchemes": {},
-    "securityRequirements": []
-  }
+  ]
 }
