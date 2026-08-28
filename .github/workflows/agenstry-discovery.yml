@@ -1,0 +1,60 @@
+name: Accord Trace Agenstry discovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/agenstry-discovery.yml'
+      - 'adapters/a2a/agent-card.json'
+      - 'server.json'
+  schedule:
+    - cron: '17 */12 * * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accordtrace-agenstry-discovery
+  cancel-in-progress: true
+
+jobs:
+  validate-and-check-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Upsert Accord Trace through Agenstry public validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          payload='{"jsonrpc":"2.0","id":"accordtrace-index","method":"SendMessage","params":{"message":{"messageId":"accordtrace-index","role":"ROLE_USER","parts":[{"text":"validate: https://accordtrace.notary-labs.workers.dev"}]}}}'
+          response="$(curl --fail-with-body --silent --show-error \
+            --request POST 'https://agenstry.com/a2a' \
+            --header 'content-type: application/json' \
+            --header 'A2A-Version: 1.0' \
+            --data "$payload")"
+          printf '%s\n' "$response" | jq .
+          if printf '%s' "$response" | jq -e '.error' >/dev/null; then
+            echo 'Agenstry returned a JSON-RPC error.' >&2
+            exit 1
+          fi
+
+      - name: Check semantic discovery queries
+        shell: bash
+        run: |
+          set -euo pipefail
+          for query in \
+            'cryptographic proof verification for AI agents' \
+            'tamper evident agent handoff receipt' \
+            'verify AI agent artifact integrity'
+          do
+            echo "=== $query ==="
+            curl --fail-with-body --silent --show-error --get \
+              'https://agenstry.com/api/v1/skills/find_agent' \
+              --data-urlencode "query=$query" | jq .
+          done
+
+      - name: Discovery note
+        run: |
+          echo 'Agenstry validation mutates/upserts its public index by design.'
+          echo 'This workflow is intentionally low-frequency and does not send unsolicited messages.'
