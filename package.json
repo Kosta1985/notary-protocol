@@ -14,6 +14,8 @@
     "demo": "node scripts/create-demo.js",
     "vectors:generate": "node scripts/generate-test-vectors.js",
     "partners:validate": "node scripts/validate-partner-applications.mjs",
+    "accordtrace:metadata": "node scripts/check-accordtrace-metadata.mjs",
+    "accordtrace:live": "node scripts/accordtrace-live-contract.mjs",
     "cf:prepare": "node scripts/prepare-cloudflare-assets.js",
     "cf:dev": "npm run cf:prepare && npx wrangler@latest dev",
     "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy",
