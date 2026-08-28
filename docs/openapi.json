@@ -1,25 +1,24 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Notary Protocol API",
-    "version": "0.1.0",
-    "description": "Cryptographic evidence verification for AI-agent transactions. Verification does not evaluate commercial or legal quality."
+    "title": "Accord Trace API",
+    "version": "0.2.1",
+    "description": "Tamper-evident cryptographic evidence and verification infrastructure for AI agents. Accord Trace records integrity evidence and service timestamps; it does not establish truth, identity, authority, authorship, or legal validity."
   },
-  "servers": [{ "url": "http://127.0.0.1:8787" }],
+  "servers": [{ "url": "https://accordtrace.notary-labs.workers.dev" }],
   "paths": {
     "/health": {
       "get": { "operationId": "health", "responses": { "200": { "description": "Service is healthy" } } }
     },
     "/v1/capabilities": {
-      "get": { "operationId": "getCapabilities", "responses": { "200": { "description": "Machine-readable protocol versions, cryptography, limits and endpoints" } } }
+      "get": { "operationId": "getCapabilities", "responses": { "200": { "description": "Machine-readable capabilities, cryptography, limits and discovery endpoints" } } }
     },
     "/v1/verify": {
       "post": {
         "operationId": "verifyEnvelope",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "/schemas/deal-envelope-0.1.json" } } } },
         "responses": {
-          "200": { "description": "Evidence is valid", "content": { "application/json": { "schema": { "$ref": "/schemas/notary-receipt-0.1.json" } } } },
-          "422": { "description": "Evidence failed one or more verification checks", "content": { "application/json": { "schema": { "$ref": "/schemas/notary-receipt-0.1.json" } } } }
+          "200": { "description": "Evidence is valid" },
+          "422": { "description": "Evidence failed one or more verification checks" }
         }
       }
     },
@@ -33,24 +32,21 @@
     "/v1/receipts/verify": {
       "post": {
         "operationId": "verifyReceipt",
-        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "/schemas/notary-receipt-0.1.json" } } } },
-        "responses": { "200": { "description": "Receipt signature and trusted notary key are valid" }, "422": { "description": "Receipt verification failed" } }
+        "responses": { "200": { "description": "Receipt is valid" }, "422": { "description": "Receipt verification failed" } }
       }
     },
     "/v1/notary-key": {
-      "get": { "operationId": "getNotaryKey", "responses": { "200": { "description": "Notary Ed25519 public key" } } }
-    },
-    "/v1/demo": {
-      "get": { "operationId": "createDemoEnvelope", "responses": { "200": { "description": "Fresh signed demo envelope" } } }
+      "get": { "operationId": "getNotaryKey", "responses": { "200": { "description": "Accord Trace Ed25519 public key" } } }
     },
     "/v1/stats": {
-      "get": { "operationId": "getPublicStats", "responses": { "200": { "description": "Anonymous aggregate activity for the last 30 days" } } }
+      "get": { "operationId": "getPublicStats", "responses": { "200": { "description": "Anonymous aggregate Accord Trace activity for the last 30 days" } } }
     },
     "/.well-known/agent-card.json": {
       "get": { "operationId": "getA2AAgentCard", "responses": { "200": { "description": "A2A agent card" } } }
     },
     "/a2a": {
-      "post": { "operationId": "sendA2AMessage", "responses": { "200": { "description": "Completed A2A task containing a NotaryReceipt artifact" } } }
+      "get": { "operationId": "getA2AStatus", "responses": { "200": { "description": "JSON-RPC/A2A endpoint discovery status" } } },
+      "post": { "operationId": "sendA2AMessage", "responses": { "200": { "description": "JSON-RPC 2.0 A2A response" } } }
     }
   }
 }
