@@ -16,4 +16,6 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Verify Accord Trace metadata consistency
+        run: npm run accordtrace:metadata
       - run: python -m compileall -q sdk/python/notary_protocol
