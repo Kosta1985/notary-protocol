@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://notary-protocol.notary-labs.workers.dev/sitemap.xml
+Sitemap: https://accordtrace.notary-labs.workers.dev/sitemap.xml
