@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Accord Trace Statistics</title>
-  <meta name="description" content="Public aggregate usage statistics for Accord Trace cryptographic evidence infrastructure." />
+  <meta name="description" content="Public aggregate usage and active-agent statistics for Accord Trace cryptographic evidence infrastructure." />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -12,11 +12,18 @@
     <section class="hero">
       <p class="eyebrow">Accord Trace · v0.2.1</p>
       <h1>Public statistics</h1>
-      <p>Aggregate 30-day service activity. No user identifiers are displayed.</p>
+      <p>Live service activity and privacy-preserving agent adoption metrics.</p>
       <p><a href="/">Home</a> · <a href="/docs.html">Docs</a> · <a href="/verify.html">Verify proof</a></p>
     </section>
 
     <section class="panel">
+      <h2>Agent adoption</h2>
+      <p id="agent-stats-note">Agent metrics appear when clients provide an anonymous stable Accord Trace agent identifier. Anonymous traffic remains visible separately and is never guessed from IP addresses.</p>
+      <div id="agent-summary" class="stats-grid" hidden></div>
+    </section>
+
+    <section class="panel">
+      <h2>Service activity</h2>
       <div id="stats-status">Loading live statistics…</div>
       <div id="stats-summary" class="stats-grid" hidden></div>
     </section>
@@ -32,8 +39,8 @@
     </section>
 
     <section class="panel">
-      <h2>What these numbers mean</h2>
-      <p>Statistics are anonymous aggregate event counters recorded by the service. Monitoring and synthetic smoke-test traffic should be excluded from production counters.</p>
+      <h2>How counting works</h2>
+      <p>Service events are aggregate counters. Identified-agent metrics use a client-generated pseudonymous identifier; the service stores only a one-way hash for counting active and returning agents. IP addresses are not used to manufacture an agent count. Monitoring and synthetic smoke-test traffic are excluded where supported.</p>
     </section>
   </main>
   <script src="/stats.js" defer></script>
