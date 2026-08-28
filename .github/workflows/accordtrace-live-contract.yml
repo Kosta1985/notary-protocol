@@ -1,0 +1,29 @@
+name: Accord Trace live contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'adapters/a2a/agent-card.json'
+      - 'docs/openapi.json'
+      - 'web/stats.*'
+      - 'scripts/accordtrace-live-contract.mjs'
+      - '.github/workflows/accordtrace-live-contract.yml'
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify production Accord Trace contract
+        run: node scripts/accordtrace-live-contract.mjs
