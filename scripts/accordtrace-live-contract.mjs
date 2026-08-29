@@ -27,6 +27,17 @@ function interfaceDeclaresV1(card) {
     || card?.extra?.supportedInterfaces?.some((item) => item?.protocolVersion === '1.0');
 }
 
+function cardFingerprint(card) {
+  if (!card || typeof card !== 'object' || Array.isArray(card)) return null;
+  return JSON.stringify({
+    name: card.name ?? null,
+    version: card.version ?? null,
+    url: card.url ?? null,
+    protocolVersion: card.protocolVersion ?? null,
+    skills: Array.isArray(card.skills) ? card.skills.map((skill) => skill?.id ?? skill?.name ?? null) : []
+  });
+}
+
 async function main() {
   const failures = [];
   const observations = {};
@@ -47,6 +58,22 @@ async function main() {
     check(card.body?.version === EXPECTED_VERSION, `Agent card version drift: expected ${EXPECTED_VERSION}, got ${card.body?.version}`);
     check(interfaceDeclaresV1(card.body), 'A2A v1.0 is not declared in Agent Card');
     check(Array.isArray(card.body?.skills) && card.body.skills.length >= 4, `Expected at least four Accord Trace skills, got ${card.body?.skills?.length ?? 0}`);
+  }
+
+  // Some agent directories and older A2A clients still probe this legacy alias.
+  // Treat it as a compatibility signal so discovery regressions are visible immediately.
+  const legacyCard = await json('/.well-known/agent.json');
+  observations.legacyAgentCard = {
+    status: legacyCard.response?.status ?? null,
+    version: legacyCard.body?.version ?? null,
+    compatibleWithCanonical: legacyCard.response?.ok && card.response?.ok
+      ? cardFingerprint(legacyCard.body) === cardFingerprint(card.body)
+      : false
+  };
+  check(!legacyCard.error, `Legacy Agent Card request failed: ${legacyCard.error}`);
+  check(legacyCard.response?.ok, `Legacy Agent Card alias HTTP ${legacyCard.response?.status ?? 'unreachable'}`);
+  if (legacyCard.response?.ok && card.response?.ok) {
+    check(cardFingerprint(legacyCard.body) === cardFingerprint(card.body), 'Legacy Agent Card alias differs from canonical discovery metadata');
   }
 
   let stats = await json('/v1/stats');
