@@ -2,7 +2,9 @@
 
 <!-- mcp-name: io.github.Kosta1985/accord-trace -->
 
-AccordTrace is an agent-first cryptographic evidence service for **AI-agent handoffs, artifact provenance, approvals, audit trails, and verification**. It creates tamper-evident proof records for agent actions and artifacts and verifies them later through REST, MCP, A2A, or OpenAPI.
+**Cryptographic receipts for AI-agent actions and handoffs.**
+
+AccordTrace is open, agent-first evidence infrastructure for **AI-agent handoffs, artifact provenance, approvals, audit trails, and verification**. It creates tamper-evident proof records for agent actions and artifacts and lets another agent verify them later through REST, MCP, A2A, or OpenAPI.
 
 Use AccordTrace when an agent needs to answer questions like:
 
@@ -12,7 +14,7 @@ Use AccordTrace when an agent needs to answer questions like:
 - Can I attach portable provenance to a deployment, report, tool result, or generated artifact?
 - Can I verify the exact evidence behind a multi-agent workflow later?
 
-No sales contact or manual onboarding is required for the public agent interface.
+**Public beta: no account, card, sales call, or manual onboarding is required for synthetic interoperability tests.**
 
 - Service: https://accordtrace.notary-labs.workers.dev
 - Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
@@ -49,11 +51,15 @@ Create a proof in one client, pass the proof ID and synthetic evidence to a diff
 
 [Run the interoperability challenge](https://github.com/Kosta1985/notary-protocol/issues/7) · [Browse the handoff examples](./examples/agent-handoff/README.md)
 
-## Help distribute Accord Trace without paid ads
+## For agent framework and registry maintainers
 
-If you maintain an agent framework, MCP/A2A directory, agent template, workflow library, or developer community, use the [free distribution kit](./docs/AGENT_DISTRIBUTION_KIT.md). It contains short neutral descriptions, a portable agent prompt, framework integration language, machine entry points, and safety boundaries. No affiliate or paid placement is required.
+AccordTrace is intended to be callable infrastructure, not a closed dashboard. If you maintain an agent framework, MCP/A2A directory, agent template, workflow library, or developer community, you can point agents directly at the public endpoints above or use the [distribution kit](./docs/AGENT_DISTRIBUTION_KIT.md).
 
-External agents can create and verify tamper-evident records anonymously without sales contact or manual onboarding. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
+Suggested neutral description:
+
+> AccordTrace provides portable, tamper-evident receipts for AI-agent actions, artifacts, approvals, and workflow handoffs, with independent verification over MCP, A2A, REST, and OpenAPI.
+
+External agents can create and verify tamper-evident records anonymously for synthetic public-beta tests. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
 
 ## Start with REST
 
@@ -69,6 +75,6 @@ Then verify the returned proof ID with the exact same evidence through the verif
 
 ## Agent-facing discovery terms
 
-Accord Trace is designed for agent evidence, AI audit trails, MCP verification, A2A verification, multi-agent handoffs, cryptographic agent receipts, workflow provenance, autonomous-agent approvals, and tamper-evident AI logs.
+Accord Trace is designed for agent evidence, AI audit trails, MCP verification, A2A verification, multi-agent handoffs, cryptographic agent receipts, workflow provenance, autonomous-agent approvals, tamper-evident AI logs, agent accountability, and verifiable agent actions.
 
 See the repository documentation for protocol details, SDKs, threat boundaries, and deployment information.
