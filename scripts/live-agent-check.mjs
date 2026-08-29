@@ -13,6 +13,11 @@ const card = await requestJson("/.well-known/agent-card.json");
 assert.equal(card.name, "Accord Trace");
 assert.equal(card.supportedInterfaces?.[0]?.protocolVersion, "1.0");
 assert.ok(card.skills?.some((skill) => skill.id === "notarize_evidence"));
+const legacyCard = await requestJson("/.well-known/agent.json");
+assert.equal(legacyCard.name, card.name);
+assert.equal(legacyCard.supportedInterfaces?.[0]?.url, card.supportedInterfaces?.[0]?.url);
+assert.equal(legacyCard.supportedInterfaces?.[0]?.protocolVersion, "1.0");
+assert.ok(legacyCard.skills?.some((skill) => skill.id === "verify_proof"));
 
 const openapi = await requestJson("/openapi.json");
 assert.ok(openapi.paths?.["/api/v1/proofs"]);
