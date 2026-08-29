@@ -39,7 +39,55 @@
       "get": { "operationId": "getNotaryKey", "responses": { "200": { "description": "Accord Trace Ed25519 public key" } } }
     },
     "/v1/stats": {
-      "get": { "operationId": "getPublicStats", "responses": { "200": { "description": "Anonymous aggregate Accord Trace activity for the last 30 days" } } }
+      "get": { "operationId": "getLegacyPublicStats", "deprecated": true, "responses": { "200": { "description": "Legacy anonymous aggregate Accord Trace activity for the last 30 days" } } }
+    },
+    "/api/v1/stats": {
+      "get": {
+        "operationId": "getUsageStats",
+        "summary": "Get privacy-safe external usage statistics",
+        "description": "Returns a rolling 30-day aggregate of external Accord Trace API activity. Unique-agent figures count only explicit client/agent identifiers and store those identifiers only as SHA-256 hashes. Health checks, discovery probes and marked internal smoke tests are excluded. Historical activity before telemetry deployment is not fabricated.",
+        "responses": {
+          "200": {
+            "description": "External usage, protocol adoption and active-agent metrics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "windowDays": { "type": "integer", "example": 30 },
+                    "totals": { "type": "object", "additionalProperties": { "type": "integer" } },
+                    "agents": {
+                      "type": "object",
+                      "properties": {
+                        "active": {
+                          "type": "object",
+                          "properties": {
+                            "active24h": { "type": "integer" },
+                            "active7d": { "type": "integer" },
+                            "active30d": { "type": "integer" }
+                          }
+                        },
+                        "requests": {
+                          "type": "object",
+                          "properties": {
+                            "identified": { "type": "integer" },
+                            "anonymous": { "type": "integer" }
+                          }
+                        },
+                        "protocols": { "type": "object", "additionalProperties": { "type": "integer" } }
+                      }
+                    },
+                    "daily": { "type": "array", "items": { "type": "object" } },
+                    "privacy": { "type": "string" },
+                    "startedFrom": { "type": "string" }
+                  }
+                }
+              }
+            }
+          },
+          "503": { "description": "Usage statistics storage is not configured or temporarily unavailable" }
+        }
+      }
     },
     "/.well-known/agent-card.json": {
       "get": { "operationId": "getA2AAgentCard", "responses": { "200": { "description": "A2A agent card" } } }
