@@ -1,6 +1,6 @@
 import { fileURLToPath } from "node:url";
 
-const defaultBaseUrl = "https://notary-protocol.notary-labs.workers.dev";
+const defaultBaseUrl = "https://accordtrace.notary-labs.workers.dev";
 
 export async function runSmoke(baseUrl = defaultBaseUrl, fetcher = fetch) {
   const base = new URL(baseUrl);
@@ -27,7 +27,7 @@ export async function runSmoke(baseUrl = defaultBaseUrl, fetcher = fetch) {
     throw new Error(`GET /v1/capabilities returned HTTP ${capabilitiesResponse.status}`);
   }
   if (!capabilitiesAvailable) {
-    return { status: "ok", mode: "health-only", baseUrl: base.origin, protocolVersion: "0.1", capabilitiesAvailable };
+    return { status: "ok", mode: "health-only", baseUrl: base.origin, capabilitiesAvailable };
   }
 
   const envelope = await request("/v1/demo");
@@ -48,11 +48,11 @@ export async function runSmoke(baseUrl = defaultBaseUrl, fetcher = fetch) {
   const stored = await request(`/v1/receipts/${encodeURIComponent(receipt.id)}`);
   if (stored?.id !== receipt.id || stored?.evidenceDigest !== receipt.evidenceDigest) throw new Error("Stored receipt does not match");
 
-  return { status: "ok", mode: "full", baseUrl: base.origin, protocolVersion: "0.1", capabilitiesAvailable, receiptId: receipt.id, checks: receipt.checks?.length ?? 0 };
+  return { status: "ok", mode: "full", baseUrl: base.origin, capabilitiesAvailable, receiptId: receipt.id, checks: receipt.checks?.length ?? 0 };
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  runSmoke(process.argv[2] ?? process.env.NOTARY_BASE_URL ?? defaultBaseUrl)
+  runSmoke(process.argv[2] ?? process.env.ACCORDTRACE_BASE ?? process.env.NOTARY_BASE_URL ?? defaultBaseUrl)
     .then((result) => console.log(JSON.stringify(result, null, 2)))
     .catch((error) => { console.error(`Live smoke failed: ${error.message}`); process.exitCode = 1; });
 }
