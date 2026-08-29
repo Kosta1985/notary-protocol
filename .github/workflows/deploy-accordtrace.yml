@@ -22,28 +22,44 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_TOKEN_2: ${{ secrets.CLOUDFLARE_TOKEN }}
+      CF_TOKEN_3: ${{ secrets.CF_API_TOKEN }}
+      CF_TOKEN_4: ${{ secrets.CF_TOKEN }}
+      CF_ACCOUNT_1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CF_ACCOUNT_2: ${{ secrets.CF_ACCOUNT_ID }}
+      CF_ACCOUNT_3: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+      CF_ACCOUNT_4: ${{ vars.CF_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
 
-      - name: Check Cloudflare credentials
+      - name: Resolve existing Cloudflare credentials
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
-            echo "Missing repository secret CLOUDFLARE_API_TOKEN" >&2
+          token=""
+          for candidate in "${CF_TOKEN_1:-}" "${CF_TOKEN_2:-}" "${CF_TOKEN_3:-}" "${CF_TOKEN_4:-}"; do
+            if [[ -n "$candidate" ]]; then token="$candidate"; break; fi
+          done
+          if [[ -z "$token" ]]; then
+            echo "No usable Cloudflare token found under CLOUDFLARE_API_TOKEN, CLOUDFLARE_TOKEN, CF_API_TOKEN or CF_TOKEN." >&2
             exit 2
           fi
-          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
-            account_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts)"
+          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
+
+          account_id=""
+          for candidate in "${CF_ACCOUNT_1:-}" "${CF_ACCOUNT_2:-}" "${CF_ACCOUNT_3:-}" "${CF_ACCOUNT_4:-}"; do
+            if [[ -n "$candidate" ]]; then account_id="$candidate"; break; fi
+          done
+          if [[ -z "$account_id" ]]; then
+            account_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $token" https://api.cloudflare.com/client/v4/accounts)"
             account_id="$(printf '%s' "$account_json" | jq -r '.result[0].id // empty')"
-            test -n "$account_id"
-            echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
           fi
+          test -n "$account_id"
+          echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
 
       - name: Preserve live AccordTrace D1 binding
         shell: bash
