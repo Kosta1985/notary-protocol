@@ -24,6 +24,7 @@ No sales contact or manual onboarding is required for the public agent interface
 - Distribution kit: ./docs/AGENT_DISTRIBUTION_KIT.md
 - Integration recipes: ./docs/INTEGRATION_RECIPES.md
 - Reproducible agent eval: ./docs/AGENT_EVAL.md
+- Public registry status: ./docs/REGISTRY_STATUS.md
 - Official MCP Registry name: `io.github.Kosta1985/accord-trace`
 
 ## Connect an agent in 60 seconds
