@@ -1,0 +1,91 @@
+name: Deploy AccordTrace production
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "cloudflare/**"
+      - "scripts/prepare-cloudflare-assets.js"
+      - ".github/workflows/deploy-accordtrace.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: accordtrace-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check Cloudflare credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUDFLARE_API_TOKEN:-}" ]]; then
+            echo "Missing repository secret CLOUDFLARE_API_TOKEN" >&2
+            exit 2
+          fi
+          if [[ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            account_json="$(curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts)"
+            account_id="$(printf '%s' "$account_json" | jq -r '.result[0].id // empty')"
+            test -n "$account_id"
+            echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
+          fi
+
+      - name: Preserve live AccordTrace D1 binding
+        shell: bash
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4"
+          settings="$(curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/accordtrace/settings")"
+          db_id="$(printf '%s' "$settings" | jq -r '.result.bindings[]? | select(.type == "d1" and .name == "DB") | (.id // .database_id // empty)' | head -n1)"
+          if [[ -z "$db_id" ]]; then
+            databases="$(curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database?per_page=100")"
+            db_id="$(printf '%s' "$databases" | jq -r '.result[]? | select(.name == "accordtrace" or .name == "notary-protocol") | .uuid' | head -n1)"
+          fi
+          if [[ -z "$db_id" ]]; then
+            echo "Could not resolve the production D1 database; refusing to deploy." >&2
+            exit 3
+          fi
+          node - "$db_id" <<'NODE'
+          import fs from 'node:fs';
+          const dbId = process.argv[2];
+          const config = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
+          config.name = 'accordtrace';
+          config.d1_databases[0].database_id = dbId;
+          fs.writeFileSync('wrangler.production.json', JSON.stringify(config, null, 2));
+          NODE
+
+      - name: Test
+        run: npm test
+
+      - name: Prepare production assets
+        run: npm run cf:prepare
+
+      - name: Deploy live worker and assets
+        run: npx wrangler@latest deploy --config wrangler.production.json
+
+      - name: Verify new homepage
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' https://accordtrace.notary-labs.workers.dev/)"
+          printf '%s' "$body" | grep -q 'Infrastructure for accountable AI agents'
+          if printf '%s' "$body" | grep -q 'class="brand-mark"'; then
+            echo "Old brand mark is still present" >&2
+            exit 4
+          fi
+          curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/health
