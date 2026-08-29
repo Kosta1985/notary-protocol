@@ -18,18 +18,16 @@
     <title>AccordTrace · Portable evidence for agent handoffs</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
+    <link rel="stylesheet" href="/brand-refresh.css">
     <script type="module" src="/app.js"></script>
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="#top" aria-label="AccordTrace home">
-        <span class="brand-mark" aria-hidden="true">A</span>
-        <span>ACCORDTRACE</span>
-      </a>
+      <a class="brand" href="#top" aria-label="AccordTrace home"><span>ACCORDTRACE</span></a>
       <nav aria-label="Primary navigation">
         <a href="#protocol">How it works</a>
         <a href="#integration">Proof API</a>
-        <a href="#verify">Advanced verifier</a>
+        <a href="#verify">Verifier</a>
         <a href="/pilot.html">Founding agents</a>
         <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub</a>
       </nav>
@@ -41,41 +39,28 @@
 
     <main id="top">
       <section class="hero" aria-labelledby="hero-title">
-        <div class="hero-grid" aria-hidden="true"></div>
         <div class="hero-copy">
-          <p class="eyebrow">Public beta · Agent-first evidence API</p>
+          <p class="eyebrow">Infrastructure for accountable AI agents</p>
           <h1 id="hero-title">AccordTrace</h1>
-          <p class="hero-lede">Create a tamper-evident record for any agent action, verify it later, and carry the evidence across vendor boundaries.</p>
+          <p class="hero-lede">Cryptographic receipts for agent actions, approvals and handoffs. Record what happened once. Verify it anywhere.</p>
           <div class="hero-actions">
-            <a class="primary-action" href="#integration">Create your first proof <span aria-hidden="true">↘</span></a>
-            <a class="text-action" href="/openapi.json">Read the API spec <span aria-hidden="true">→</span></a>
+            <a class="primary-action" href="#integration">Create a proof <span aria-hidden="true">↘</span></a>
+            <a class="text-action" href="/openapi.json">API reference <span aria-hidden="true">→</span></a>
           </div>
         </div>
 
-        <div class="evidence-plane" aria-label="Evidence attestation sequence">
-          <div class="trace-line"></div>
-          <div class="trace-pulse"></div>
-          <div class="evidence-node node-a">
-            <span class="node-index">01</span>
-            <strong>ACTION</strong>
-            <small>Agent event</small>
+        <div class="evidence-plane" aria-label="Example AccordTrace proof">
+          <div class="proof-window">
+            <div class="proof-window-head"><span>PROOF / LIVE</span><strong>VERIFIED</strong></div>
+            <dl class="proof-window-body">
+              <div><dt>Action</dt><dd>agent.workflow.approved</dd></div>
+              <div><dt>Proof ID</dt><dd>atr_8f2c…91d4</dd></div>
+              <div><dt>Digest</dt><dd>sha256: 9a42c7…e18b</dd></div>
+              <div><dt>Signed</dt><dd>ES256 · service key</dd></div>
+            </dl>
+            <div class="proof-window-foot"><span>REST · MCP · A2A</span><span>portable evidence</span></div>
           </div>
-          <div class="evidence-node node-offer">
-            <span class="node-index">02</span>
-            <strong>HASH</strong>
-            <small>Canonical JSON</small>
-          </div>
-          <div class="evidence-node node-b">
-            <span class="node-index">03</span>
-            <strong>ATTEST</strong>
-            <small>ES256 signature</small>
-          </div>
-          <div class="evidence-node node-receipt">
-            <span class="receipt-sigil" aria-hidden="true">✓</span>
-            <strong>VERIFY</strong>
-            <small>Portable proof</small>
-          </div>
-          <p class="plane-caption">One durable evidence trail for every agent boundary.</p>
+          <p class="plane-caption">A small, verifiable record that can travel with the work.</p>
         </div>
         <a class="scroll-cue" href="#protocol">How it works <span aria-hidden="true">↓</span></a>
       </section>
@@ -102,10 +87,7 @@
       </section>
 
       <section class="integration-section" id="integration" aria-labelledby="integration-title">
-        <div>
-          <p class="eyebrow">Start in one request</p>
-          <h2 id="integration-title">Create portable evidence without an account.</h2>
-        </div>
+        <div><p class="eyebrow">Start in one request</p><h2 id="integration-title">Create portable evidence without an account.</h2></div>
         <div class="integration-list">
           <a href="/openapi.json"><span>Create proof</span><strong>POST /api/v1/proofs</strong><b aria-hidden="true">→</b></a>
           <a href="/verify.html"><span>Verify proof</span><strong>Web + POST /api/v1/verify</strong><b aria-hidden="true">→</b></a>
@@ -115,85 +97,18 @@
       </section>
 
       <section class="verifier-section" id="verify" aria-labelledby="verify-title">
-        <div class="verifier-heading">
-          <div>
-            <p class="eyebrow">Advanced protocol profile</p>
-            <h2 id="verify-title">Verify a signed DealEnvelope</h2>
-          </div>
-          <p>Notary Protocol adds bilateral offer, acceptance and signature checks when a simple proof record is not enough.</p>
-        </div>
-
-        <div class="verifier-toolbar">
-          <div class="mode-tabs" role="tablist" aria-label="Input mode">
-            <button class="tab active" type="button" role="tab" aria-selected="true">JSON</button>
-            <button class="tab" id="file-tab" type="button" role="tab" aria-selected="false">File</button>
-            <input id="file-input" type="file" accept="application/json,.json" hidden>
-          </div>
-          <button class="secondary-action" id="load-demo" type="button">Load signed demo</button>
-        </div>
-
-        <form class="receipt-lookup" id="receipt-lookup">
-          <label for="receipt-query">Retrieve a protocol receipt</label>
-          <input id="receipt-query" type="text" autocomplete="off" placeholder="ntr_…" aria-label="Receipt ID">
-          <button class="text-action" type="submit">Find receipt <span aria-hidden="true">→</span></button>
-        </form>
-
+        <div class="verifier-heading"><div><p class="eyebrow">Advanced protocol profile</p><h2 id="verify-title">Verify a signed DealEnvelope</h2></div><p>Notary Protocol adds bilateral offer, acceptance and signature checks when a simple proof record is not enough.</p></div>
+        <div class="verifier-toolbar"><div class="mode-tabs" role="tablist" aria-label="Input mode"><button class="tab active" type="button" role="tab" aria-selected="true">JSON</button><button class="tab" id="file-tab" type="button" role="tab" aria-selected="false">File</button><input id="file-input" type="file" accept="application/json,.json" hidden></div><button class="secondary-action" id="load-demo" type="button">Load signed demo</button></div>
+        <form class="receipt-lookup" id="receipt-lookup"><label for="receipt-query">Retrieve a protocol receipt</label><input id="receipt-query" type="text" autocomplete="off" placeholder="ntr_…" aria-label="Receipt ID"><button class="text-action" type="submit">Find receipt <span aria-hidden="true">→</span></button></form>
         <div class="verifier-workspace">
-          <div class="editor-pane">
-            <label for="envelope-input">DealEnvelope</label>
-            <textarea id="envelope-input" spellcheck="false" autocomplete="off" placeholder="Paste a signed DealEnvelope JSON object or drop a .json file…"></textarea>
-            <div class="editor-footer">
-              <span id="editor-status">Waiting for evidence</span>
-              <button class="primary-action" id="verify-button" type="button">Verify envelope <span aria-hidden="true">→</span></button>
-            </div>
-          </div>
-          <aside class="result-pane" aria-live="polite" aria-labelledby="result-title">
-            <div class="result-idle" id="result-idle">
-              <span class="result-glyph" aria-hidden="true">N</span>
-              <h3 id="result-title">No receipt yet</h3>
-              <p>Run verification to inspect signature and evidence checks.</p>
-            </div>
-            <div class="result-content" id="result-content" hidden>
-              <div class="result-summary">
-                <span class="result-icon" id="result-icon" aria-hidden="true"></span>
-                <div><p id="result-kicker"></p><h3 id="result-state"></h3></div>
-              </div>
-              <dl class="receipt-meta">
-                <div><dt>Receipt</dt><dd id="receipt-id"></dd></div>
-                <div><dt>Evidence SHA-256</dt><dd id="receipt-digest"></dd></div>
-                <div><dt>Verified</dt><dd id="receipt-time"></dd></div>
-                <div><dt>Notary signature</dt><dd id="receipt-signature">Checking…</dd></div>
-              </dl>
-              <div class="checks-heading"><span>Verification checks</span><span id="checks-count"></span></div>
-              <ul class="checks-list" id="checks-list"></ul>
-              <div class="receipt-actions">
-                <button class="text-action copy-action" id="copy-receipt" type="button">Copy JSON <span aria-hidden="true">□</span></button>
-                <button class="text-action copy-action" id="download-receipt" type="button">Download receipt <span aria-hidden="true">↓</span></button>
-              </div>
-            </div>
-          </aside>
+          <div class="editor-pane"><label for="envelope-input">DealEnvelope</label><textarea id="envelope-input" spellcheck="false" autocomplete="off" placeholder="Paste a signed DealEnvelope JSON object or drop a .json file…"></textarea><div class="editor-footer"><span id="editor-status">Waiting for evidence</span><button class="primary-action" id="verify-button" type="button">Verify envelope <span aria-hidden="true">→</span></button></div></div>
+          <aside class="result-pane" aria-live="polite" aria-labelledby="result-title"><div class="result-idle" id="result-idle"><span class="result-glyph" aria-hidden="true">N</span><h3 id="result-title">No receipt yet</h3><p>Run verification to inspect signature and evidence checks.</p></div><div class="result-content" id="result-content" hidden><div class="result-summary"><span class="result-icon" id="result-icon" aria-hidden="true"></span><div><p id="result-kicker"></p><h3 id="result-state"></h3></div></div><dl class="receipt-meta"><div><dt>Receipt</dt><dd id="receipt-id"></dd></div><div><dt>Evidence SHA-256</dt><dd id="receipt-digest"></dd></div><div><dt>Verified</dt><dd id="receipt-time"></dd></div><div><dt>Notary signature</dt><dd id="receipt-signature">Checking…</dd></div></dl><div class="checks-heading"><span>Verification checks</span><span id="checks-count"></span></div><ul class="checks-list" id="checks-list"></ul><div class="receipt-actions"><button class="text-action copy-action" id="copy-receipt" type="button">Copy JSON <span aria-hidden="true">□</span></button><button class="text-action copy-action" id="download-receipt" type="button">Download receipt <span aria-hidden="true">↓</span></button></div></div></aside>
         </div>
       </section>
 
-      <section class="final-section">
-        <p class="eyebrow">Make evidence portable</p>
-        <h2>Record what happened.<br>Decide nothing else.</h2>
-        <div class="final-actions">
-          <a class="primary-action inverse" href="#integration">Create a proof <span aria-hidden="true">↑</span></a>
-          <a class="text-action" href="/pilot.html">Founding Agent Program <span aria-hidden="true">→</span></a>
-        </div>
-      </section>
+      <section class="final-section"><p class="eyebrow">Make evidence portable</p><h2>Record what happened.<br>Decide nothing else.</h2><div class="final-actions"><a class="primary-action inverse" href="#integration">Create a proof <span aria-hidden="true">↑</span></a><a class="text-action" href="/pilot.html">Founding Agent Program <span aria-hidden="true">→</span></a></div></section>
     </main>
 
-    <footer>
-      <a class="brand" href="#top"><span class="brand-mark">A</span><span>ACCORDTRACE</span></a>
-      <p>Portable evidence for agent handoffs · Open core</p>
-      <div class="footer-links">
-        <a href="/activity.html">Activity</a>
-        <a href="/pilot.html">Founding agents</a>
-        <a href="/privacy.html">Privacy</a>
-        <a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub ↗</a>
-      </div>
-    </footer>
+    <footer><a class="brand" href="#top"><span>ACCORDTRACE</span></a><p>Portable evidence for agent handoffs · Open core</p><div class="footer-links"><a href="/activity.html">Activity</a><a href="/pilot.html">Founding agents</a><a href="/privacy.html">Privacy</a><a href="https://github.com/Kosta1985/notary-protocol" target="_blank" rel="noreferrer">GitHub ↗</a></div></footer>
   </body>
 </html>
