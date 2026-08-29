@@ -1,6 +1,15 @@
-name: Live smoke
+name: AccordTrace production smoke
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/**"
+      - "adapters/**"
+      - "web/.well-known/**"
+      - "docs/openapi.json"
+      - "scripts/live-smoke.js"
+      - ".github/workflows/live-smoke.yml"
   schedule:
     - cron: "17 */6 * * *"
   workflow_dispatch:
@@ -9,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: live-smoke
+  group: accordtrace-production-smoke
   cancel-in-progress: true
 
 jobs:
@@ -17,8 +26,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: node scripts/live-smoke.js
+      - name: Smoke-test AccordTrace production
+        env:
+          ACCORDTRACE_BASE: https://accordtrace.notary-labs.workers.dev
+        run: node scripts/live-smoke.js
