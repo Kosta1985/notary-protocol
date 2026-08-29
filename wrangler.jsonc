@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "notary-protocol",
-  "main": "cloudflare/src/index.js",
+  "main": "cloudflare/src/telemetry-worker.js",
   "compatibility_date": "2026-08-24",
   "workers_dev": true,
   "preview_urls": true,
@@ -13,7 +13,9 @@
       "/",
       "/health",
       "/v1/*",
+      "/api/*",
       "/a2a",
+      "/mcp/*",
       "/openapi.json",
       "/.well-known/*"
     ]
@@ -24,6 +26,12 @@
       "database_name": "notary-protocol",
       "database_id": "REPLACE_WITH_D1_DATABASE_ID",
       "migrations_dir": "cloudflare/migrations"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "USAGE_ANALYTICS",
+      "dataset": "accordtrace_usage"
     }
   ],
   "observability": {
