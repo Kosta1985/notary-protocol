@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - "server.json"
+      - "web/.well-known/agent.json"
+      - "adapters/a2a/agent-card.json"
       - "scripts/live-agent-check.mjs"
       - ".github/workflows/accord-trace-agent-smoke.yml"
 
