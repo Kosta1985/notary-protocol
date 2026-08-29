@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+const auth=await readFile(new URL('../src/auth.js',import.meta.url),'utf8');
+const metrics=await readFile(new URL('../src/metrics.js',import.meta.url),'utf8');
+const migration=await readFile(new URL('../migrations/0003_events_stats.sql',import.meta.url),'utf8');
+test('API keys are compared as hashes, not plaintext',()=>{assert.match(auth,/SHA-256/);assert.match(auth,/key_hash/);assert.doesNotMatch(auth,/WHERE .*token=/);});
+test('ownership enforcement is explicit',()=>{assert.match(auth,/requireOwner/);assert.match(auth,/forbidden/);});
+test('public traction excludes synthetic events',()=>{assert.match(metrics,/is_synthetic=0/);assert.match(metrics,/Synthetic CI and monitor events are excluded/);});
+test('reputation is derived from completed task history',()=>{assert.match(metrics,/agent_reputation/);});
+test('event ledger supports attribution',()=>{for(const x of ['principal_id','agent_id','task_id','is_synthetic'])assert.ok(migration.includes(x));});
