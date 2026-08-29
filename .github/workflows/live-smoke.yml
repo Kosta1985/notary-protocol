@@ -8,7 +8,7 @@ on:
       - "adapters/**"
       - "web/.well-known/**"
       - "docs/openapi.json"
-      - "scripts/live-smoke.js"
+      - "scripts/live-agent-check.mjs"
       - ".github/workflows/live-smoke.yml"
   schedule:
     - cron: "17 */6 * * *"
@@ -30,7 +30,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Smoke-test AccordTrace production
-        env:
-          ACCORDTRACE_BASE: https://accordtrace.notary-labs.workers.dev
-        run: node scripts/live-smoke.js
+      - name: Black-box test AccordTrace production
+        run: node scripts/live-agent-check.mjs https://accordtrace.notary-labs.workers.dev
