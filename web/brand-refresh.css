@@ -176,3 +176,24 @@ h1 {
   .evidence-plane { margin: 56px 20px 0; }
   .proof-window-body div { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; }
 }
+
+/* AccordTrace 2026 visual system: indigo proof infrastructure. */
+:root { --ink: #171a3f; --paper: #f1f3ff; --white: #fbfcff; --muted: #666b8d; --line: #ccd1ec; --signal: #78d7ff; --danger: #ef5b72; }
+body { background: var(--paper); }
+::selection { background: var(--signal); color: var(--ink); }
+.site-header,.site-header.scrolled { background: rgba(18,20,55,.92); border-bottom-color: rgba(255,255,255,.13); }
+.product-nav { display:flex; align-items:center; gap:16px; min-width:max-content; }
+.product-divider { width:1px; height:25px; background:rgba(255,255,255,.22); }
+.site-switcher { display:flex; gap:4px; padding:4px; border:1px solid rgba(255,255,255,.2); border-radius:999px; }
+.site-switcher a { padding:7px 11px; border-radius:999px; color:#aeb7da; font-size:9px; font-weight:750; text-transform:uppercase; letter-spacing:.06em; }
+.site-switcher a.active { background:var(--signal); color:#121437; }
+.hero { background:radial-gradient(circle at 78% 35%,rgba(120,215,255,.18),transparent 30%),linear-gradient(145deg,#111338,#20255b 60%,#111338); }
+.proof-window { background:#171b48; border-color:rgba(120,215,255,.35); box-shadow:0 28px 80px rgba(8,10,40,.42); border-radius:14px; overflow:hidden; }
+.proof-window-head strong,.network-status.online { color:var(--signal); }
+.network-status.online i { background:var(--signal); box-shadow:0 0 14px rgba(120,215,255,.7); }
+.proof-rail { background:#dfeaff; }
+.primary-action { background:var(--signal); border-radius:8px; }
+.primary-action:hover { background:#a4e5ff; }
+textarea { background:#121535; }
+.protocol-flow li,.integration-list a,.verifier-workspace { border-color:var(--line); }
+@media(max-width:980px){.product-divider{display:none}.site-switcher{position:absolute;top:78px;left:20px;background:#171a46}.site-header{margin-bottom:44px}}
