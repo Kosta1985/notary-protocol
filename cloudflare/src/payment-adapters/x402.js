@@ -58,7 +58,7 @@ function normalizeFacilitator(value, required) {
   }
   try {
     const url = new URL(String(value));
-    if (url.protocol !== "https:" || url.username || url.password) throw new Error();
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error();
     return url.href.replace(/\/$/, "");
   } catch {
     throw new PaymentAdapterError("invalid_x402_facilitator_url", 500);
