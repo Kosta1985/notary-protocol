@@ -16,6 +16,7 @@
       "/api/v1/gateway/*",
       "/api/v1/payments/*",
       "/api/v1/identity/*",
+      "/api/v1/validation/*",
       "/api/v1/reputation/*",
       "/api/v1/attestors/*",
       "/api/v1/control-plane/*",
