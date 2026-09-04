@@ -1,8 +1,10 @@
+import { handleStripe, StripeError } from './stripe.js';
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8"};
 const INTERESTS=new Set(['agent_verification','validator','developer','business','enterprise']);
 export async function handleLaunch(request,env,url=new URL(request.url)){
   if(!url.pathname.startsWith('/api/v1/launch/'))return null;
-  if(request.method==='GET'&&url.pathname==='/api/v1/launch/capabilities')return reply({service:'AccordTrace Launch',version:'0.2.0',features:['privacy_bounded_waitlist','commercial_readiness','release_drift_detection'],stripe_enabled:Boolean(env.STRIPE_SECRET_KEY),payments_mode:env.STRIPE_SECRET_KEY?'stripe_ready':'prelaunch',release_sha:env.ACCORDTRACE_RELEASE_SHA||null});
+  if(url.pathname.startsWith('/api/v1/launch/stripe/')){try{return await handleStripe(request,env,url)}catch(error){const status=error instanceof StripeError?error.status:500;return reply({error:error instanceof StripeError?'invalid_stripe_request':'internal_error',message:error instanceof Error?error.message:'Unknown error'},status)}}
+  if(request.method==='GET'&&url.pathname==='/api/v1/launch/capabilities')return reply({service:'AccordTrace Launch',version:'0.3.0',features:['privacy_bounded_waitlist','commercial_readiness','release_drift_detection','stripe_checkout_adapter'],stripe_enabled:Boolean(env.STRIPE_SECRET_KEY)&&Boolean(env.STRIPE_WEBHOOK_SECRET),payments_mode:env.STRIPE_SECRET_KEY&&env.STRIPE_WEBHOOK_SECRET?'stripe_ready':'prelaunch',release_sha:env.ACCORDTRACE_RELEASE_SHA||null});
   if(request.method==='POST'&&url.pathname==='/api/v1/launch/waitlist'){
     let b;try{b=await request.json();}catch{return reply({error:'request_body_must_be_json'},400)}
     if(String(b.website||'').trim())return reply({accepted:true});
