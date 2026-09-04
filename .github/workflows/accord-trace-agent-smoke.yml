@@ -4,14 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "19 2 * * *"
-  push:
-    branches: [main]
-    paths:
-      - "server.json"
-      - "web/.well-known/agent.json"
-      - "adapters/a2a/agent-card.json"
-      - "scripts/live-agent-check.mjs"
-      - ".github/workflows/accord-trace-agent-smoke.yml"
 
 permissions:
   contents: read
@@ -25,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Discover, notarize, verify, and call A2A/MCP
