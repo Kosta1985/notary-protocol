@@ -22,6 +22,7 @@
       "/api/v1/reputation/*",
       "/api/v1/attestors/*",
       "/api/v1/control-plane/*",
+      "/api/v1/continuity/*",
       "/api/v1/launch/*",
       "/api/v1/developer/*",
       "/",
