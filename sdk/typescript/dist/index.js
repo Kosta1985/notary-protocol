@@ -31,6 +31,58 @@ export function signingPayload(envelope, role) {
   return payload;
 }
 
+export async function passportIdFromSpkiPem(publicKeyPem) {
+  const digest = await crypto.subtle.digest("SHA-256", spkiPemBytes(publicKeyPem));
+  return `agtp_${[...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export async function passportProfilePayload(profile) {
+  const passportId = await passportIdFromSpkiPem(profile.public_key);
+  return {
+    domain: "accordtrace.passport.profile.v1",
+    passport_id: passportId,
+    public_key: profile.public_key,
+    marketplace_agent_id: profile.marketplace_agent_id ?? null,
+    identity_ref: profile.identity_ref ?? null,
+    payment_endpoint: profile.payment_endpoint ?? null,
+    payment_methods: profile.payment_methods ?? [],
+    issued_at: profile.issued_at
+  };
+}
+
+export function securityEventPayload(event) {
+  return {
+    domain: "accordtrace.security.event.v1",
+    passport_id: event.passport_id,
+    event_id: event.event_id,
+    type: event.type,
+    severity: event.severity,
+    evidence_digest: event.evidence_digest ?? null,
+    proof_id: event.proof_id ?? null,
+    source: "self",
+    metadata: event.metadata ?? {},
+    observed_at: event.observed_at
+  };
+}
+
+export async function signSecurityPayload(privateKey, payload) {
+  const signature = await crypto.subtle.sign("Ed25519", privateKey, new TextEncoder().encode(canonicalize(payload)));
+  return base64url(new Uint8Array(signature));
+}
+
+function spkiPemBytes(pem) {
+  const match = pem.match(/-----BEGIN PUBLIC KEY-----([\s\S]+?)-----END PUBLIC KEY-----/);
+  if (!match) throw new TypeError("Expected SPKI PEM public key");
+  const binary = atob(match[1].replace(/\s+/g, ""));
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function base64url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
 export class NotaryClient {
   constructor(baseUrl) { this.baseUrl = baseUrl.replace(/\/$/, ""); }
   async verify(envelope) {
@@ -47,5 +99,21 @@ export class NotaryClient {
   async verifyReceipt(receipt) {
     const response = await fetch(`${this.baseUrl}/v1/receipts/verify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(receipt) });
     return response.json();
+  }
+}
+
+export class AgentSecurityClient {
+  constructor(baseUrl) { this.baseUrl = baseUrl.replace(/\/$/, ""); }
+  async capabilities() { return this.request("/api/v1/security/capabilities"); }
+  async upsertPassport(profile) { return this.request("/api/v1/security/passports", profile); }
+  async getPassport(passportId) { return this.request(`/api/v1/security/passports/${encodeURIComponent(passportId)}`); }
+  async recordEvent(event) { return this.request("/api/v1/security/events", event); }
+  async createCanary(request) { return this.request("/api/v1/security/canaries", request); }
+  async checkCanary(token) { return this.request("/api/v1/security/canaries/check", { token }); }
+  async request(path, body) {
+    const response = await fetch(`${this.baseUrl}${path}`, body === undefined ? undefined : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.message ?? `AccordTrace security request failed (${response.status})`);
+    return result;
   }
 }
