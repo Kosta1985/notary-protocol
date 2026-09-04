@@ -1,5 +1,15 @@
 const BASE = process.env.ACCORDTRACE_BASE ?? 'https://accordtrace.notary-labs.workers.dev';
 const EXPECTED_VERSION = '0.2.1';
+const REQUIRED_SKILLS = [
+  'notarize_evidence',
+  'verify_proof',
+  'get_proof',
+  'hash_content',
+  'network_capabilities',
+  'network_stats',
+  'passport_product_capabilities',
+  'resolve_referral'
+];
 
 async function json(path, init = {}) {
   try {
@@ -8,7 +18,7 @@ async function json(path, init = {}) {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',
-        'x-notary-monitor': 'live-smoke',
+        'x-notary-monitor': 'live-contract',
         ...(init.headers ?? {})
       }
     });
@@ -27,6 +37,10 @@ function interfaceDeclaresV1(card) {
     || card?.extra?.supportedInterfaces?.some((item) => item?.protocolVersion === '1.0');
 }
 
+function skillIds(card) {
+  return Array.isArray(card?.skills) ? card.skills.map((skill) => skill?.id ?? skill?.name ?? null).filter(Boolean) : [];
+}
+
 function cardFingerprint(card) {
   if (!card || typeof card !== 'object' || Array.isArray(card)) return null;
   return JSON.stringify({
@@ -34,7 +48,8 @@ function cardFingerprint(card) {
     version: card.version ?? null,
     url: card.url ?? null,
     protocolVersion: card.protocolVersion ?? null,
-    skills: Array.isArray(card.skills) ? card.skills.map((skill) => skill?.id ?? skill?.name ?? null) : []
+    supportedInterfaces: card.supportedInterfaces ?? null,
+    skills: skillIds(card)
   });
 }
 
@@ -46,22 +61,22 @@ async function main() {
   };
 
   const card = await json('/.well-known/agent-card.json');
+  const cardSkills = skillIds(card.body);
   observations.agentCard = {
     status: card.response?.status ?? null,
     version: card.body?.version ?? null,
-    skills: Array.isArray(card.body?.skills) ? card.body.skills.length : null,
+    skills: cardSkills,
     a2aV1: interfaceDeclaresV1(card.body)
   };
   check(!card.error, `Agent card request failed: ${card.error}`);
   check(card.response?.ok, `Agent card HTTP ${card.response?.status ?? 'unreachable'}`);
   if (card.response?.ok) {
+    check(card.body?.name === 'Accord Trace', `Agent card name drift: ${card.body?.name}`);
     check(card.body?.version === EXPECTED_VERSION, `Agent card version drift: expected ${EXPECTED_VERSION}, got ${card.body?.version}`);
     check(interfaceDeclaresV1(card.body), 'A2A v1.0 is not declared in Agent Card');
-    check(Array.isArray(card.body?.skills) && card.body.skills.length >= 4, `Expected at least four Accord Trace skills, got ${card.body?.skills?.length ?? 0}`);
+    for (const skill of REQUIRED_SKILLS) check(cardSkills.includes(skill), `Agent Card missing required skill: ${skill}`);
   }
 
-  // Some agent directories and older A2A clients still probe this legacy alias.
-  // Treat it as a compatibility signal so discovery regressions are visible immediately.
   const legacyCard = await json('/.well-known/agent.json');
   observations.legacyAgentCard = {
     status: legacyCard.response?.status ?? null,
@@ -94,33 +109,48 @@ async function main() {
     check(Boolean(stats.body?.privacy), 'Stats response must declare its privacy boundary');
   }
 
-  const heartbeat = await json('/a2a', {
+  const networkRead = await json('/a2a', {
     method: 'POST',
     headers: { 'A2A-Version': '1.0' },
     body: JSON.stringify({
       jsonrpc: '2.0',
-      id: 'accordtrace-monitor',
+      id: 'accordtrace-live-contract-network',
       method: 'SendMessage',
       params: {
         message: {
-          messageId: 'accordtrace-monitor',
+          messageId: 'accordtrace-live-contract-network',
           role: 'ROLE_USER',
-          parts: [{ text: 'health heartbeat; do not create persistent evidence' }]
+          parts: [{
+            data: { action: 'network_capabilities', arguments: {} },
+            mediaType: 'application/json'
+          }]
         }
       }
     })
   });
+  const networkData = networkRead.body?.result?.task?.artifacts?.[0]?.parts?.[0]?.data;
   observations.a2a = {
-    status: heartbeat.response?.status ?? null,
-    jsonrpc: heartbeat.body?.jsonrpc ?? null,
-    responseId: heartbeat.body?.id ?? null,
-    error: heartbeat.body?.error ?? heartbeat.error ?? null
+    status: networkRead.response?.status ?? null,
+    jsonrpc: networkRead.body?.jsonrpc ?? null,
+    responseId: networkRead.body?.id ?? null,
+    error: networkRead.body?.error ?? networkRead.error ?? null,
+    action: 'network_capabilities',
+    model: networkData?.model ?? null,
+    passportPriceAtomic: networkData?.passport_price?.amount_atomic ?? null,
+    directCommissionAtomic: networkData?.direct_commission?.amount_atomic ?? null,
+    cashPayoutsEnabled: networkData?.cash_payouts_enabled ?? null
   };
-  check(!heartbeat.error, `A2A heartbeat request failed: ${heartbeat.error}`);
-  check(heartbeat.response?.ok, `A2A heartbeat HTTP ${heartbeat.response?.status ?? 'unreachable'}`);
-  if (heartbeat.response?.ok) {
-    check(heartbeat.body?.jsonrpc === '2.0', 'A2A heartbeat did not return JSON-RPC 2.0');
-    check(heartbeat.body?.id != null, 'A2A heartbeat response has no id');
+  check(!networkRead.error, `A2A network capability request failed: ${networkRead.error}`);
+  check(networkRead.response?.ok, `A2A network capability HTTP ${networkRead.response?.status ?? 'unreachable'}`);
+  if (networkRead.response?.ok) {
+    check(!networkRead.body?.error, `A2A network capability returned JSON-RPC error: ${JSON.stringify(networkRead.body?.error)}`);
+    check(networkRead.body?.jsonrpc === '2.0', 'A2A network capability did not return JSON-RPC 2.0');
+    check(networkData?.model === 'single_level_direct_product_referral', `Unexpected affiliate model: ${networkData?.model}`);
+    check(networkData?.passport_price?.amount_atomic === 200, `Unexpected Passport product price: ${networkData?.passport_price?.amount_atomic}`);
+    check(networkData?.direct_commission?.amount_atomic === 100, `Unexpected direct commission: ${networkData?.direct_commission?.amount_atomic}`);
+    check(networkData?.cash_payouts_enabled === false, 'Affiliate cash payouts unexpectedly enabled');
+    check(networkData?.rules?.includes('no_multilevel_downline_commission'), 'No-downline policy missing from live A2A response');
+    check(networkData?.rules?.includes('no_self_referral'), 'No-self-referral policy missing from live A2A response');
   }
 
   const report = {
@@ -133,9 +163,7 @@ async function main() {
   };
   console.log(JSON.stringify(report, null, 2));
 
-  if (failures.length) {
-    throw new Error(`${failures.length} production contract issue(s): ${failures.join(' | ')}`);
-  }
+  if (failures.length) throw new Error(`${failures.length} production contract issue(s): ${failures.join(' | ')}`);
 }
 
 main().catch((error) => {
