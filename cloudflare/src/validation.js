@@ -22,9 +22,11 @@ export async function handleValidation(request,env,url=new URL(request.url)){
 
   if(request.method==='GET'&&url.pathname==='/api/v1/validation/products'){
     const type=url.searchParams.get('type');
+    const base=`SELECT p.*,o.rail,o.network,o.asset,o.amount_atomic,o.platform_fee_atomic,o.expires_at AS offer_expires_at FROM validation_products p JOIN service_offers o ON o.id=p.payment_offer_id WHERE p.status='active' AND o.status='active' AND o.expires_at>?1`;
+    const now=new Date().toISOString();
     const rows=type&&TYPES.includes(type)
-      ?await env.DB.prepare(`SELECT * FROM validation_products WHERE status='active' AND validation_type=?1 ORDER BY created_at DESC LIMIT 100`).bind(type).all()
-      :await env.DB.prepare(`SELECT * FROM validation_products WHERE status='active' ORDER BY created_at DESC LIMIT 100`).all();
+      ?await env.DB.prepare(`${base} AND p.validation_type=?2 ORDER BY p.created_at DESC LIMIT 100`).bind(now,type).all()
+      :await env.DB.prepare(`${base} ORDER BY p.created_at DESC LIMIT 100`).bind(now).all();
     return reply({products:(rows.results||[]).map(productView)});
   }
 
@@ -58,12 +60,12 @@ export async function handleValidation(request,env,url=new URL(request.url)){
     const now=new Date().toISOString();
     const exists=await env.DB.prepare(`SELECT id FROM validation_requests WHERE id=?1 OR payment_order_id=?2 LIMIT 1`).bind(id,orderId).first(); if(exists)return reply({error:'validation_request_or_payment_already_used'},409);
     const statements=[
-      env.DB.prepare(`UPDATE service_orders SET payment_status='consumed',consumed_at=?1,updated_at=?1 WHERE id=?2 AND payment_status='payment_authorized'`).bind(now,orderId),
-      env.DB.prepare(`INSERT INTO validation_requests (id,product_id,subject_passport_id,validator_passport_id,validation_type,payment_order_id,subject_ref,subject_ref_digest,status,requested_at,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'pending',?9,?10,?10)`).bind(id,product.id,subject.id,product.validator_passport_id,product.validation_type,orderId,publicSubjectRef(product.validation_type,subjectRef),subjectRefDigest,payload.requested_at,now)
+      env.DB.prepare(`INSERT INTO validation_requests (id,product_id,subject_passport_id,validator_passport_id,validation_type,payment_order_id,subject_ref,subject_ref_digest,status,requested_at,created_at,updated_at) SELECT ?1,?2,?3,?4,?5,?6,?7,?8,'pending',?9,?10,?10 FROM service_orders WHERE id=?6 AND payment_status='payment_authorized' AND offer_id=?11 AND buyer_passport_id=?3 AND seller_passport_id=?4`).bind(id,product.id,subject.id,product.validator_passport_id,product.validation_type,orderId,publicSubjectRef(product.validation_type,subjectRef),subjectRefDigest,payload.requested_at,now,product.payment_offer_id),
+      env.DB.prepare(`UPDATE service_orders SET payment_status='consumed',consumed_at=?1,updated_at=?1 WHERE id=?2 AND payment_status='payment_authorized' AND EXISTS (SELECT 1 FROM validation_requests WHERE id=?3 AND payment_order_id=?2)`).bind(now,orderId,id)
     ];
     let results;
     try{results=typeof env.DB.batch==='function'?await env.DB.batch(statements):[await statements[0].run(),await statements[1].run()];}catch{throw new ValidationError('validation_request_transaction_failed',409);}
-    if(Number(results?.[0]?.meta?.changes??0)!==1)throw new ValidationError('payment_consumption_race_lost',409);
+    if(Number(results?.[0]?.meta?.changes??0)!==1||Number(results?.[1]?.meta?.changes??0)!==1)throw new ValidationError('payment_consumption_race_lost',409);
     return reply({validation_request:requestView(await getRequest(env,id)),payment:{order_id:orderId,status:'consumed',custody:'none'}},201);
   }
 
@@ -75,9 +77,13 @@ export async function handleValidation(request,env,url=new URL(request.url)){
     const product=await getProduct(env,row.product_id); const expiresAt=outcome==='passed'?new Date(Date.parse(b.completed_at)+Number(product.validity_days)*86400000).toISOString():null;
     const payload={domain:'accordtrace.validation.result.v1',request_id:row.id,product_id:row.product_id,subject_passport_id:row.subject_passport_id,validator_passport_id:validator.id,validation_type:row.validation_type,outcome,evidence_digest:evidenceDigest,completed_at:new Date(b.completed_at).toISOString(),expires_at:expiresAt};
     await verifyEd25519(validator.public_key,canonicalize(payload),b.signature);
-    const now=new Date().toISOString(); const r=await env.DB.prepare(`UPDATE validation_requests SET status='completed',outcome=?1,evidence_digest=?2,completed_at=?3,expires_at=?4,updated_at=?5 WHERE id=?6 AND status='pending'`).bind(outcome,evidenceDigest,payload.completed_at,expiresAt,now,row.id).run();
-    if(Number(r.meta?.changes??0)!==1)return reply({error:'validation_completion_race_lost'},409);
-    await env.DB.prepare(`INSERT OR REPLACE INTO validation_result_signatures (request_id,signature,created_at) VALUES (?1,?2,?3)`).bind(row.id,text(b.signature,1200),now).run();
+    const now=new Date().toISOString();
+    const statements=[
+      env.DB.prepare(`UPDATE validation_requests SET status='completed',outcome=?1,evidence_digest=?2,completed_at=?3,expires_at=?4,updated_at=?5 WHERE id=?6 AND status='pending'`).bind(outcome,evidenceDigest,payload.completed_at,expiresAt,now,row.id),
+      env.DB.prepare(`INSERT INTO validation_result_signatures (request_id,signature,created_at) SELECT ?1,?2,?3 WHERE EXISTS (SELECT 1 FROM validation_requests WHERE id=?1 AND status='completed' AND completed_at=?4)`).bind(row.id,text(b.signature,1200),now,payload.completed_at)
+    ];
+    let results; try{results=typeof env.DB.batch==='function'?await env.DB.batch(statements):[await statements[0].run(),await statements[1].run()];}catch{throw new ValidationError('validation_result_transaction_failed',409);}
+    if(Number(results?.[0]?.meta?.changes??0)!==1||Number(results?.[1]?.meta?.changes??0)!==1)return reply({error:'validation_completion_race_lost'},409);
     return reply({validation_result:{...payload,signature_verified:true,status:'completed'},commercial_boundary:'Payment bought the assessment, not this outcome.'});
   }
 
@@ -94,7 +100,7 @@ async function requireQualifiedValidator(env,id){const row=await env.DB.prepare(
 async function requirePassport(env,id){required(id,'passport_id');const p=await env.DB.prepare(`SELECT id,public_key,status FROM agent_passports WHERE id=?1`).bind(id).first();if(!p)throw new ValidationError('passport_not_found',404);if(p.status!=='active')throw new ValidationError('passport_not_active',403);return p;}
 async function getProduct(env,id){return env.DB.prepare(`SELECT * FROM validation_products WHERE id=?1`).bind(id).first();}
 async function getRequest(env,id){return env.DB.prepare(`SELECT * FROM validation_requests WHERE id=?1`).bind(id).first();}
-function productView(r){if(!r)return null;return{id:r.id,validator_passport_id:r.validator_passport_id,validation_type:r.validation_type,title:r.title,description:r.description,payment_offer_id:r.payment_offer_id,validity_days:Number(r.validity_days),status:r.status,created_at:r.created_at};}
+function productView(r){if(!r)return null;return{id:r.id,validator_passport_id:r.validator_passport_id,validation_type:r.validation_type,title:r.title,description:r.description,payment_offer_id:r.payment_offer_id,validity_days:Number(r.validity_days),status:r.status,price:r.amount_atomic?{rail:r.rail,network:r.network,asset:r.asset,amount_atomic:r.amount_atomic,platform_fee_atomic:r.platform_fee_atomic,offer_expires_at:r.offer_expires_at}:null,created_at:r.created_at};}
 function requestView(r){if(!r)return null;return{id:r.id,product_id:r.product_id,subject_passport_id:r.subject_passport_id,validator_passport_id:r.validator_passport_id,validation_type:r.validation_type,payment_order_id:r.payment_order_id,subject_ref:r.subject_ref,subject_ref_digest:r.subject_ref_digest,status:r.status,outcome:r.outcome,evidence_digest:r.evidence_digest,requested_at:r.requested_at,completed_at:r.completed_at,expires_at:r.expires_at};}
 function validationEvidenceView(r){const expired=r.expires_at&&Date.parse(r.expires_at)<=Date.now();return{request_id:r.id,product_id:r.product_id,title:r.title,validation_type:r.validation_type,validator_passport_id:r.validator_passport_id,outcome:r.outcome,effective_status:expired?'expired':r.outcome,evidence_digest:r.evidence_digest,subject_ref:r.subject_ref,subject_ref_digest:r.subject_ref_digest,completed_at:r.completed_at,expires_at:r.expires_at,validator_signature:r.signature||null};}
 function summarize(rows){const current=rows.filter(x=>x.effective_status!=='expired');return{completed:rows.length,current_passed:current.filter(x=>x.outcome==='passed').length,current_failed:current.filter(x=>x.outcome==='failed').length,current_inconclusive:current.filter(x=>x.outcome==='inconclusive').length,distinct_validators:new Set(current.map(x=>x.validator_passport_id)).size};}
