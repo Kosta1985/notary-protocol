@@ -1,14 +1,9 @@
 name: Accord Trace live contract
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'adapters/a2a/agent-card.json'
-      - 'docs/openapi.json'
-      - 'web/stats.*'
-      - 'scripts/accordtrace-live-contract.mjs'
-      - '.github/workflows/accordtrace-live-contract.yml'
+  workflow_run:
+    workflows: ["Deploy AccordTrace production"]
+    types: [completed]
   schedule:
     - cron: '17 */6 * * *'
   workflow_dispatch:
@@ -16,14 +11,21 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-live-contract
+  cancel-in-progress: true
+
 jobs:
   live-contract:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Verify production Accord Trace contract
+      - name: Verify deployed Accord Trace contract
         run: node scripts/accordtrace-live-contract.mjs
