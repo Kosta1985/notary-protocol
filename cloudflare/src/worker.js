@@ -7,6 +7,7 @@ import { handlePaymentBoundGateway } from "./gateway-payment-guard.js";
 import { handlePayments, PaymentError } from "./payments.js";
 import { handlePaymentHardening, PaymentHardeningError } from "./payment-hardening.js";
 import { handleIdentity, IdentityError } from "./identity.js";
+import { handleValidation, ValidationError } from "./validation.js";
 import { handleReputation, ReputationError } from "./reputation.js";
 import { handleAttestorSafety, SafetyError } from "./attestor-safety.js";
 import { handleControlPlane, ControlPlaneError } from "./control-plane.js";
@@ -43,6 +44,10 @@ export default {
     if (url.pathname.startsWith("/api/v1/reputation/")) {
       try { const response = await handleReputation(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof ReputationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ReputationError ? "invalid_reputation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
+    }
+    if (url.pathname.startsWith("/api/v1/validation/")) {
+      try { const response = await handleValidation(request, env, url); if (response) return withCors(response); }
+      catch (error) { const status = error instanceof ValidationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ValidationError ? "invalid_validation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/identity/")) {
       try { const response = await handleIdentity(request, env, url); if (response) return withCors(response); }

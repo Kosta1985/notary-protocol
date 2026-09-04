@@ -1,0 +1,23 @@
+{
+  "paths": {
+    "/api/v1/validation/capabilities": {
+      "get": {"operationId":"getValidationCapabilities","responses":{"200":{"description":"Validation marketplace capabilities and trust boundary"}}}
+    },
+    "/api/v1/validation/products": {
+      "get": {"operationId":"listValidationProducts","parameters":[{"name":"type","in":"query","required":false,"schema":{"type":"string","enum":["domain_control","security_assessment","publisher_validation"]}}],"responses":{"200":{"description":"Active paid validation products with payment-offer pricing metadata"}}},
+      "post": {"operationId":"createValidationProduct","description":"Publish a validator-signed validation product. Validator must have an active uniquely controlled attestor safety profile and a matching active payment offer.","responses":{"201":{"description":"Validation product created"},"403":{"description":"Validator is not safety-qualified"},"422":{"description":"Payment offer does not match validator or validation action"}}}
+    },
+    "/api/v1/validation/requests": {
+      "post": {"operationId":"createValidationRequest","description":"Create a subject-Passport-signed validation request using one independently authorized payment order. The payment order is consumed exactly once by the request transaction.","responses":{"201":{"description":"Validation request created"},"402":{"description":"Payment is not authorized"},"409":{"description":"Payment/order request is already consumed or raced"},"422":{"description":"Payment parties or offer do not match the validation product"}}}
+    },
+    "/api/v1/validation/results": {
+      "post": {"operationId":"completeValidationRequest","description":"Record a validator-Passport-signed passed, failed, or inconclusive result. Passed results require a SHA-256 evidence digest. Payment never guarantees a passed outcome.","responses":{"200":{"description":"Signed validation result recorded"},"400":{"description":"Invalid outcome or missing required evidence digest"},"403":{"description":"Validator mismatch or validator is no longer safety-qualified"},"409":{"description":"Request is not pending"}}}
+    },
+    "/api/v1/validation/requests/{request_id}": {
+      "get": {"operationId":"getValidationRequest","parameters":[{"name":"request_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Validation request and outcome metadata"},"404":{"description":"Request not found"}}}
+    },
+    "/api/v1/validation/passports/{passport_id}/evidence": {
+      "get": {"operationId":"getPassportValidationEvidence","description":"Return completed paid validation evidence. Non-domain subject references are exposed only as digests. No numeric trust score is produced.","parameters":[{"name":"passport_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Passport validation evidence"},"404":{"description":"Passport not found"}}}
+    }
+  }
+}
