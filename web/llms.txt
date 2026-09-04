@@ -55,7 +55,7 @@ A Certificate proves historical AccordTrace issuance bound to cryptographic Pass
 - Continuity monitoring does not automatically contain agents.
 - Defensive containment must be limited to systems and credentials the operator owns or is authorized to administer.
 - AccordTrace does not seize wallets, steal credentials, capture third-party agents or control external infrastructure.
-- Affiliate enrollment is separate from Certificate purchase. There are no multilevel/downline commissions.
+- Affiliate enrollment is separate from Certificate purchase. No multilevel/downline commissions.
 - Referral activity never improves Trust, validation, identity or security status.
 - Self-referrals are not allowed. Reciprocal or shared-payment-identity patterns can be held for review.
 - Generating an invitation does not create a customer, sale, earned commission or paid commission.
