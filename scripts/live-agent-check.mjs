@@ -9,10 +9,31 @@ async function requestJson(path, init = {}, expected = [200]) {
   return JSON.parse(text);
 }
 
+function a2aAction(action, args = {}, id = `a2a-${action}`) {
+  return requestJson("/a2a", {
+    method: "POST",
+    headers: { "content-type": "application/json", "A2A-Version": "1.0" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id,
+      method: "SendMessage",
+      params: {
+        message: {
+          role: "ROLE_USER",
+          messageId: crypto.randomUUID(),
+          parts: [{ data: { action, arguments: args }, mediaType: "application/json" }]
+        }
+      }
+    })
+  });
+}
+
 const card = await requestJson("/.well-known/agent-card.json");
 assert.equal(card.name, "Accord Trace");
 assert.equal(card.supportedInterfaces?.[0]?.protocolVersion, "1.0");
-assert.ok(card.skills?.some((skill) => skill.id === "notarize_evidence"));
+for (const skill of ["notarize_evidence", "verify_proof", "network_capabilities", "network_stats", "passport_product_capabilities", "resolve_referral"]) {
+  assert.ok(card.skills?.some((candidate) => candidate.id === skill), `Agent Card missing ${skill}`);
+}
 
 const legacyResponse = await fetch(`${base}/.well-known/agent.json`);
 if (legacyResponse.status === 200) {
@@ -32,30 +53,73 @@ assert.equal(llmsResponse.status, 200);
 assert.match(await llmsResponse.text(), /independently integrity-checked later/i);
 
 const evidence = { event: "external-agent-production-check", source: "github-actions", run: process.env.GITHUB_RUN_ID || `manual-${Date.now()}` };
-const create = await requestJson("/api/v1/proofs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: evidence, metadata: { synthetic: true, client: "external-agent-check" } }) }, [201]);
+const create = await requestJson("/api/v1/proofs", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ data: evidence, metadata: { synthetic: true, client: "external-agent-check" } })
+}, [201]);
 assert.match(create.proof_id, /^atp_/);
 assert.ok(["service_recorded_hash", "issuer_signed_hash"].includes(create.integrity_mode));
 const retrieved = await requestJson(`/api/v1/proofs/${encodeURIComponent(create.proof_id)}`);
 assert.equal(retrieved.hash, create.hash);
-const verified = await requestJson("/api/v1/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ proof_id: create.proof_id, data: evidence }) });
+const verified = await requestJson("/api/v1/verify", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ proof_id: create.proof_id, data: evidence })
+});
 assert.equal(verified.valid, true);
 assert.equal(verified.hash_match, true);
 
-const a2a = await requestJson("/a2a", { method: "POST", headers: { "content-type": "application/json", "A2A-Version": "1.0" }, body: JSON.stringify({ jsonrpc: "2.0", id: "external-a2a-check", method: "SendMessage", params: { message: { role: "ROLE_USER", messageId: crypto.randomUUID(), parts: [{ data: { action: "verify_proof", arguments: { proof_id: create.proof_id, data: evidence } }, mediaType: "application/json" }] } } }) });
-assert.equal(a2a.result?.task?.artifacts?.[0]?.parts?.[0]?.data?.valid, true);
+const a2aVerify = await a2aAction("verify_proof", { proof_id: create.proof_id, data: evidence }, "external-a2a-verify");
+assert.equal(a2aVerify.result?.task?.artifacts?.[0]?.parts?.[0]?.data?.valid, true);
+const a2aNetwork = await a2aAction("network_capabilities", {}, "external-a2a-network");
+const a2aNetworkData = a2aNetwork.result?.task?.artifacts?.[0]?.parts?.[0]?.data;
+assert.equal(a2aNetworkData?.model, "single_level_direct_product_referral");
+assert.equal(a2aNetworkData?.cash_payouts_enabled, false);
 
 async function mcp(method, params, id) {
-  const body = { jsonrpc: "2.0", id, method, params: { ...params, _meta: { "io.modelcontextprotocol/protocolVersion": "2026-07-28", "io.modelcontextprotocol/clientInfo": { name: "accord-trace-external-check", version: "1.0.0" }, "io.modelcontextprotocol/clientCapabilities": {} } } };
+  const body = {
+    jsonrpc: "2.0",
+    id,
+    method,
+    params: {
+      ...params,
+      _meta: {
+        "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+        "io.modelcontextprotocol/clientInfo": { name: "accord-trace-external-check", version: "1.0.0" },
+        "io.modelcontextprotocol/clientCapabilities": {}
+      }
+    }
+  };
   const headers = { "content-type": "application/json", "MCP-Protocol-Version": "2026-07-28", "Mcp-Method": method };
   if (method === "tools/call") headers["Mcp-Name"] = params.name;
   return requestJson("/mcp", { method: "POST", headers, body: JSON.stringify(body) });
 }
+
 const discovered = await mcp("server/discover", {}, "external-mcp-discover");
 assert.ok(discovered.result?.supportedVersions?.includes("2026-07-28"));
 const listed = await mcp("tools/list", {}, "external-mcp-list");
-assert.ok(listed.result?.tools?.some((tool) => tool.name === "accord_trace_verify"));
+for (const tool of [
+  "accord_trace_verify",
+  "accord_trace_network_capabilities",
+  "accord_trace_network_stats",
+  "accord_trace_passport_product_capabilities",
+  "accord_trace_resolve_referral"
+]) assert.ok(listed.result?.tools?.some((candidate) => candidate.name === tool), `MCP missing ${tool}`);
+
 const mcpVerified = await mcp("tools/call", { name: "accord_trace_verify", arguments: { proof_id: create.proof_id, data: evidence } }, "external-mcp-verify");
 assert.equal(mcpVerified.result?.structuredContent?.valid, true);
+const mcpNetwork = await mcp("tools/call", { name: "accord_trace_network_capabilities", arguments: {} }, "external-mcp-network");
+assert.equal(mcpNetwork.result?.structuredContent?.model, "single_level_direct_product_referral");
+assert.equal(mcpNetwork.result?.structuredContent?.passport_price?.amount_atomic, 200);
+assert.equal(mcpNetwork.result?.structuredContent?.direct_commission?.amount_atomic, 100);
+assert.equal(mcpNetwork.result?.structuredContent?.cash_payouts_enabled, false);
+const mcpStats = await mcp("tools/call", { name: "accord_trace_network_stats", arguments: {} }, "external-mcp-network-stats");
+assert.equal(mcpStats.result?.structuredContent?.invitation_payloads?.classification, "generated_payloads_not_sales");
+const mcpProduct = await mcp("tools/call", { name: "accord_trace_passport_product_capabilities", arguments: {} }, "external-mcp-passport-product");
+assert.equal(mcpProduct.result?.structuredContent?.product?.id, "agent_passport_certificate");
+assert.equal(mcpProduct.result?.structuredContent?.product?.price?.amount_atomic, 200);
+assert.equal(mcpProduct.result?.structuredContent?.cash_affiliate_payouts_enabled, false);
 
 const network = await requestJson("/api/v1/network/capabilities");
 assert.equal(network.model, "single_level_direct_product_referral");
@@ -92,6 +156,7 @@ process.stdout.write(`${JSON.stringify({
   rest: "passed",
   a2a: "passed",
   mcp: "passed",
+  agent_growth_discovery: "passed",
   affiliate_network: "passed",
   passport_product_safety: "passed",
   passport_product_commercial_ready: Boolean(passportProduct.commercial_ready),
