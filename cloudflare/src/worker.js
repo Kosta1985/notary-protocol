@@ -8,6 +8,7 @@ import { handlePayments, PaymentError } from "./payments.js";
 import { handlePaymentHardening, PaymentHardeningError } from "./payment-hardening.js";
 import { handleIdentity, IdentityError } from "./identity.js";
 import { handleValidation, ValidationError } from "./validation.js";
+import { handleValidationDns, ValidationDnsError } from "./validation-dns.js";
 import { handleReputation, ReputationError } from "./reputation.js";
 import { handleAttestorSafety, SafetyError } from "./attestor-safety.js";
 import { handleControlPlane, ControlPlaneError } from "./control-plane.js";
@@ -16,25 +17,16 @@ import { handleControlPlaneHardening, HardeningError } from "./control-plane-har
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if(request.method === "OPTIONS" && url.pathname.startsWith("/api/v1/")) return withCors(new Response(null,{status:204}),url.pathname.startsWith("/api/v1/control-plane/"));
 
     if (url.pathname.startsWith("/api/v1/control-plane/maintenance/") || url.pathname.startsWith("/api/v1/control-plane/sessions/")) {
-      try {
-        const response = await handleControlPlaneHardening(request, env, url);
-        if (response) return withCors(response, true);
-      } catch (error) {
-        const status = error instanceof HardeningError ? error.status : 500;
-        return withCors(new Response(JSON.stringify({ error: error instanceof HardeningError ? "invalid_control_plane_hardening_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true);
-      }
+      try { const response = await handleControlPlaneHardening(request, env, url); if (response) return withCors(response, true); }
+      catch (error) { const status = error instanceof HardeningError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof HardeningError ? "invalid_control_plane_hardening_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true); }
     }
 
     if (url.pathname.startsWith("/api/v1/control-plane/")) {
-      try {
-        const response = await handleControlPlane(request, env, url);
-        if (response) return withCors(response, true);
-      } catch (error) {
-        const status = error instanceof ControlPlaneError ? error.status : 500;
-        return withCors(new Response(JSON.stringify({ error: error instanceof ControlPlaneError ? "invalid_control_plane_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true);
-      }
+      try { const response = await handleControlPlane(request, env, url); if (response) return withCors(response, true); }
+      catch (error) { const status = error instanceof ControlPlaneError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ControlPlaneError ? "invalid_control_plane_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true); }
     }
 
     if (url.pathname.startsWith("/api/v1/attestors/")) {
@@ -46,6 +38,8 @@ export default {
       catch (error) { const status = error instanceof ReputationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ReputationError ? "invalid_reputation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/validation/")) {
+      try { const automated = await handleValidationDns(request, env, url); if (automated) return withCors(automated); }
+      catch (error) { const status = error instanceof ValidationDnsError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ValidationDnsError ? "invalid_validation_dns_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
       try { const response = await handleValidation(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof ValidationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ValidationError ? "invalid_validation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
@@ -54,15 +48,8 @@ export default {
       catch (error) { const status = error instanceof IdentityError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof IdentityError ? "invalid_identity_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/payments/")) {
-      try {
-        const hardened = await handlePaymentHardening(request, env, url);
-        if (hardened) return withCors(hardened);
-      } catch (error) {
-        const status = error instanceof PaymentHardeningError ? error.status : 500;
-        const body = { error: error instanceof PaymentHardeningError ? "invalid_hardened_payment_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" };
-        if (error instanceof PaymentHardeningError && error.details) body.details = error.details;
-        return withCors(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } }));
-      }
+      try { const hardened = await handlePaymentHardening(request, env, url); if (hardened) return withCors(hardened); }
+      catch (error) { const status = error instanceof PaymentHardeningError ? error.status : 500; const body = { error: error instanceof PaymentHardeningError ? "invalid_hardened_payment_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }; if (error instanceof PaymentHardeningError && error.details) body.details = error.details; return withCors(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
       try { const response = await handlePayments(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof PaymentError ? error.status : 500; const body = { error: error instanceof PaymentError ? "invalid_payment_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }; if (error instanceof PaymentError && error.details) body.details = error.details; return withCors(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
@@ -92,10 +79,6 @@ function withCors(response, controlPlane = false) {
   headers.set("access-control-allow-methods", "GET, POST, OPTIONS");
   headers.set("access-control-allow-headers", "content-type, authorization");
   headers.set("cache-control", "no-store");
-  if (controlPlane) {
-    headers.set("content-security-policy", "default-src 'none'; frame-ancestors 'none'");
-    headers.set("x-content-type-options", "nosniff");
-    headers.set("referrer-policy", "no-referrer");
-  }
+  if (controlPlane) { headers.set("content-security-policy", "default-src 'none'; frame-ancestors 'none'"); headers.set("x-content-type-options", "nosniff"); headers.set("referrer-policy", "no-referrer"); }
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
