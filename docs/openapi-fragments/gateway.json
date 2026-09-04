@@ -1,0 +1,128 @@
+{
+  "paths": {
+    "/api/v1/gateway/capabilities": {
+      "get": {
+        "operationId": "getCapabilityGatewayCapabilities",
+        "responses": {
+          "200": { "description": "Least-privilege capability-lease, quota and kill-switch capabilities plus enforcement boundary" }
+        }
+      }
+    },
+    "/api/v1/gateway/leases": {
+      "post": {
+        "operationId": "createCapabilityLease",
+        "description": "Create an immutable issuer-signed capability lease for a different subject Passport. Leases contain policy only, never target-system credentials.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapabilityLeaseRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Capability lease created" },
+          "400": { "description": "Invalid scope, timestamps or quota" },
+          "401": { "description": "Issuer signature verification failed" },
+          "409": { "description": "Lease identifier already exists" }
+        }
+      }
+    },
+    "/api/v1/gateway/authorize": {
+      "post": {
+        "operationId": "authorizeCapabilityAction",
+        "description": "Evaluate a subject-signed action against an issuer-signed lease. The external runtime/proxy must enforce the returned point-in-time decision before invoking the real credential or tool.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuthorizationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Authorization decision, reason and remaining call quota" },
+          "401": { "description": "Subject signature verification failed" },
+          "409": { "description": "Request ID conflict or an identical request is still being decided" }
+        }
+      }
+    },
+    "/api/v1/gateway/leases/revoke": {
+      "post": {
+        "operationId": "revokeCapabilityLease",
+        "description": "Issuer-signed kill switch that revokes an active AccordTrace capability lease.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevokeCapabilityLeaseRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Lease revoked" },
+          "401": { "description": "Issuer signature verification failed" },
+          "403": { "description": "Passport is not the lease issuer" },
+          "409": { "description": "Lease is no longer active" }
+        }
+      }
+    },
+    "/api/v1/gateway/leases/status": {
+      "post": {
+        "operationId": "getCapabilityLeaseStatus",
+        "description": "Return scope, expiry and remaining quota after a signed status request from the issuer or subject Passport.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CapabilityLeaseStatusRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Current lease status" },
+          "401": { "description": "Passport signature verification failed" },
+          "403": { "description": "Passport is not a party to the lease" },
+          "404": { "description": "Lease not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CapabilityLeaseRequest": {
+        "type": "object",
+        "required": ["lease_id", "issuer_passport_id", "subject_passport_id", "allowed_actions", "allowed_origins", "max_calls", "issued_at", "expires_at", "signature"],
+        "properties": {
+          "lease_id": { "type": "string" },
+          "issuer_passport_id": { "type": "string" },
+          "subject_passport_id": { "type": "string" },
+          "allowed_actions": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string" } },
+          "allowed_origins": { "type": "array", "minItems": 1, "maxItems": 50, "items": { "type": "string", "format": "uri" } },
+          "max_calls": { "type": "integer", "minimum": 1, "maximum": 1000000 },
+          "issued_at": { "type": "string", "format": "date-time" },
+          "expires_at": { "type": "string", "format": "date-time", "description": "Maximum lease duration is 30 days" },
+          "signature": { "type": "string", "description": "base64url Ed25519 signature from issuer Passport" }
+        }
+      },
+      "AuthorizationRequest": {
+        "type": "object",
+        "required": ["request_id", "lease_id", "subject_passport_id", "action", "target_origin", "observed_at", "signature"],
+        "properties": {
+          "request_id": { "type": "string" },
+          "lease_id": { "type": "string" },
+          "subject_passport_id": { "type": "string" },
+          "action": { "type": "string" },
+          "target_origin": { "type": "string", "format": "uri" },
+          "observed_at": { "type": "string", "format": "date-time" },
+          "signature": { "type": "string", "description": "base64url Ed25519 signature from subject Passport" }
+        }
+      },
+      "RevokeCapabilityLeaseRequest": {
+        "type": "object",
+        "required": ["lease_id", "issuer_passport_id", "revoked_at", "signature"],
+        "properties": {
+          "lease_id": { "type": "string" },
+          "issuer_passport_id": { "type": "string" },
+          "reason": { "type": ["string", "null"], "maxLength": 200 },
+          "revoked_at": { "type": "string", "format": "date-time" },
+          "signature": { "type": "string" }
+        }
+      },
+      "CapabilityLeaseStatusRequest": {
+        "type": "object",
+        "required": ["lease_id", "passport_id", "checked_at", "signature"],
+        "properties": {
+          "lease_id": { "type": "string" },
+          "passport_id": { "type": "string" },
+          "checked_at": { "type": "string", "format": "date-time" },
+          "signature": { "type": "string" }
+        }
+      }
+    }
+  }
+}
