@@ -9,10 +9,21 @@ import { handleIdentity, IdentityError } from "./identity.js";
 import { handleReputation, ReputationError } from "./reputation.js";
 import { handleAttestorSafety, SafetyError } from "./attestor-safety.js";
 import { handleControlPlane, ControlPlaneError } from "./control-plane.js";
+import { handleControlPlaneHardening, HardeningError } from "./control-plane-hardening.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/v1/control-plane/maintenance/") || url.pathname.startsWith("/api/v1/control-plane/sessions/")) {
+      try {
+        const response = await handleControlPlaneHardening(request, env, url);
+        if (response) return withCors(response, true);
+      } catch (error) {
+        const status = error instanceof HardeningError ? error.status : 500;
+        return withCors(new Response(JSON.stringify({ error: error instanceof HardeningError ? "invalid_control_plane_hardening_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true);
+      }
+    }
 
     if (url.pathname.startsWith("/api/v1/control-plane/")) {
       try {
