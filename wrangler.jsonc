@@ -27,6 +27,7 @@
       "/api/v1/control-plane/*",
       "/api/v1/continuity/*",
       "/api/v1/network/*",
+      "/api/v1/passport-product/*",
       "/api/v1/launch/*",
       "/api/v1/developer/*",
       "/",
