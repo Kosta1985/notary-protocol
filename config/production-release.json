@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "profile": "enterprise-production",
+  "worker": {
+    "name": "accordtrace",
+    "base_url": "https://accordtrace.notary-labs.workers.dev",
+    "entrypoint": "cloudflare/src/worker.js",
+    "d1_binding": "DB",
+    "migrations_dir": "cloudflare/migrations"
+  },
+  "required_bindings": [
+    "DB"
+  ],
+  "required_secrets": [
+    "CONTROL_PLANE_RBAC_JSON"
+  ],
+  "conditional_runtime_requirements": [
+    {
+      "when_binding": "X402_VERIFY_ENABLED",
+      "equals": "true",
+      "require_binding": "X402_FACILITATOR_URL"
+    }
+  ],
+  "required_public_endpoints": [
+    "/health",
+    "/api/v1/security/capabilities",
+    "/api/v1/trust/capabilities",
+    "/api/v1/gateway/capabilities",
+    "/api/v1/payments/capabilities",
+    "/api/v1/identity/capabilities",
+    "/api/v1/reputation/capabilities",
+    "/api/v1/attestors/capabilities",
+    "/api/v1/product/plans",
+    "/openapi.json"
+  ],
+  "required_protected_endpoints": [
+    "/api/v1/control-plane/capabilities",
+    "/api/v1/control-plane/maintenance/capabilities"
+  ],
+  "migration_policy": {
+    "first_sequence": 1,
+    "require_contiguous_sequence": true,
+    "destructive_review_marker": "-- accordtrace: destructive-reviewed",
+    "forbidden_without_review": [
+      "DROP TABLE",
+      "DROP COLUMN",
+      "DELETE FROM",
+      "PRAGMA WRITABLE_SCHEMA",
+      "VACUUM INTO",
+      "ATTACH DATABASE"
+    ]
+  },
+  "release_invariants": [
+    "control_plane_is_fail_closed_without_authentication",
+    "control_plane_audit_is_append_only_under_automated_retention",
+    "x402_is_non_custodial_and_verify_only",
+    "x402_payment_requirements_are_stored_and_deterministic",
+    "payment_payload_replay_is_cross_order_protected",
+    "no_secret_values_are_committed_to_release_configuration"
+  ]
+}
