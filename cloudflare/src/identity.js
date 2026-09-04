@@ -6,7 +6,7 @@ const TYPES=["verified_domain","organization","software_publisher","security_eva
 export async function handleIdentity(request,env,url=new URL(request.url)){
   if(!url.pathname.startsWith("/api/v1/identity/"))return null;
   await ensureSchema(env);
-  if(request.method==="GET"&&url.pathname==="/api/v1/identity/capabilities")return reply({service:"AccordTrace Independent Identity Evidence",version:"0.1.0",features:["third_party_attestations","expiry","revocation","reputation_dimensions"],trust_model:"Attestations prove that an independent Passport key signed a scoped claim. They do not by themselves prove legal identity, beneficial ownership, or independence of the attestor."});
+  if(request.method==="GET"&&url.pathname==="/api/v1/identity/capabilities")return reply({service:"AccordTrace Independent Identity Evidence",version:"0.2.0",features:["third_party_attestations","expiry","revocation","reputation_dimensions","attestor_safety_qualification"],trust_model:"Attestations prove key-signed claims. Only attestations from active attestor safety profiles qualify for confidence dimensions; this still does not prove legal identity, beneficial ownership, or operator independence."});
   if(request.method==="POST"&&url.pathname==="/api/v1/identity/attestations"){
     const b=await bodyJson(request),attestor=await passport(env,b.attestor_passport_id),subject=await passport(env,b.subject_passport_id);
     if(attestor.id===subject.id)throw new IdentityError("self_attestation_not_allowed",400);
@@ -30,10 +30,22 @@ export async function handleIdentity(request,env,url=new URL(request.url)){
     return reply({attestation_id:row.id,status:"revoked"});
   }
   const m=url.pathname.match(/^\/api\/v1\/identity\/passports\/([^/]+)\/evidence$/);
-  if(request.method==="GET"&&m){const id=decodeURIComponent(m[1]); if(!await passport(env,id))return reply({error:"passport_not_found"},404); const rows=await env.DB.prepare("SELECT id,attestor_passport_id,type,subject_ref,evidence_digest,issued_at,expires_at,status,revoked_at FROM identity_attestations WHERE subject_passport_id=?1 ORDER BY created_at DESC").bind(id).all(); const list=(rows.results||[]).map(x=>({...x,effective_status:x.status==='active'&&Date.parse(x.expires_at)<=Date.now()?"expired":x.status})); const active=list.filter(x=>x.effective_status==='active'); return reply({passport_id:id,dimensions:{identity:dimension(active,["verified_domain","organization","payment_rail_identity"]),security_posture:dimension(active,["security_evaluator"]),publisher:dimension(active,["software_publisher"])},attestations:list,trust_score:null,limitations:["Attestor Passports may still be colluding or controlled by one operator.","No numeric score is published until anti-Sybil graph analysis is added."]});}
+  if(request.method==="GET"&&m){
+    const id=decodeURIComponent(m[1]); if(!await passport(env,id))return reply({error:"passport_not_found"},404);
+    const rows=await env.DB.prepare(`SELECT i.id,i.attestor_passport_id,i.type,i.subject_ref,i.evidence_digest,i.issued_at,i.expires_at,i.status,i.revoked_at,
+      COALESCE(s.state,'unenrolled') AS attestor_safety_state,
+      CASE WHEN s.state='active' THEN 1 ELSE 0 END AS safety_qualified
+      FROM identity_attestations i
+      LEFT JOIN attestor_safety_profiles s ON s.passport_id=i.attestor_passport_id
+      WHERE i.subject_passport_id=?1 ORDER BY i.created_at DESC`).bind(id).all();
+    const list=(rows.results||[]).map(x=>({...x,effective_status:x.status==='active'&&Date.parse(x.expires_at)<=Date.now()?"expired":x.status,safety_qualified:Boolean(x.safety_qualified)}));
+    const active=list.filter(x=>x.effective_status==='active');
+    const qualified=active.filter(x=>x.safety_qualified);
+    return reply({passport_id:id,dimensions:{identity:dimension(qualified,["verified_domain","organization","payment_rail_identity"]),security_posture:dimension(qualified,["security_evaluator"]),publisher:dimension(qualified,["software_publisher"])},attestations:list,qualified_attestations:qualified.length,unqualified_active_attestations:active.length-qualified.length,trust_score:null,limitations:["Only active safety-profile attestors count toward confidence dimensions.","Safety enrollment does not prove operator independence or legal identity.","Compromised, suspended, revoked or unenrolled attestors remain visible for audit but are excluded from qualified evidence."]});
+  }
   return reply({error:"not_found"},404);
 }
-function dimension(rows,types){const relevant=rows.filter(r=>types.includes(r.type));return{status:relevant.length?"attested":"unattested",active_attestations:relevant.length,distinct_attestors:new Set(relevant.map(r=>r.attestor_passport_id)).size}}
+function dimension(rows,types){const relevant=rows.filter(r=>types.includes(r.type));return{status:relevant.length?"attested":"unattested",qualified_attestations:relevant.length,distinct_qualified_attestors:new Set(relevant.map(r=>r.attestor_passport_id)).size}}
 async function passport(env,id){required(id,"passport_id");return env.DB.prepare("SELECT id,public_key,status FROM agent_passports WHERE id=?1 AND status='active'").bind(id).first()}
 async function ensureSchema(env){if(schemaReady)return;for(const sql of [`CREATE TABLE IF NOT EXISTS identity_attestations (id TEXT PRIMARY KEY,attestor_passport_id TEXT NOT NULL,subject_passport_id TEXT NOT NULL,type TEXT NOT NULL,subject_ref TEXT NOT NULL,evidence_digest TEXT,issued_at TEXT NOT NULL,expires_at TEXT NOT NULL,signature TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'active',revoked_at TEXT,revoke_reason TEXT,created_at TEXT NOT NULL,updated_at TEXT NOT NULL)`,`CREATE INDEX IF NOT EXISTS idx_identity_subject ON identity_attestations(subject_passport_id,status,expires_at)`,`CREATE INDEX IF NOT EXISTS idx_identity_attestor ON identity_attestations(attestor_passport_id,status,expires_at)`])await env.DB.prepare(sql).run();schemaReady=true}
 function assertExpiry(a,b){const s=Date.parse(a),e=Date.parse(b);if(!Number.isFinite(s)||!Number.isFinite(e)||e<=s||e-s>365*24*60*60*1000)throw new IdentityError("invalid_expiry",400);return new Date(e).toISOString()}
