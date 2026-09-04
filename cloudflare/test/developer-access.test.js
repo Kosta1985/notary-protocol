@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const dev=fs.readFileSync(new URL('../src/developer.js',import.meta.url),'utf8');
+const migration=fs.readFileSync(new URL('../migrations/0017_developer_api_keys.sql',import.meta.url),'utf8');
+const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
+const openapi=fs.readFileSync(new URL('../../docs/openapi-fragments/developer.json',import.meta.url),'utf8');
+test('developer keys are hash-only at rest and raw token is returned once',()=>{assert.match(migration,/key_hash TEXT NOT NULL UNIQUE/);assert.doesNotMatch(migration,/raw_key|token TEXT|secret TEXT/i);assert.match(dev,/AccordTrace stores only its SHA-256 hash/);});
+test('key issuance is Passport signed and replay bounded',()=>{assert.match(dev,/accordtrace\.developer\.api_key\.create\.v1/);assert.match(migration,/request_id TEXT NOT NULL UNIQUE/);assert.match(dev,/verifyEd25519/);});
+test('live keys are disabled unless explicitly enabled',()=>{assert.match(dev,/LIVE_API_KEYS_ENABLED/);assert.match(dev,/live_api_keys_disabled/);});
+test('test ping enforces bearer environment and scope',()=>{assert.match(dev,/\/api\/v1\/developer\/test\/ping/);assert.match(dev,/authenticateDeveloperKey/);assert.match(dev,/test:read/);assert.match(dev,/wrong_environment/);assert.match(dev,/scope_not_granted/);});
+test('developer routes are wired and documented',()=>{assert.match(worker,/handleDeveloper/);assert.match(openapi,/\/api\/v1\/developer\/keys/);assert.match(openapi,/\/api\/v1\/developer\/test\/ping/);});
