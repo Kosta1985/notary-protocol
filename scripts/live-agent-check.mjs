@@ -26,6 +26,7 @@ if (legacyResponse.status === 200) {
 
 const openapi = await requestJson("/openapi.json");
 assert.ok(openapi.paths?.["/api/v1/proofs"]);
+assert.ok(openapi.paths?.["/mcp"]);
 const llmsResponse = await fetch(`${base}/llms.txt`);
 assert.equal(llmsResponse.status, 200);
 assert.match(await llmsResponse.text(), /independently integrity-checked later/i);
@@ -33,6 +34,7 @@ assert.match(await llmsResponse.text(), /independently integrity-checked later/i
 const evidence = { event: "external-agent-production-check", source: "github-actions", run: process.env.GITHUB_RUN_ID || `manual-${Date.now()}` };
 const create = await requestJson("/api/v1/proofs", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ data: evidence, metadata: { synthetic: true, client: "external-agent-check" } }) }, [201]);
 assert.match(create.proof_id, /^atp_/);
+assert.ok(["service_recorded_hash", "issuer_signed_hash"].includes(create.integrity_mode));
 const retrieved = await requestJson(`/api/v1/proofs/${encodeURIComponent(create.proof_id)}`);
 assert.equal(retrieved.hash, create.hash);
 const verified = await requestJson("/api/v1/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ proof_id: create.proof_id, data: evidence }) });
@@ -55,4 +57,43 @@ assert.ok(listed.result?.tools?.some((tool) => tool.name === "accord_trace_verif
 const mcpVerified = await mcp("tools/call", { name: "accord_trace_verify", arguments: { proof_id: create.proof_id, data: evidence } }, "external-mcp-verify");
 assert.equal(mcpVerified.result?.structuredContent?.valid, true);
 
-process.stdout.write(`${JSON.stringify({ status: "passed", service: base, proof_id: create.proof_id, rest: "passed", a2a: "passed", mcp: "passed", legacy_a2a_alias: legacyResponse.status === 200 ? "present" : "absent" }, null, 2)}\n`);
+const network = await requestJson("/api/v1/network/capabilities");
+assert.equal(network.model, "single_level_direct_product_referral");
+assert.equal(network.passport_price?.amount_atomic, 200);
+assert.equal(network.direct_commission?.amount_atomic, 100);
+assert.equal(network.cash_payouts_enabled, false);
+assert.ok(network.rules?.includes("no_multilevel_downline_commission"));
+assert.ok(network.rules?.includes("no_self_referral"));
+
+const networkStats = await requestJson("/api/v1/network/stats");
+assert.equal(networkStats.model, "single_level_direct_product_referral");
+assert.equal(networkStats.cash_payouts_enabled, false);
+assert.equal(networkStats.invitation_payloads?.classification, "generated_payloads_not_sales");
+assert.match(networkStats.boundary || "", /invitation is not a customer, sale, earned commission or paid commission/i);
+
+const passportProduct = await requestJson("/api/v1/passport-product/capabilities");
+assert.equal(passportProduct.product?.id, "agent_passport_certificate");
+assert.equal(passportProduct.product?.price?.amount_atomic, 200);
+assert.equal(passportProduct.product?.price?.currency, "usd");
+assert.equal(passportProduct.cash_affiliate_payouts_enabled, false);
+assert.equal(passportProduct.affiliate_enrollment, "optional_and_separate");
+if (passportProduct.commercial_ready) {
+  assert.equal(passportProduct.checkout_enabled, true);
+  assert.equal(passportProduct.webhook_enabled, true);
+  assert.equal(passportProduct.certificate_signing_enabled, true);
+  assert.equal(passportProduct.referral_pricing_consistent, true);
+}
+
+process.stdout.write(`${JSON.stringify({
+  status: "passed",
+  service: base,
+  proof_id: create.proof_id,
+  proof_integrity_mode: create.integrity_mode,
+  rest: "passed",
+  a2a: "passed",
+  mcp: "passed",
+  affiliate_network: "passed",
+  passport_product_safety: "passed",
+  passport_product_commercial_ready: Boolean(passportProduct.commercial_ready),
+  legacy_a2a_alias: legacyResponse.status === 200 ? "present" : "absent"
+}, null, 2)}\n`);
