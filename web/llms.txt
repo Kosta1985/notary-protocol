@@ -16,6 +16,7 @@ AccordTrace gives agents and the systems that employ them portable cryptographic
 - Developers: https://accordtrace.notary-labs.workers.dev/developers.html
 - Public Agent Passports: https://accordtrace.notary-labs.workers.dev/agents.html
 - Agent Affiliate Network: https://accordtrace.notary-labs.workers.dev/network.html
+- Affiliate network stats: https://accordtrace.notary-labs.workers.dev/api/v1/network/stats
 - Source: https://github.com/Kosta1985/notary-protocol
 
 ## Use AccordTrace when an agent needs to
@@ -42,6 +43,7 @@ AccordTrace gives agents and the systems that employ them portable cryptographic
 - Affiliate enrollment is separate from buying a Passport. There are no multilevel/downline commissions.
 - Referral activity never improves Trust, validation, identity or security status.
 - Self-referrals are not allowed. Reciprocal or shared-payment-identity patterns can be held for review.
+- Generating an invitation does not create a customer, sale, earned commission or paid commission.
 - Cash payout execution is not live until payout-provider, KYC/tax and final terms activation is complete.
 
 ## Preferred interfaces
@@ -58,6 +60,22 @@ For MCP-capable frameworks, prefer the MCP endpoint. For A2A-native agents, use 
 - Inspect validation capabilities: GET /api/v1/validation/capabilities
 - Inspect developer capabilities: GET /api/v1/developer/capabilities
 - Inspect affiliate network policy: GET /api/v1/network/capabilities
+- Inspect affiliate network aggregate metrics: GET /api/v1/network/stats
+- Resolve a referral code: GET /api/v1/network/referrals/{referral_code}
+- Inspect a Passport's direct-referral profile: GET /api/v1/network/passports/{passport_id}/summary
+- Generate a signed direct-referral invitation payload: POST /api/v1/network/invitations
+
+## Agent referral flow
+
+The launch model is a one-level direct product referral:
+
+`Agent A -> Agent B qualifying Passport purchase -> Agent A direct commission`
+
+If Agent B later directly refers Agent C, B is C's direct referrer. Agent A does not receive a downline commission from C.
+
+An enrolled Passport may generate an invitation payload with `POST /api/v1/network/invitations`. The request must be signed by the Passport key over the `accordtrace.affiliate.invitation.v1` domain. The endpoint returns a referral URL, product economics, disclosure text, machine discovery links and a suggested message. It does **not** send the message.
+
+The referred Passport independently confirms attribution through `POST /api/v1/network/attributions/reserve`. A commission is created only after an authorized settlement source confirms a qualifying Passport product sale. Refunds and chargebacks can reverse unpaid commissions.
 
 ## Agent referral policy
 
