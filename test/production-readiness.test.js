@@ -2,6 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 const ready=fs.readFileSync(new URL('../scripts/production-readiness.mjs',import.meta.url),'utf8');
 const smoke=fs.readFileSync(new URL('../scripts/full-production-smoke.js',import.meta.url),'utf8');
 const deploy=fs.readFileSync(new URL('../.github/workflows/deploy-accordtrace.yml',import.meta.url),'utf8');
+const liveSmoke=fs.readFileSync(new URL('../.github/workflows/live-smoke.yml',import.meta.url),'utf8');
 const launch=fs.readFileSync(new URL('../cloudflare/src/launch.js',import.meta.url),'utf8');
 const wrangler=fs.readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8');
 test('readiness validator requires contiguous migrations and commercial assets',()=>{assert.match(ready,/migration_sequence/);assert.match(ready,/web\/verify\.html/);assert.match(ready,/web\/developers\.html/);assert.match(ready,/web\/checkout-success\.html/);assert.match(ready,/web\/network\.html/);assert.match(ready,/expected_at_least_20/);assert.match(ready,/handleAgentContinuity/);assert.match(ready,/runContinuityScheduled/);assert.match(ready,/handleAffiliate/);assert.match(ready,/matureAffiliateCommissions/);});
@@ -9,3 +10,4 @@ test('production smoke covers commercial, trust, continuity and affiliate surfac
 test('continuity and affiliate background work are scheduled and Worker-first',()=>{assert.match(wrangler,/\/api\/v1\/continuity\/\*/);assert.match(wrangler,/\/api\/v1\/network\/\*/);assert.match(wrangler,/\*\/5 \* \* \* \*/);});
 test('deploy stamps and verifies the exact release SHA',()=>{assert.match(deploy,/ACCORDTRACE_RELEASE_SHA/);assert.match(deploy,/EXPECTED_RELEASE_SHA/);assert.match(deploy,/smoke:production/);assert.match(launch,/release_sha/);});
 test('deploy applies migrations before worker deployment',()=>{assert.ok(deploy.indexOf('d1 migrations apply')<deploy.indexOf('wrangler@latest deploy'));});
+test('black-box live smoke waits for successful production deploy instead of racing push deployment',()=>{assert.match(liveSmoke,/workflow_run:/);assert.match(liveSmoke,/Deploy AccordTrace production/);assert.match(liveSmoke,/workflow_run\.conclusion == 'success'/);assert.doesNotMatch(liveSmoke,/branches:\s*\[main\]/);assert.match(liveSmoke,/live-agent-check\.mjs/);});
