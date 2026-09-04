@@ -21,6 +21,10 @@
     "./payments": {
       "types": "./src/payments.ts",
       "import": "./dist/payments.js"
+    },
+    "./enforcement": {
+      "types": "./src/enforcement.ts",
+      "import": "./dist/enforcement.js"
     }
   },
   "engines": { "node": ">=20" },
