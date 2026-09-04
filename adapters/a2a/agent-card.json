@@ -1,6 +1,6 @@
 {
   "name": "Accord Trace",
-  "description": "Independent tamper-evident cryptographic evidence, receipt and verification infrastructure for AI-agent actions, artifacts, approvals and workflow handoffs.",
+  "description": "Independent tamper-evident cryptographic evidence, receipt, verification, identity and agent-economic discovery infrastructure for AI-agent actions, artifacts, approvals and workflow handoffs.",
   "supportedInterfaces": [
     {
       "url": "https://accordtrace.notary-labs.workers.dev/a2a",
@@ -24,41 +24,13 @@
   "defaultInputModes": ["application/json", "text/plain"],
   "defaultOutputModes": ["application/json", "text/plain"],
   "skills": [
-    {
-      "id": "notarize_evidence",
-      "name": "Create cryptographic proof",
-      "description": "Create a tamper-evident timestamped Accord Trace attestation for an action, artifact, approval, API output or workflow checkpoint. The receipt attests submitted evidence integrity and service-recorded time; it does not prove truth, identity, authorship, authority or legality.",
-      "tags": ["cryptographic-evidence", "attestation", "agent-handoff", "artifact-integrity", "provenance", "sha-256", "audit-trail", "developer-tools"],
-      "examples": ["Create an integrity receipt for this deployment artifact before handing it to another agent."],
-      "inputModes": ["application/json", "text/plain"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "verify_proof",
-      "name": "Verify cryptographic proof",
-      "description": "Verify an Accord Trace attestation and optionally confirm that supplied content or a SHA-256 digest matches the recorded evidence.",
-      "tags": ["verification", "cryptographic-evidence", "artifact-integrity", "agent-handoff", "tamper-evident", "developer-tools"],
-      "examples": ["Verify this Accord Trace proof and compare it with the artifact I received."],
-      "inputModes": ["application/json", "text/plain"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "get_proof",
-      "name": "Retrieve proof metadata",
-      "description": "Retrieve public non-secret proof metadata and machine-readable verification information by Accord Trace proof identifier.",
-      "tags": ["proof", "receipt", "provenance", "verification", "audit-trail", "developer-tools"],
-      "examples": ["Retrieve the verification metadata for this Accord Trace proof ID."],
-      "inputModes": ["application/json", "text/plain"],
-      "outputModes": ["application/json"]
-    },
-    {
-      "id": "hash_content",
-      "name": "Hash content",
-      "description": "Generate a canonical SHA-256 digest suitable for privacy-preserving evidence registration without creating or storing a proof.",
-      "tags": ["sha-256", "privacy", "artifact-integrity", "cryptographic-evidence", "developer-tools"],
-      "examples": ["Generate a canonical SHA-256 digest for this JSON artifact."],
-      "inputModes": ["application/json", "text/plain"],
-      "outputModes": ["application/json"]
-    }
+    {"id":"notarize_evidence","name":"Create cryptographic proof","description":"Create a tamper-evident timestamped Accord Trace proof for an action, artifact, approval, API output or workflow checkpoint. The record attests submitted evidence integrity and service-recorded time; when issuer signing is configured it also carries an Ed25519 issuer signature. It does not prove truth, identity, authorship, authority or legality.","tags":["cryptographic-evidence","attestation","agent-handoff","artifact-integrity","provenance","sha-256","audit-trail","developer-tools"],"examples":["Create an integrity receipt for this deployment artifact before handing it to another agent."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"verify_proof","name":"Verify cryptographic proof","description":"Verify an Accord Trace recorded proof and optionally confirm that supplied content or a SHA-256 digest matches the recorded evidence; verify an issuer signature when present.","tags":["verification","cryptographic-evidence","artifact-integrity","agent-handoff","tamper-evident","developer-tools"],"examples":["Verify this Accord Trace proof and compare it with the artifact I received."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"get_proof","name":"Retrieve proof metadata","description":"Retrieve public non-secret proof metadata and machine-readable verification information by Accord Trace proof identifier.","tags":["proof","receipt","provenance","verification","audit-trail","developer-tools"],"examples":["Retrieve the verification metadata for this Accord Trace proof ID."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"hash_content","name":"Hash content","description":"Generate a canonical SHA-256 digest suitable for privacy-preserving evidence registration without creating or storing a proof.","tags":["sha-256","privacy","artifact-integrity","cryptographic-evidence","developer-tools"],"examples":["Generate a canonical SHA-256 digest for this JSON artifact."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"network_capabilities","name":"Inspect affiliate network policy","description":"Read the live one-level Agent Affiliate Network economics, anti-downline/self-referral rules and payout activation status. This read-only action does not enroll or attribute an agent.","tags":["agent-economy","affiliate","referral","policy","read-only"],"examples":["What are the current Accord Trace referral economics and payout status?"],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"network_stats","name":"Inspect affiliate network statistics","description":"Read aggregate network states while keeping invitation payloads, attributions, qualified direct sales, earned commissions and paid commissions distinct.","tags":["agent-economy","affiliate","statistics","evidence","read-only"],"examples":["Show the current evidence-backed Accord Trace affiliate network statistics."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"passport_product_capabilities","name":"Inspect Passport Certificate readiness","description":"Read the standalone Agent Passport Certificate product price and live commercial readiness gates without starting checkout.","tags":["agent-passport","certificate","commerce","readiness","read-only"],"examples":["Is the Accord Trace Agent Passport Certificate commercially ready, and what is its current price?"],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]},
+    {"id":"resolve_referral","name":"Resolve direct referral","description":"Resolve an active direct referral code to its public record and disclosure. This read-only action does not reserve attribution, create a sale or earn a commission.","tags":["agent-economy","referral","disclosure","read-only"],"examples":["Resolve this Accord Trace referral code before deciding whether to use it."],"inputModes":["application/json","text/plain"],"outputModes":["application/json"]}
   ]
 }
