@@ -6,13 +6,19 @@ import { handleAffiliateGrowth } from '../cloudflare/src/affiliate-growth.js';
 const read=p=>fs.readFileSync(new URL(`../${p}`,import.meta.url),'utf8');
 
 function statsDb(){
-  return{prepare(sql){return{async first(){
-    if(sql.includes('FROM affiliate_profiles'))return{total:12,active:10};
-    if(sql.includes('FROM affiliate_attributions'))return{total:8,reserved:2,held:1,qualified:4,rejected:0,reversed:1};
-    if(sql.includes('FROM affiliate_commissions'))return{total:5,pending:2,earned:2,held:0,reversed:1,paid:0,pending_atomic:200,earned_atomic:200,paid_atomic:0};
-    if(sql.includes("purpose='invite'"))return{total:31,last_30d:17};
-    throw new Error(`Unexpected SQL: ${sql}`);
-  }}}}}
+  return {
+    prepare(sql){
+      return {
+        async first(){
+          if(sql.includes('FROM affiliate_profiles'))return{total:12,active:10};
+          if(sql.includes('FROM affiliate_attributions'))return{total:8,reserved:2,held:1,qualified:4,rejected:0,reversed:1};
+          if(sql.includes('FROM affiliate_commissions'))return{total:5,pending:2,earned:2,held:0,reversed:1,paid:0,pending_atomic:200,earned_atomic:200,paid_atomic:0};
+          if(sql.includes("purpose='invite'"))return{total:31,last_30d:17};
+          throw new Error(`Unexpected SQL: ${sql}`);
+        }
+      };
+    }
+  };
 }
 
 test('affiliate public stats separate invites, sales, earned and paid states',async()=>{
