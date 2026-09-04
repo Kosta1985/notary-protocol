@@ -1,23 +1,240 @@
-import fs from 'node:fs';import path from 'node:path';
-const root=path.resolve(new URL('..',import.meta.url).pathname);const problems=[];const notes=[];
-const requiredFiles=['wrangler.jsonc','cloudflare/src/worker.js','cloudflare/src/affiliate.js','web/index.html','web/verify.html','web/dashboard.html','web/validation.html','web/developers.html','web/agents.html','web/network.html','web/checkout-success.html','web/ai.html','web/llms.txt','web/llms-full.txt','web/robots.txt','web/sitemap.xml','.github/workflows/deploy-accordtrace.yml'];for(const f of requiredFiles)if(!fs.existsSync(path.join(root,f)))problems.push(`missing:${f}`);
-const migDir=path.join(root,'cloudflare/migrations');const migrations=fs.readdirSync(migDir).filter(x=>/^\d{4}_.+\.sql$/.test(x)).sort();for(let i=0;i<migrations.length;i++){const expected=String(i+1).padStart(4,'0');if(!migrations[i].startsWith(`${expected}_`))problems.push(`migration_sequence:${expected}:${migrations[i]}`)}
-if(migrations.length<20)problems.push(`migration_count:${migrations.length}:expected_at_least_20`);
-const worker=fs.readFileSync(path.join(root,'cloudflare/src/worker.js'),'utf8');for(const marker of ['handleValidation','handleValidationDns','handlePaymentHardening','handleIdentityHardening','handleReputationHardening','handleLaunch','handleDeveloper','handleAgentContinuity','runContinuityScheduled','handleAffiliate','matureAffiliateCommissions'])if(!worker.includes(marker))problems.push(`worker_route_missing:${marker}`);
-const wrangler=fs.readFileSync(path.join(root,'wrangler.jsonc'),'utf8');if(!wrangler.includes('/api/v1/continuity/*'))problems.push('continuity_route_missing');if(!wrangler.includes('/api/v1/network/*'))problems.push('affiliate_network_route_missing');if(!wrangler.includes('*/5 * * * *'))problems.push('continuity_cron_missing');
-const launch=fs.readFileSync(path.join(root,'cloudflare/src/launch.js'),'utf8');if(!launch.includes('handleStripe'))problems.push('launch_route_missing:handleStripe');
-const affiliate=fs.readFileSync(path.join(root,'cloudflare/src/affiliate.js'),'utf8');for(const marker of ['single_level_direct_product_referral','no_multilevel_downline_commission','self_referral_not_allowed','shared_payment_identity_review','cash_payouts_enabled:false'])if(!affiliate.includes(marker))problems.push(`affiliate_boundary_missing:${marker}`);
-const home=fs.readFileSync(path.join(root,'web/index.html'),'utf8');if(!/Know which agent you are dealing with/i.test(home))problems.push('commercial_home_marker_missing');if(/TaskBay's portable evidence layer/.test(home))problems.push('stale_taskbay_positioning');
-const network=fs.readFileSync(path.join(root,'web/network.html'),'utf8');for(const marker of ['one-level affiliate network','No downline commissions','cash payouts remain disabled'])if(!network.toLowerCase().includes(marker.toLowerCase()))problems.push(`network_page_missing:${marker}`);
-const ai=fs.readFileSync(path.join(root,'web/ai.html'),'utf8');for(const marker of ['application/ld+json','SoftwareApplication','FAQPage','Agent Continuity Monitor'])if(!ai.includes(marker))problems.push(`ai_discovery_missing:${marker}`);
-const llms=fs.readFileSync(path.join(root,'web/llms.txt'),'utf8');if(!llms.includes('/ai.html')||!llms.includes('/api/v1/continuity/capabilities')||!llms.includes('/api/v1/network/capabilities'))problems.push('llms_discovery_outdated');
-const full=fs.readFileSync(path.join(root,'web/llms-full.txt'),'utf8');if(!full.includes('Missing heartbeat alone never triggers containment'))problems.push('llms_full_safety_boundary_missing');
-const robots=fs.readFileSync(path.join(root,'web/robots.txt'),'utf8');if(!robots.includes('Disallow: /api/v1/control-plane/'))problems.push('robots_private_surface_boundary_missing');
-const sitemap=fs.readFileSync(path.join(root,'web/sitemap.xml'),'utf8');for(const marker of ['/ai.html','/network.html','/llms.txt','/llms-full.txt'])if(!sitemap.includes(marker))problems.push(`sitemap_missing:${marker}`);
-const deploy=fs.readFileSync(path.join(root,'.github/workflows/deploy-accordtrace.yml'),'utf8');for(const marker of ['d1 migrations apply','wrangler@latest deploy','CLOUDFLARE_API_TOKEN','EXPECTED_RELEASE_SHA'])if(!deploy.includes(marker))problems.push(`deploy_marker_missing:${marker}`);
-const requireCloudflare=process.argv.includes('--require-cloudflare');const cloudflareToken=process.env.CLOUDFLARE_API_TOKEN||process.env.CF_TOKEN_1||process.env.CF_TOKEN_2||process.env.CF_TOKEN_3||process.env.CF_TOKEN_4;const cloudflareAccount=process.env.CLOUDFLARE_ACCOUNT_ID||process.env.CF_ACCOUNT_1||process.env.CF_ACCOUNT_2||process.env.CF_ACCOUNT_3||process.env.CF_ACCOUNT_4;if(requireCloudflare){if(!cloudflareToken)problems.push('env:CLOUDFLARE_API_TOKEN');if(!cloudflareAccount)notes.push('Cloudflare account ID will be resolved by deploy workflow when token authorization permits it.')}else if(!cloudflareToken)notes.push('Cloudflare token not configured in this process; deployment credentials may still be normalized by the deploy workflow.');
-for(const key of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_DOMAIN_CONTROL','STRIPE_PRICE_PUBLISHER_VALIDATION','STRIPE_PRICE_SECURITY_ASSESSMENT'])if(!process.env[key])notes.push(`${key} not configured; corresponding Stripe checkout capability remains disabled.`);
-if(!process.env.STRIPE_PUBLISHABLE_KEY)notes.push('STRIPE_PUBLISHABLE_KEY is not configured; hosted Checkout does not require it server-side, but retain it for future embedded/client features.');
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const problems = [];
+const notes = [];
+
+const requiredFiles = [
+  'wrangler.jsonc',
+  'cloudflare/src/worker.js',
+  'cloudflare/src/worker-v2.js',
+  'cloudflare/src/interoperability.js',
+  'cloudflare/src/proofs.js',
+  'cloudflare/src/affiliate.js',
+  'cloudflare/src/affiliate-growth.js',
+  'cloudflare/src/passport-product.js',
+  'web/index.html',
+  'web/verify.html',
+  'web/dashboard.html',
+  'web/validation.html',
+  'web/developers.html',
+  'web/agents.html',
+  'web/network.html',
+  'web/checkout-success.html',
+  'web/passport-checkout-success.html',
+  'web/ai.html',
+  'web/llms.txt',
+  'web/llms-full.txt',
+  'web/robots.txt',
+  'web/sitemap.xml',
+  'web/.well-known/agent.json',
+  'web/.well-known/mcp.json',
+  'scripts/live-agent-check.mjs',
+  '.github/workflows/deploy-accordtrace.yml',
+  '.github/workflows/live-smoke.yml',
+  '.github/workflows/accord-trace-agent-smoke.yml'
+];
+for (const file of requiredFiles) {
+  if (!fs.existsSync(path.join(root, file))) problems.push(`missing:${file}`);
+}
+
+const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
+const parseJson = (file, code) => {
+  try {
+    return JSON.parse(read(file));
+  } catch {
+    problems.push(`${code}:${file}`);
+    return null;
+  }
+};
+
+const migDir = path.join(root, 'cloudflare/migrations');
+const migrations = fs.readdirSync(migDir).filter((name) => /^\d{4}_.+\.sql$/.test(name)).sort();
+for (let i = 0; i < migrations.length; i += 1) {
+  const expected = String(i + 1).padStart(4, '0');
+  if (!migrations[i].startsWith(`${expected}_`)) problems.push(`migration_sequence:${expected}:${migrations[i]}`);
+}
+if (migrations.length < 21) problems.push(`migration_count:${migrations.length}:expected_at_least_21`);
+
+const worker = read('cloudflare/src/worker.js');
+for (const marker of [
+  'handleValidation',
+  'handleValidationDns',
+  'handlePaymentHardening',
+  'handleIdentityHardening',
+  'handleReputationHardening',
+  'handleLaunch',
+  'handleDeveloper',
+  'handleAgentContinuity',
+  'runContinuityScheduled',
+  'handleAffiliate',
+  'matureAffiliateCommissions'
+]) {
+  if (!worker.includes(marker)) problems.push(`worker_route_missing:${marker}`);
+}
+
+const workerV2 = read('cloudflare/src/worker-v2.js');
+for (const marker of ['handleInteroperability', 'handleProofs', 'coreWorker.fetch', 'coreWorker.scheduled']) {
+  if (!workerV2.includes(marker)) problems.push(`worker_v2_missing:${marker}`);
+}
+if (workerV2.indexOf('handleInteroperability') > workerV2.indexOf('coreWorker.fetch')) {
+  problems.push('worker_v2_interoperability_order_invalid');
+}
+
+const interoperability = read('cloudflare/src/interoperability.js');
+for (const marker of ['2026-07-28', 'accord_trace_verify', 'accord_trace_create_proof', 'TASK_STATE_COMPLETED', 'SendMessage']) {
+  if (!interoperability.includes(marker)) problems.push(`interoperability_missing:${marker}`);
+}
+
+const proofs = read('cloudflare/src/proofs.js');
+for (const marker of ['service_recorded_hash', 'issuer_signed_hash', 'accordtrace.proof.v1', 'INSERT INTO receipts']) {
+  if (!proofs.includes(marker)) problems.push(`proof_runtime_missing:${marker}`);
+}
+
+const wranglerText = read('wrangler.jsonc');
+let wrangler = null;
+try {
+  wrangler = JSON.parse(wranglerText);
+} catch {
+  problems.push('wrangler_json_invalid');
+}
+if (wrangler?.main !== 'cloudflare/src/worker-v2.js') problems.push(`wrangler_main_invalid:${wrangler?.main || 'missing'}`);
+const workerFirst = new Set(wrangler?.assets?.run_worker_first || []);
+for (const route of [
+  '/api/v1/continuity/*',
+  '/api/v1/network/*',
+  '/api/v1/passport-product/*',
+  '/api/v1/proofs*',
+  '/api/v1/hash',
+  '/api/v1/verify',
+  '/a2a',
+  '/mcp',
+  '/.well-known/*'
+]) {
+  if (!workerFirst.has(route)) problems.push(`worker_first_route_missing:${route}`);
+}
+if (!(wrangler?.triggers?.crons || []).includes('*/5 * * * *')) problems.push('continuity_cron_missing');
+
+const agentCard = parseJson('web/.well-known/agent.json', 'agent_card_json_invalid');
+if (agentCard) {
+  if (agentCard.name !== 'Accord Trace') problems.push(`agent_card_name_invalid:${agentCard.name || 'missing'}`);
+  if (agentCard.supportedInterfaces?.[0]?.protocolVersion !== '1.0') problems.push('agent_card_a2a_version_invalid');
+  if (!agentCard.supportedInterfaces?.[0]?.url?.endsWith('/a2a')) problems.push('agent_card_a2a_url_invalid');
+  if (!agentCard.skills?.some((skill) => skill.id === 'notarize_evidence')) problems.push('agent_card_notarize_skill_missing');
+  if (!agentCard.skills?.some((skill) => skill.id === 'verify_proof')) problems.push('agent_card_verify_skill_missing');
+}
+
+const mcpManifest = parseJson('web/.well-known/mcp.json', 'mcp_manifest_json_invalid');
+if (mcpManifest) {
+  if (mcpManifest.name !== 'Accord Trace') problems.push(`mcp_manifest_name_invalid:${mcpManifest.name || 'missing'}`);
+  if (mcpManifest.transport !== 'streamable-http') problems.push(`mcp_transport_invalid:${mcpManifest.transport || 'missing'}`);
+  if (!String(mcpManifest.url || '').endsWith('/mcp')) problems.push('mcp_url_invalid');
+  if (mcpManifest.registry?.server !== 'io.github.Kosta1985/accord-trace') problems.push('mcp_registry_identity_invalid');
+}
+
+const launch = read('cloudflare/src/launch.js');
+if (!launch.includes('handleStripe')) problems.push('launch_route_missing:handleStripe');
+
+const affiliate = read('cloudflare/src/affiliate.js');
+for (const marker of [
+  'single_level_direct_product_referral',
+  'no_multilevel_downline_commission',
+  'self_referral_not_allowed',
+  'shared_payment_identity_review',
+  'cash_payouts_enabled:false'
+]) {
+  if (!affiliate.includes(marker)) problems.push(`affiliate_boundary_missing:${marker}`);
+}
+
+const passportProduct = read('cloudflare/src/passport-product.js');
+for (const marker of ['agent_passport_certificate', 'STRIPE_PRICE_AGENT_PASSPORT', 'STRIPE_WEBHOOK_SECRET', 'NOTARY_PRIVATE_JWK']) {
+  if (!passportProduct.includes(marker)) problems.push(`passport_product_gate_missing:${marker}`);
+}
+
+const home = read('web/index.html');
+if (!/Know which agent you are dealing with/i.test(home)) problems.push('commercial_home_marker_missing');
+if (/TaskBay's portable evidence layer/.test(home)) problems.push('stale_taskbay_positioning');
+
+const network = read('web/network.html');
+for (const marker of ['one-level affiliate network', 'No downline commissions', 'cash payouts remain disabled']) {
+  if (!network.toLowerCase().includes(marker.toLowerCase())) problems.push(`network_page_missing:${marker}`);
+}
+
+const ai = read('web/ai.html');
+for (const marker of ['application/ld+json', 'SoftwareApplication', 'FAQPage', 'Agent Continuity Monitor']) {
+  if (!ai.includes(marker)) problems.push(`ai_discovery_missing:${marker}`);
+}
+
+const llms = read('web/llms.txt');
+for (const marker of ['/ai.html', '/api/v1/continuity/capabilities', '/api/v1/network/capabilities', '/mcp', '/api/v1/passport-product/capabilities']) {
+  if (!llms.includes(marker)) problems.push(`llms_discovery_missing:${marker}`);
+}
+const full = read('web/llms-full.txt');
+if (!full.includes('Missing heartbeat alone never triggers containment')) problems.push('llms_full_safety_boundary_missing');
+
+const robots = read('web/robots.txt');
+if (!robots.includes('Disallow: /api/v1/control-plane/')) problems.push('robots_private_surface_boundary_missing');
+const sitemap = read('web/sitemap.xml');
+for (const marker of ['/ai.html', '/network.html', '/llms.txt', '/llms-full.txt']) {
+  if (!sitemap.includes(marker)) problems.push(`sitemap_missing:${marker}`);
+}
+
+const liveAgentCheck = read('scripts/live-agent-check.mjs');
+for (const marker of ['"rest": "passed"', '"a2a": "passed"', '"mcp": "passed"', 'affiliate_network', 'passport_product_safety']) {
+  if (!liveAgentCheck.includes(marker)) problems.push(`live_agent_check_missing:${marker}`);
+}
+
+const deploy = read('.github/workflows/deploy-accordtrace.yml');
+for (const marker of ['d1 migrations apply', 'wrangler@latest deploy', 'CLOUDFLARE_API_TOKEN', 'EXPECTED_RELEASE_SHA', 'smoke:production']) {
+  if (!deploy.includes(marker)) problems.push(`deploy_marker_missing:${marker}`);
+}
+if (deploy.indexOf('d1 migrations apply') > deploy.indexOf('wrangler@latest deploy')) problems.push('deploy_migration_order_invalid');
+
+const liveSmoke = read('.github/workflows/live-smoke.yml');
+for (const marker of ['workflow_run:', 'Deploy AccordTrace production', "workflow_run.conclusion == 'success'", 'actions/checkout@v7', 'actions/setup-node@v7', 'live-agent-check.mjs']) {
+  if (!liveSmoke.includes(marker)) problems.push(`live_smoke_missing:${marker}`);
+}
+if (/\npush:\s*\n/.test(liveSmoke)) problems.push('live_smoke_must_not_race_push_deploy');
+
+const secondarySmoke = read('.github/workflows/accord-trace-agent-smoke.yml');
+for (const marker of ['schedule:', 'workflow_dispatch:', 'actions/checkout@v7', 'actions/setup-node@v7', 'live-agent-check.mjs']) {
+  if (!secondarySmoke.includes(marker)) problems.push(`secondary_smoke_missing:${marker}`);
+}
+if (/\npush:\s*\n/.test(secondarySmoke)) problems.push('secondary_smoke_must_not_race_push_deploy');
+
+const requireCloudflare = process.argv.includes('--require-cloudflare');
+const cloudflareToken = process.env.CLOUDFLARE_API_TOKEN || process.env.CF_TOKEN_1 || process.env.CF_TOKEN_2 || process.env.CF_TOKEN_3 || process.env.CF_TOKEN_4;
+const cloudflareAccount = process.env.CLOUDFLARE_ACCOUNT_ID || process.env.CF_ACCOUNT_1 || process.env.CF_ACCOUNT_2 || process.env.CF_ACCOUNT_3 || process.env.CF_ACCOUNT_4;
+if (requireCloudflare) {
+  if (!cloudflareToken) problems.push('env:CLOUDFLARE_API_TOKEN');
+  if (!cloudflareAccount) notes.push('Cloudflare account ID will be resolved by deploy workflow when token authorization permits it.');
+} else if (!cloudflareToken) {
+  notes.push('Cloudflare token not configured in this process; deployment credentials may still be normalized by the deploy workflow.');
+}
+
+for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_DOMAIN_CONTROL', 'STRIPE_PRICE_PUBLISHER_VALIDATION', 'STRIPE_PRICE_SECURITY_ASSESSMENT']) {
+  if (!process.env[key]) notes.push(`${key} not configured; corresponding Stripe checkout capability remains disabled.`);
+}
+if (!process.env.STRIPE_PRICE_AGENT_PASSPORT) notes.push('STRIPE_PRICE_AGENT_PASSPORT not configured; Agent Passport Certificate checkout remains disabled.');
+if (!process.env.NOTARY_PRIVATE_JWK) notes.push('NOTARY_PRIVATE_JWK not configured; free proofs use service_recorded_hash and signed Passport Certificate issuance remains disabled.');
+if (!process.env.STRIPE_PUBLISHABLE_KEY) notes.push('STRIPE_PUBLISHABLE_KEY is not configured; hosted Checkout does not require it server-side, but retain it for future embedded/client features.');
 notes.push('Affiliate cash payouts remain intentionally disabled until payout-provider, KYC/tax and final terms activation.');
-if(String(process.env.LIVE_API_KEYS_ENABLED||'').toLowerCase()!=='true')notes.push('Live developer API keys are disabled; test mode remains available after deployment.');
-const result={status:problems.length?'blocked':'ready',migrations:migrations.length,latest_migration:migrations.at(-1)||null,problems,notes};console.log(JSON.stringify(result,null,2));if(problems.length)process.exitCode=1;
+if (String(process.env.LIVE_API_KEYS_ENABLED || '').toLowerCase() !== 'true') notes.push('Live developer API keys are disabled; test mode remains available after deployment.');
+
+const result = {
+  status: problems.length ? 'blocked' : 'ready',
+  runtime: {
+    entrypoint: wrangler?.main || null,
+    a2a_protocol: agentCard?.supportedInterfaces?.[0]?.protocolVersion || null,
+    mcp_transport: mcpManifest?.transport || null,
+    proof_modes: ['service_recorded_hash', 'issuer_signed_hash']
+  },
+  migrations: migrations.length,
+  latest_migration: migrations.at(-1) || null,
+  problems,
+  notes
+};
+console.log(JSON.stringify(result, null, 2));
+if (problems.length) process.exitCode = 1;
