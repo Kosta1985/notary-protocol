@@ -17,6 +17,7 @@
       "/api/v1/payments/*",
       "/api/v1/identity/*",
       "/api/v1/reputation/*",
+      "/api/v1/attestors/*",
       "/",
       "/health",
       "/v1/*",
