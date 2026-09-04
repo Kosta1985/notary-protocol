@@ -25,6 +25,10 @@
     "./enforcement": {
       "types": "./src/enforcement.ts",
       "import": "./dist/enforcement.js"
+    },
+    "./validation": {
+      "types": "./src/validation.ts",
+      "import": "./dist/validation.js"
     }
   },
   "engines": { "node": ">=20" },
