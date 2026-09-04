@@ -1,4 +1,4 @@
-import { handleReputation } from './reputation.js';
+import { handleReputation, confidenceDimensions, graphReviewState } from './reputation.js';
 
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8"};
 
@@ -25,8 +25,8 @@ export async function handleReputationHardening(request,env,url=new URL(request.
   const sharedSignal={name:'shared_recovery_control_pattern',present:active.some(x=>Number(x.recovery_key_users)>1),evidence:{present:active.some(x=>Number(x.recovery_key_users)>1)},interpretation:'review_only_not_proof'};
   const signals=(r.graph_signals?.signals||[]).filter(x=>!['unsafe_attestor_evidence','shared_recovery_control_pattern'].includes(x.name)); signals.push(unsafeSignal,sharedSignal);
   r.graph_signals={present_count:signals.filter(x=>x.present).length,signals};
-  if(r.confidence_dimensions?.identity)r.confidence_dimensions.identity=qualified.length===0?'unattested':distinct.size>=2?'corroborated':'attested';
-  if(r.confidence_dimensions?.security_posture&&r.evidence_facts.security.independent_security_attestors===0)r.confidence_dimensions.security_posture='unattested';
+  r.review_state=graphReviewState(r.evidence_facts,r.graph_signals);
+  r.confidence_dimensions=confidenceDimensions(r.evidence_facts,r.graph_signals);
   r.limitations=[...(r.limitations||[]),'Identity and security confidence count only active attestors with an active safety profile and a recovery key not shared by another enrolled attestor.','Unsafe/shared-recovery signals are review evidence only; they do not prove collusion, common ownership, or malicious behavior.'];
   r.trust_score=null;
   return reply(body,base.status);
