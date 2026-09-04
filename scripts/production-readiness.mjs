@@ -15,6 +15,7 @@ const requiredFiles = [
   'cloudflare/src/affiliate.js',
   'cloudflare/src/affiliate-growth.js',
   'cloudflare/src/passport-product.js',
+  'adapters/a2a/agent-card.json',
   'web/index.html',
   'web/verify.html',
   'web/dashboard.html',
@@ -42,12 +43,8 @@ for (const file of requiredFiles) {
 
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const parseJson = (file, code) => {
-  try {
-    return JSON.parse(read(file));
-  } catch {
-    problems.push(`${code}:${file}`);
-    return null;
-  }
+  try { return JSON.parse(read(file)); }
+  catch { problems.push(`${code}:${file}`); return null; }
 };
 
 const migDir = path.join(root, 'cloudflare/migrations');
@@ -59,69 +56,59 @@ for (let i = 0; i < migrations.length; i += 1) {
 if (migrations.length < 21) problems.push(`migration_count:${migrations.length}:expected_at_least_21`);
 
 const worker = read('cloudflare/src/worker.js');
-for (const marker of [
-  'handleValidation',
-  'handleValidationDns',
-  'handlePaymentHardening',
-  'handleIdentityHardening',
-  'handleReputationHardening',
-  'handleLaunch',
-  'handleDeveloper',
-  'handleAgentContinuity',
-  'runContinuityScheduled',
-  'handleAffiliate',
-  'matureAffiliateCommissions'
-]) {
+for (const marker of ['handleValidation','handleValidationDns','handlePaymentHardening','handleIdentityHardening','handleReputationHardening','handleLaunch','handleDeveloper','handleAgentContinuity','runContinuityScheduled','handleAffiliate','matureAffiliateCommissions']) {
   if (!worker.includes(marker)) problems.push(`worker_route_missing:${marker}`);
 }
 
 const workerV2 = read('cloudflare/src/worker-v2.js');
-for (const marker of ['handleInteroperability', 'handleProofs', 'coreWorker.fetch', 'coreWorker.scheduled']) {
+for (const marker of ['handleInteroperability','handleProofs','coreWorker.fetch','coreWorker.scheduled']) {
   if (!workerV2.includes(marker)) problems.push(`worker_v2_missing:${marker}`);
 }
 if (workerV2.indexOf('handleInteroperability') > workerV2.indexOf('coreWorker.fetch')) problems.push('worker_v2_interoperability_order_invalid');
 
 const interoperability = read('cloudflare/src/interoperability.js');
-for (const marker of ['2026-07-28', 'accord_trace_verify', 'accord_trace_create_proof', 'TASK_STATE_COMPLETED', 'SendMessage']) {
+for (const marker of [
+  '2026-07-28',
+  'accord_trace_verify',
+  'accord_trace_create_proof',
+  'accord_trace_network_capabilities',
+  'accord_trace_network_stats',
+  'accord_trace_passport_product_capabilities',
+  'accord_trace_resolve_referral',
+  'handleAffiliateGrowth',
+  'handlePassportProduct',
+  'TASK_STATE_COMPLETED',
+  'SendMessage'
+]) {
   if (!interoperability.includes(marker)) problems.push(`interoperability_missing:${marker}`);
 }
 
 const proofs = read('cloudflare/src/proofs.js');
-for (const marker of ['service_recorded_hash', 'issuer_signed_hash', 'accordtrace.proof.v1', 'INSERT INTO receipts']) {
+for (const marker of ['service_recorded_hash','issuer_signed_hash','accordtrace.proof.v1','INSERT INTO receipts']) {
   if (!proofs.includes(marker)) problems.push(`proof_runtime_missing:${marker}`);
 }
 
 const wranglerText = read('wrangler.jsonc');
 let wrangler = null;
-try {
-  wrangler = JSON.parse(wranglerText);
-} catch {
-  problems.push('wrangler_json_invalid');
-}
+try { wrangler = JSON.parse(wranglerText); }
+catch { problems.push('wrangler_json_invalid'); }
 if (wrangler?.main !== 'cloudflare/src/worker-v2.js') problems.push(`wrangler_main_invalid:${wrangler?.main || 'missing'}`);
 const workerFirst = new Set(wrangler?.assets?.run_worker_first || []);
-for (const route of [
-  '/api/v1/continuity/*',
-  '/api/v1/network/*',
-  '/api/v1/passport-product/*',
-  '/api/v1/proofs*',
-  '/api/v1/hash',
-  '/api/v1/verify',
-  '/a2a',
-  '/mcp',
-  '/.well-known/*'
-]) {
+for (const route of ['/api/v1/continuity/*','/api/v1/network/*','/api/v1/passport-product/*','/api/v1/proofs*','/api/v1/hash','/api/v1/verify','/a2a','/mcp','/.well-known/*']) {
   if (!workerFirst.has(route)) problems.push(`worker_first_route_missing:${route}`);
 }
 if (!(wrangler?.triggers?.crons || []).includes('*/5 * * * *')) problems.push('continuity_cron_missing');
 
 const agentCard = parseJson('web/.well-known/agent.json', 'agent_card_json_invalid');
+const adapterCard = parseJson('adapters/a2a/agent-card.json', 'adapter_agent_card_json_invalid');
+if (agentCard && adapterCard && JSON.stringify(agentCard) !== JSON.stringify(adapterCard)) problems.push('agent_card_adapter_drift');
 if (agentCard) {
   if (agentCard.name !== 'Accord Trace') problems.push(`agent_card_name_invalid:${agentCard.name || 'missing'}`);
   if (agentCard.supportedInterfaces?.[0]?.protocolVersion !== '1.0') problems.push('agent_card_a2a_version_invalid');
   if (!agentCard.supportedInterfaces?.[0]?.url?.endsWith('/a2a')) problems.push('agent_card_a2a_url_invalid');
-  if (!agentCard.skills?.some((skill) => skill.id === 'notarize_evidence')) problems.push('agent_card_notarize_skill_missing');
-  if (!agentCard.skills?.some((skill) => skill.id === 'verify_proof')) problems.push('agent_card_verify_skill_missing');
+  for (const skill of ['notarize_evidence','verify_proof','network_capabilities','network_stats','passport_product_capabilities','resolve_referral']) {
+    if (!agentCard.skills?.some((candidate) => candidate.id === skill)) problems.push(`agent_card_skill_missing:${skill}`);
+  }
 }
 
 const mcpManifest = parseJson('web/.well-known/mcp.json', 'mcp_manifest_json_invalid');
@@ -136,12 +123,12 @@ const launch = read('cloudflare/src/launch.js');
 if (!launch.includes('handleStripe')) problems.push('launch_route_missing:handleStripe');
 
 const affiliate = read('cloudflare/src/affiliate.js');
-for (const marker of ['single_level_direct_product_referral', 'no_multilevel_downline_commission', 'self_referral_not_allowed', 'shared_payment_identity_review', 'cash_payouts_enabled:false']) {
+for (const marker of ['single_level_direct_product_referral','no_multilevel_downline_commission','self_referral_not_allowed','shared_payment_identity_review','cash_payouts_enabled:false']) {
   if (!affiliate.includes(marker)) problems.push(`affiliate_boundary_missing:${marker}`);
 }
 
 const passportProduct = read('cloudflare/src/passport-product.js');
-for (const marker of ['agent_passport_certificate', 'STRIPE_PRICE_AGENT_PASSPORT', 'STRIPE_WEBHOOK_SECRET', 'NOTARY_PRIVATE_JWK']) {
+for (const marker of ['agent_passport_certificate','STRIPE_PRICE_AGENT_PASSPORT','STRIPE_WEBHOOK_SECRET','NOTARY_PRIVATE_JWK']) {
   if (!passportProduct.includes(marker)) problems.push(`passport_product_gate_missing:${marker}`);
 }
 
@@ -150,17 +137,17 @@ if (!/Know which agent you are dealing with/i.test(home)) problems.push('commerc
 if (/TaskBay's portable evidence layer/.test(home)) problems.push('stale_taskbay_positioning');
 
 const network = read('web/network.html');
-for (const marker of ['one-level affiliate network', 'No downline commissions', 'cash payouts remain disabled']) {
+for (const marker of ['one-level affiliate network','No downline commissions','cash payouts remain disabled']) {
   if (!network.toLowerCase().includes(marker.toLowerCase())) problems.push(`network_page_missing:${marker}`);
 }
 
 const ai = read('web/ai.html');
-for (const marker of ['application/ld+json', 'SoftwareApplication', 'FAQPage', 'Agent Continuity Monitor']) {
+for (const marker of ['application/ld+json','SoftwareApplication','FAQPage','Agent Continuity Monitor']) {
   if (!ai.includes(marker)) problems.push(`ai_discovery_missing:${marker}`);
 }
 
 const llms = read('web/llms.txt');
-for (const marker of ['/ai.html', '/api/v1/continuity/capabilities', '/api/v1/network/capabilities', '/mcp', '/api/v1/passport-product/capabilities']) {
+for (const marker of ['/ai.html','/api/v1/continuity/capabilities','/api/v1/network/capabilities','/mcp','/api/v1/passport-product/capabilities']) {
   if (!llms.includes(marker)) problems.push(`llms_discovery_missing:${marker}`);
 }
 const full = read('web/llms-full.txt');
@@ -169,29 +156,29 @@ if (!full.includes('Missing heartbeat alone never triggers containment')) proble
 const robots = read('web/robots.txt');
 if (!robots.includes('Disallow: /api/v1/control-plane/')) problems.push('robots_private_surface_boundary_missing');
 const sitemap = read('web/sitemap.xml');
-for (const marker of ['/ai.html', '/network.html', '/llms.txt', '/llms-full.txt']) {
+for (const marker of ['/ai.html','/network.html','/llms.txt','/llms-full.txt']) {
   if (!sitemap.includes(marker)) problems.push(`sitemap_missing:${marker}`);
 }
 
 const liveAgentCheck = read('scripts/live-agent-check.mjs');
-for (const marker of ['rest: "passed"', 'a2a: "passed"', 'mcp: "passed"', 'affiliate_network', 'passport_product_safety']) {
+for (const marker of ['rest: "passed"','a2a: "passed"','mcp: "passed"','agent_growth_discovery','affiliate_network','passport_product_safety','accord_trace_network_capabilities','accord_trace_network_stats','accord_trace_passport_product_capabilities']) {
   if (!liveAgentCheck.includes(marker)) problems.push(`live_agent_check_missing:${marker}`);
 }
 
 const deploy = read('.github/workflows/deploy-accordtrace.yml');
-for (const marker of ['d1 migrations apply', 'wrangler@latest deploy', 'CLOUDFLARE_API_TOKEN', 'EXPECTED_RELEASE_SHA', 'smoke:production']) {
+for (const marker of ['d1 migrations apply','wrangler@latest deploy','CLOUDFLARE_API_TOKEN','EXPECTED_RELEASE_SHA','smoke:production']) {
   if (!deploy.includes(marker)) problems.push(`deploy_marker_missing:${marker}`);
 }
 if (deploy.indexOf('d1 migrations apply') > deploy.indexOf('wrangler@latest deploy')) problems.push('deploy_migration_order_invalid');
 
 const liveSmoke = read('.github/workflows/live-smoke.yml');
-for (const marker of ['workflow_run:', 'Deploy AccordTrace production', "workflow_run.conclusion == 'success'", 'actions/checkout@v7', 'actions/setup-node@v7', 'live-agent-check.mjs']) {
+for (const marker of ['workflow_run:','Deploy AccordTrace production',"workflow_run.conclusion == 'success'",'actions/checkout@v7','actions/setup-node@v7','live-agent-check.mjs']) {
   if (!liveSmoke.includes(marker)) problems.push(`live_smoke_missing:${marker}`);
 }
 if (/\npush:\s*\n/.test(liveSmoke)) problems.push('live_smoke_must_not_race_push_deploy');
 
 const secondarySmoke = read('.github/workflows/accord-trace-agent-smoke.yml');
-for (const marker of ['schedule:', 'workflow_dispatch:', 'actions/checkout@v7', 'actions/setup-node@v7', 'live-agent-check.mjs']) {
+for (const marker of ['schedule:','workflow_dispatch:','actions/checkout@v7','actions/setup-node@v7','live-agent-check.mjs']) {
   if (!secondarySmoke.includes(marker)) problems.push(`secondary_smoke_missing:${marker}`);
 }
 if (/\npush:\s*\n/.test(secondarySmoke)) problems.push('secondary_smoke_must_not_race_push_deploy');
@@ -206,7 +193,7 @@ if (requireCloudflare) {
   notes.push('Cloudflare token not configured in this process; deployment credentials may still be normalized by the deploy workflow.');
 }
 
-for (const key of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'STRIPE_PRICE_DOMAIN_CONTROL', 'STRIPE_PRICE_PUBLISHER_VALIDATION', 'STRIPE_PRICE_SECURITY_ASSESSMENT']) {
+for (const key of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_DOMAIN_CONTROL','STRIPE_PRICE_PUBLISHER_VALIDATION','STRIPE_PRICE_SECURITY_ASSESSMENT']) {
   if (!process.env[key]) notes.push(`${key} not configured; corresponding Stripe checkout capability remains disabled.`);
 }
 if (!process.env.STRIPE_PRICE_AGENT_PASSPORT) notes.push('STRIPE_PRICE_AGENT_PASSPORT not configured; Agent Passport Certificate checkout remains disabled.');
@@ -221,7 +208,8 @@ const result = {
     entrypoint: wrangler?.main || null,
     a2a_protocol: agentCard?.supportedInterfaces?.[0]?.protocolVersion || null,
     mcp_transport: mcpManifest?.transport || null,
-    proof_modes: ['service_recorded_hash', 'issuer_signed_hash']
+    agent_growth_tools: ['network_capabilities','network_stats','passport_product_capabilities','resolve_referral'],
+    proof_modes: ['service_recorded_hash','issuer_signed_hash']
   },
   migrations: migrations.length,
   latest_migration: migrations.at(-1) || null,
