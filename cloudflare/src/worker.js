@@ -2,15 +2,35 @@ import legacyWorker from "./index.js";
 import { handleMarketplace, MarketplaceError } from "./marketplace.js";
 import { handleSecurity, SecurityError } from "./security.js";
 import { handleTrust, TrustError } from "./trust.js";
-import { handleGateway, GatewayError } from "./gateway.js";
+import { GatewayError } from "./gateway.js";
+import { handlePaymentBoundGateway } from "./gateway-payment-guard.js";
+import { handlePayments, PaymentError } from "./payments.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith("/api/v1/payments/")) {
+      try {
+        const response = await handlePayments(request, env, url);
+        if (response) return withCors(response);
+      } catch (error) {
+        const status = error instanceof PaymentError ? error.status : 500;
+        const body = {
+          error: error instanceof PaymentError ? "invalid_payment_request" : "internal_error",
+          message: error instanceof Error ? error.message : "Unknown error"
+        };
+        if (error instanceof PaymentError && error.details) body.details = error.details;
+        return withCors(new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json; charset=utf-8" }
+        }));
+      }
+    }
+
     if (url.pathname.startsWith("/api/v1/gateway/")) {
       try {
-        const response = await handleGateway(request, env, url);
+        const response = await handlePaymentBoundGateway(request, env, url);
         if (response) return withCors(response);
       } catch (error) {
         const status = error instanceof GatewayError ? error.status : 500;
