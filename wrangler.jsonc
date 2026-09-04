@@ -10,6 +10,8 @@
     "binding": "ASSETS",
     "run_worker_first": [
       "/pilot/*",
+      "/agents/*",
+      "/badges/*",
       "/api/v1/marketplace/*",
       "/api/v1/security/*",
       "/api/v1/trust/*",
@@ -20,6 +22,8 @@
       "/api/v1/reputation/*",
       "/api/v1/attestors/*",
       "/api/v1/control-plane/*",
+      "/api/v1/launch/*",
+      "/api/v1/developer/*",
       "/",
       "/health",
       "/v1/*",
@@ -36,7 +40,5 @@
       "migrations_dir": "cloudflare/migrations"
     }
   ],
-  "observability": {
-    "enabled": true
-  }
+  "observability": {"enabled": true}
 }
