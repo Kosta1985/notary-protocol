@@ -2,10 +2,28 @@ import legacyWorker from "./index.js";
 import { handleMarketplace, MarketplaceError } from "./marketplace.js";
 import { handleSecurity, SecurityError } from "./security.js";
 import { handleTrust, TrustError } from "./trust.js";
+import { handleGateway, GatewayError } from "./gateway.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/v1/gateway/")) {
+      try {
+        const response = await handleGateway(request, env, url);
+        if (response) return withCors(response);
+      } catch (error) {
+        const status = error instanceof GatewayError ? error.status : 500;
+        const body = {
+          error: error instanceof GatewayError ? "invalid_gateway_request" : "internal_error",
+          message: error instanceof Error ? error.message : "Unknown error"
+        };
+        return withCors(new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json; charset=utf-8" }
+        }));
+      }
+    }
 
     if (url.pathname.startsWith("/api/v1/trust/")) {
       try {
