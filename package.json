@@ -21,6 +21,7 @@
     "cf:deploy": "npm run cf:prepare && npx wrangler@latest deploy",
     "seo:submit": "node scripts/submit-indexnow.js",
     "smoke:live": "node scripts/live-smoke.js",
+    "smoke:control-plane": "node scripts/control-plane-smoke.js",
     "adoption:report": "node scripts/adoption-report.js"
   },
   "license": "MIT"

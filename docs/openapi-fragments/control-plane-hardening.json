@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "/api/v1/control-plane/maintenance/capabilities": {
+      "get": {"summary":"Get control plane hardening capabilities","responses":{"200":{"description":"Capabilities"},"401":{"description":"Authentication required"}}}
+    },
+    "/api/v1/control-plane/sessions/create": {
+      "post": {"summary":"Create a short-lived operator session","description":"Root RBAC tokens only. Sessions cannot chain or escalate role.","responses":{"201":{"description":"Ephemeral session token returned once"},"403":{"description":"Role/session restriction"}}}
+    },
+    "/api/v1/control-plane/sessions/revoke": {
+      "post": {"summary":"Revoke an operator session","responses":{"200":{"description":"Session revoked"},"403":{"description":"Cannot revoke another operator session without admin role"}}}
+    },
+    "/api/v1/control-plane/maintenance/alerts/enqueue": {
+      "post": {"summary":"Enqueue a redacted alert for configured integrations","description":"Deduplicates by integration and event digest. URLs and secrets come only from server-side configuration.","responses":{"200":{"description":"Alert queued or deduplicated"}}}
+    },
+    "/api/v1/control-plane/maintenance/alerts/process": {
+      "post": {"summary":"Process due signed webhook deliveries","description":"Admin-only. Uses bounded retries, HMAC signatures when configured, and a dead-letter state.","responses":{"200":{"description":"Due outbox deliveries processed"}}}
+    },
+    "/api/v1/control-plane/maintenance/retention/run": {
+      "post": {"summary":"Apply retention to delivery logs and usage metrics","description":"Admin-only. Append-only control-plane audit receipts are explicitly exempt from automated deletion.","responses":{"200":{"description":"Retention run summary"}}}
+    }
+  }
+}
