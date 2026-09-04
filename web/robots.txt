@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /console.html
+Disallow: /checkout-success.html
+Disallow: /api/v1/control-plane/
+Disallow: /api/v1/continuity/fleets
+Disallow: /api/v1/continuity/incidents
 
 Sitemap: https://accordtrace.notary-labs.workers.dev/sitemap.xml
