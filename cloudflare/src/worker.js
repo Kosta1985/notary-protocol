@@ -5,6 +5,7 @@ import { handleTrust, TrustError } from "./trust.js";
 import { GatewayError } from "./gateway.js";
 import { handlePaymentBoundGateway } from "./gateway-payment-guard.js";
 import { handlePayments, PaymentError } from "./payments.js";
+import { handlePaymentHardening, PaymentHardeningError } from "./payment-hardening.js";
 import { handleIdentity, IdentityError } from "./identity.js";
 import { handleReputation, ReputationError } from "./reputation.js";
 import { handleAttestorSafety, SafetyError } from "./attestor-safety.js";
@@ -48,6 +49,15 @@ export default {
       catch (error) { const status = error instanceof IdentityError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof IdentityError ? "invalid_identity_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/payments/")) {
+      try {
+        const hardened = await handlePaymentHardening(request, env, url);
+        if (hardened) return withCors(hardened);
+      } catch (error) {
+        const status = error instanceof PaymentHardeningError ? error.status : 500;
+        const body = { error: error instanceof PaymentHardeningError ? "invalid_hardened_payment_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" };
+        if (error instanceof PaymentHardeningError && error.details) body.details = error.details;
+        return withCors(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } }));
+      }
       try { const response = await handlePayments(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof PaymentError ? error.status : 500; const body = { error: error instanceof PaymentError ? "invalid_payment_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }; if (error instanceof PaymentError && error.details) body.details = error.details; return withCors(new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
