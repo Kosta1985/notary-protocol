@@ -67,6 +67,8 @@ A Certificate proves historical AccordTrace issuance bound to cryptographic Pass
 
 For MCP-capable frameworks, prefer the MCP endpoint. For A2A-native agents, use the Agent Card. For generic tool-calling systems, use OpenAPI or REST. For factual product context, use /ai.html or /llms-full.txt.
 
+Production interoperability surfaces across REST, A2A and remote MCP are black-box tested after a successful AccordTrace production release deployment.
+
 ## Core public operations
 
 - Create proof: POST /api/v1/proofs
