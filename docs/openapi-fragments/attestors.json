@@ -1,0 +1,10 @@
+{
+  "paths": {
+    "/api/v1/attestors/capabilities": {"get": {"summary": "Describe attestor safety capabilities", "responses": {"200": {"description": "Capabilities"}}}},
+    "/api/v1/attestors/enroll": {"post": {"summary": "Enroll a distinct recovery key for an attestor Passport", "responses": {"201": {"description": "Attestor safety profile created"}}}},
+    "/api/v1/attestors/state": {"post": {"summary": "Change attestor safety state with Passport or recovery signature", "responses": {"200": {"description": "State event recorded"}}}},
+    "/api/v1/attestors/rotate": {"post": {"summary": "Link an old attestor Passport to a replacement Passport and revoke the old key", "responses": {"200": {"description": "Rotation recorded"}}}},
+    "/api/v1/attestors/relationships": {"post": {"summary": "Record a signed operator-relationship attestation", "responses": {"201": {"description": "Relationship attestation recorded"}}}},
+    "/api/v1/attestors/{passportId}/status": {"get": {"summary": "Get aggregate attestor safety status", "parameters": [{"name": "passportId", "in": "path", "required": true, "schema": {"type": "string"}}], "responses": {"200": {"description": "Attestor status"}, "404": {"description": "Profile not found"}}}}
+  }
+}
