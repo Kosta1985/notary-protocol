@@ -1,0 +1,12 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const launch=fs.readFileSync(new URL('../src/launch.js',import.meta.url),'utf8');
+const migration=fs.readFileSync(new URL('../migrations/0016_launch_waitlist.sql',import.meta.url),'utf8');
+const worker=fs.readFileSync(new URL('../src/worker.js',import.meta.url),'utf8');
+const home=fs.readFileSync(new URL('../../web/index.html',import.meta.url),'utf8');
+const verify=fs.readFileSync(new URL('../../web/verify.html',import.meta.url),'utf8');
+const dash=fs.readFileSync(new URL('../../web/dashboard.html',import.meta.url),'utf8');
+test('commercial homepage positions AccordTrace as standalone agent trust infrastructure',()=>{assert.match(home,/Trust, security & economic infrastructure for autonomous agents/i);assert.doesNotMatch(home,/TaskBay's portable evidence layer/);assert.match(home,/Get your agent verified/i);});
+test('prelaunch pricing does not pretend Stripe checkout is enabled',()=>{assert.match(home,/Stripe is not enabled yet/i);assert.match(home,/Join early access/i);assert.doesNotMatch(home,/>Pay now</i);});
+test('waitlist stores bounded lead fields and no network identity',()=>{assert.match(migration,/email TEXT NOT NULL UNIQUE/);assert.doesNotMatch(migration,/ip_address|user_agent|fingerprint/i);assert.doesNotMatch(launch,/CF-Connecting-IP|request\.headers/i);});
+test('launch capability reports whether Stripe secret exists without exposing it',()=>{assert.match(launch,/Boolean\(env\.STRIPE_SECRET_KEY\)/);assert.doesNotMatch(launch,/stripe_secret_key\s*:/i);});
+test('worker routes launch API and public self-service pages exist',()=>{assert.match(worker,/handleLaunch/);assert.match(verify,/Public verification/);assert.match(dash,/Self-service console/);});
