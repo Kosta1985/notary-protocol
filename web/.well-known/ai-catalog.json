@@ -1,7 +1,7 @@
 {
   "schema_version": "ai-catalog/0.1",
   "name": "AccordTrace",
-  "description": "Portable tamper-evident proof records for AI-agent handoffs.",
+  "description": "Portable tamper-evident proof records, cryptographic Agent Passports, and defensive security signals for AI-agent workflows.",
   "homepage": "https://accordtrace.notary-labs.workers.dev",
   "resources": [
     {
@@ -31,6 +31,18 @@
         "create proof",
         "verify proof"
       ]
+    },
+    {
+      "type": "api",
+      "name": "AccordTrace Agent Security & Trust",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/security/capabilities",
+      "intents": [
+        "create cryptographic agent passport",
+        "record signed security event",
+        "deploy passive authorized canary",
+        "receive containment recommendation"
+      ],
+      "notes": "v0.1 verifies Ed25519 Passport key control and security signals. Identity, marketplace ownership, payment claims, and public reputation are not implied."
     }
   ],
   "partner_program": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"
