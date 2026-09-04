@@ -34,6 +34,12 @@ CREATE TABLE IF NOT EXISTS validation_requests (
   updated_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS validation_result_signatures (
+  request_id TEXT PRIMARY KEY,
+  signature TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_validation_requests_subject ON validation_requests(subject_passport_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_validation_requests_validator ON validation_requests(validator_passport_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_validation_products_type ON validation_products(validation_type, status, created_at DESC);
