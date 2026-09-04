@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS passport_product_orders (
   referral_attribution_id TEXT REFERENCES affiliate_attributions(id) ON DELETE RESTRICT,
   referral_code TEXT,
   stripe_session_id TEXT UNIQUE,
+  stripe_checkout_url TEXT,
   stripe_payment_intent_id TEXT,
   stripe_customer_id TEXT,
   payment_status TEXT NOT NULL DEFAULT 'created' CHECK(payment_status IN ('created','pending','paid','fulfilled','failed','review','refunded','chargeback')),
@@ -35,6 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_passport_product_orders_passport ON passport_prod
 CREATE INDEX IF NOT EXISTS idx_passport_product_orders_session ON passport_product_orders(stripe_session_id);
 CREATE INDEX IF NOT EXISTS idx_passport_product_orders_payment_intent ON passport_product_orders(stripe_payment_intent_id);
 CREATE INDEX IF NOT EXISTS idx_passport_product_orders_attribution ON passport_product_orders(referral_attribution_id,payment_status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_passport_product_one_open_order ON passport_product_orders(passport_id,product_id,product_version) WHERE payment_status IN ('created','pending','paid','review','fulfilled');
 
 CREATE TABLE IF NOT EXISTS agent_passport_certificates (
   id TEXT PRIMARY KEY,
