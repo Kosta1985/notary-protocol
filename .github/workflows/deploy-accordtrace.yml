@@ -88,13 +88,16 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Apply production D1 migrations
+        run: npx wrangler@latest d1 migrations apply DB --remote --config wrangler.production.json
+
       - name: Prepare production assets
         run: npm run cf:prepare
 
       - name: Deploy live worker and assets
         run: npx wrangler@latest deploy --config wrangler.production.json
 
-      - name: Verify new homepage
+      - name: Verify new homepage and security API
         shell: bash
         run: |
           set -euo pipefail
@@ -105,3 +108,6 @@ jobs:
             exit 4
           fi
           curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/health
+          security="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/security/capabilities)"
+          printf '%s' "$security" | grep -q 'AccordTrace Agent Security & Trust'
+          printf '%s' "$security" | grep -q 'passive_canaries'
