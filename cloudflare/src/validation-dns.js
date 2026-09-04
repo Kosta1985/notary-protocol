@@ -27,7 +27,7 @@ export async function handleValidationDns(request,env,url=new URL(request.url)){
 
   if(request.method==='POST'&&url.pathname==='/api/v1/validation/domain/verify'){
     const b=await bodyJson(request); const id=cleanId(b.request_id,'request_id');
-    const c=await env.DB.prepare(`SELECT * FROM validation_domain_challenges WHERE request_id=?1`).bind(id).first();
+    const c=await env.DB.prepare(`SELECT request_id,subject_passport_id,domain_name,dns_name,record_value_digest,challenge_digest,issued_at,expires_at,verified_at,evidence_digest,resolver,dnssec_authenticated FROM validation_domain_challenges WHERE request_id=?1`).bind(id).first();
     if(!c)return reply({error:'domain_challenge_not_found'},404);
     if(c.verified_at)return reply({request_id:id,status:'already_verified',evidence_digest:c.evidence_digest,verified_at:c.verified_at});
     if(Date.parse(c.expires_at)<=Date.now())return reply({error:'domain_challenge_expired'},409);
@@ -43,7 +43,8 @@ export async function handleValidationDns(request,env,url=new URL(request.url)){
     const observedDigest=await sha256Hex(canonicalize({dns_name:c.dns_name,record_value_digest:c.record_value_digest,resolver:'dns.google',dnssec_authenticated:Boolean(data.AD)}));
     const evidenceDigest=await sha256Hex(`accordtrace.validation.domain.evidence.v1:${c.request_id}:${c.domain_name}:${observedDigest}`);
     const now=new Date().toISOString();
-    await env.DB.prepare(`UPDATE validation_domain_challenges SET verified_at=?1,evidence_digest=?2,resolver='dns.google',dnssec_authenticated=?3,updated_at=?1 WHERE request_id=?4 AND verified_at IS NULL`).bind(now,evidenceDigest,data.AD?1:0,id).run();
+    const updated=await env.DB.prepare(`UPDATE validation_domain_challenges SET verified_at=?1,evidence_digest=?2,resolver='dns.google',dnssec_authenticated=?3,updated_at=?1 WHERE request_id=?4 AND verified_at IS NULL`).bind(now,evidenceDigest,data.AD?1:0,id).run();
+    if(Number(updated.meta?.changes||0)!==1)return reply({error:'domain_verification_race_lost'},409);
     return reply({request_id:id,status:'dns_control_verified',domain:c.domain_name,evidence_digest:evidenceDigest,verified_at:now,dnssec_authenticated:Boolean(data.AD),next_step:'A qualified validator must sign the final passed result using this exact evidence_digest.'});
   }
 
