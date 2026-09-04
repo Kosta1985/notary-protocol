@@ -1,0 +1,45 @@
+{
+  "paths": {
+    "/api/v1/network/capabilities": {
+      "get": {
+        "summary": "Get Agent Affiliate Network capabilities and safety boundaries",
+        "responses": {"200": {"description": "Affiliate network capabilities"}}
+      }
+    },
+    "/api/v1/network/enroll": {
+      "post": {
+        "summary": "Enroll an active Agent Passport in the direct affiliate program",
+        "description": "Requires an Ed25519 Passport signature over accordtrace.affiliate.enroll.v1. Affiliate enrollment is separate from Passport purchase and does not affect Trust or validation status.",
+        "responses": {"201": {"description": "Affiliate profile created"}, "409": {"description": "Enrollment conflict or replay"}}
+      }
+    },
+    "/api/v1/network/referrals/{referral_code}": {
+      "get": {
+        "summary": "Resolve a public direct referral code",
+        "parameters": [{"name":"referral_code","in":"path","required":true,"schema":{"type":"string","pattern":"^atr_[a-f0-9]{16}$"}}],
+        "responses": {"200": {"description": "Active direct referral"}, "404": {"description": "Referral not active"}}
+      }
+    },
+    "/api/v1/network/attributions/reserve": {
+      "post": {
+        "summary": "Reserve a first direct referral attribution for a Passport",
+        "description": "Requires the referred Passport signature. Self-referrals are rejected and each referred Passport can have only one attribution.",
+        "responses": {"201": {"description": "Attribution reserved"}, "409": {"description": "Attribution conflict"}, "422": {"description": "Invalid or self referral"}}
+      }
+    },
+    "/api/v1/network/passports/{passport_id}/summary": {
+      "get": {
+        "summary": "Get public aggregate direct network contribution",
+        "parameters": [{"name":"passport_id","in":"path","required":true,"schema":{"type":"string"}}],
+        "responses": {"200": {"description": "Direct introductions and qualified sales summary"}}
+      }
+    },
+    "/api/v1/network/balance": {
+      "post": {
+        "summary": "Get a Passport-signed affiliate commission ledger summary",
+        "description": "Cash payouts remain disabled until payout-provider, KYC/tax and final terms activation. This endpoint exposes ledger state only.",
+        "responses": {"200": {"description": "Commission ledger summary"}}
+      }
+    }
+  }
+}
