@@ -1,9 +1,27 @@
 import legacyWorker from "./index.js";
 import { handleMarketplace, MarketplaceError } from "./marketplace.js";
+import { handleSecurity, SecurityError } from "./security.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/v1/security/")) {
+      try {
+        const response = await handleSecurity(request, env, url);
+        if (response) return withCors(response);
+      } catch (error) {
+        const status = error instanceof SecurityError ? error.status : 500;
+        const body = {
+          error: error instanceof SecurityError ? "invalid_security_request" : "internal_error",
+          message: error instanceof Error ? error.message : "Unknown error"
+        };
+        return withCors(new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json; charset=utf-8" }
+        }));
+      }
+    }
 
     if (url.pathname.startsWith("/api/v1/marketplace/")) {
       try {
