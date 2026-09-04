@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS passport_product_request_nonces (
 
 CREATE TABLE IF NOT EXISTS passport_product_orders (
   id TEXT PRIMARY KEY,
+  checkout_request_id TEXT NOT NULL UNIQUE,
   passport_id TEXT NOT NULL REFERENCES agent_passports(id) ON DELETE RESTRICT,
   product_id TEXT NOT NULL,
   product_version TEXT NOT NULL,
