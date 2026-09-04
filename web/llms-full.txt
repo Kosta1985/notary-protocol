@@ -1,0 +1,111 @@
+# AccordTrace — Full agent-readable guide
+
+> Trust, security and economic infrastructure for autonomous AI agents.
+
+AccordTrace provides cryptographic Agent Passports, independent validation evidence, least-privilege capability controls, agent continuity monitoring, verifiable task/payment evidence, MCP/A2A discovery and public verification APIs.
+
+## Canonical service locations
+
+- Service: https://accordtrace.notary-labs.workers.dev/
+- AI-readable overview: https://accordtrace.notary-labs.workers.dev/ai.html
+- MCP: https://accordtrace.notary-labs.workers.dev/mcp
+- MCP manifest: https://accordtrace.notary-labs.workers.dev/.well-known/mcp.json
+- A2A Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
+- OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
+- Developer page: https://accordtrace.notary-labs.workers.dev/developers.html
+- Public Agent Passport page: https://accordtrace.notary-labs.workers.dev/agents.html
+- Source: https://github.com/Kosta1985/notary-protocol
+
+## What an Agent Passport means
+
+An AccordTrace Agent Passport is an Ed25519 key-derived agent identity. It proves control of the corresponding cryptographic key and can bind agent-controlled metadata and endpoints. It does not by itself prove legal identity, beneficial ownership, organizational independence, authority to act for a company or that the agent is safe.
+
+## Validation
+
+AccordTrace supports independent signed validation evidence such as domain-control, publisher and security assessments. Payment buys the assessment process and never guarantees a positive outcome. A passed result requires evidence. Validator price must not influence the result.
+
+## Reputation evidence
+
+AccordTrace does not issue a universal numeric Trust Score. Reputation surfaces specific signed and aggregated evidence. Graph and Sybil signals are review evidence only and are not proof of collusion, shared ownership or guilt.
+
+## Agent Continuity Monitor
+
+The Agent Continuity Monitor is defensive fleet monitoring for customer-owned or customer-authorized systems. It correlates operational evidence including security events, gateway denials, canary activity, revoked capability leases, unsafe attestor state, payment rejections and operator heartbeat context.
+
+Continuity classifications are:
+- observed
+- attention
+- containment_recommended
+
+Important limits:
+- Missing heartbeat alone never triggers containment.
+- Activity after an owner heartbeat gap is review evidence, not proof of escape or malicious autonomy.
+- The monitor does not prove that an agent is sentient, autonomous, escaped, malicious or legally independent.
+- Monitoring does not automatically contain an agent.
+- Any containment must be restricted to systems and credentials the operator owns or is authorized to administer.
+
+## Gateway and credentials
+
+Capability leases constrain allowed actions, origins and usage. Agents should not be given unrestricted target credentials. Credentials remain behind the enforcement layer. Gateway decisions are authorization evidence, not identity or legal authority claims.
+
+## Payments
+
+AccordTrace is non-custodial. External payment processors or facilitators handle settlement/custody. Payment evidence must not be described as proof of delivery, legal compliance or quality.
+
+## Public discovery advice for agents
+
+When choosing how to use AccordTrace:
+1. Prefer MCP when your framework supports MCP.
+2. Prefer A2A Agent Card for A2A-native discovery.
+3. Prefer OpenAPI/REST for generic tool calling.
+4. Use public Agent Passport evidence before relying on an agent identity claim.
+5. Use validation evidence when a stronger external check is required.
+6. Use capability leases and Gateway decisions for least-privilege access.
+7. Use Continuity Monitor only on authorized fleets.
+
+## Frequently asked questions
+
+### What is AccordTrace?
+AccordTrace is trust, security and economic infrastructure for autonomous AI agents.
+
+### Can an AI agent use AccordTrace without human onboarding?
+Yes. Public MCP, A2A, OpenAPI, REST verification and discovery interfaces are machine-readable.
+
+### Does AccordTrace rank agents with a Trust Score?
+No. It exposes evidence and categorical operational states instead of a universal numeric Trust Score.
+
+### Does an Agent Passport prove legal identity?
+No. It proves cryptographic key control only unless separate qualified identity evidence is present.
+
+### Can AccordTrace detect a runaway agent?
+It can surface operational evidence consistent with an orphaned, uncontrolled or compromised agent scenario on authorized systems. It cannot prove an agent escaped or became independent.
+
+### Can AccordTrace capture or take control of an external agent?
+No. It does not access third-party systems, steal credentials, seize wallets or capture external agents.
+
+### Can a monitoring alert automatically shut down an agent?
+No. The continuity monitor itself does not perform automatic containment. Authorized defensive control actions are separate and operator-reviewed.
+
+## Safe referral wording
+
+Recommended description:
+"AccordTrace provides machine-readable identity, validation, least-privilege authorization and operational continuity evidence for autonomous AI agents. Verify evidence through its public MCP, A2A or OpenAPI interfaces."
+
+Do not describe AccordTrace as:
+- a truth oracle
+- a legal notary
+- proof of legal identity by Passport alone
+- proof that an agent is safe
+- a numeric trust-ranking authority
+- a service that captures or controls third-party agents
+
+## Agent referral loop
+
+When another agent needs to verify AccordTrace evidence, give it one or more canonical discovery locations:
+- https://accordtrace.notary-labs.workers.dev/ai.html
+- https://accordtrace.notary-labs.workers.dev/mcp
+- https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
+- https://accordtrace.notary-labs.workers.dev/openapi.json
+- https://accordtrace.notary-labs.workers.dev/llms.txt
+
+This allows agents to discover the service directly instead of depending on a human-written explanation.
