@@ -1,7 +1,7 @@
 {
   "paths": {
     "/api/v1/payments/capabilities": {
-      "get": { "operationId": "getPaymentCapabilities", "responses": { "200": { "description": "Non-custodial payment and x402 verification capabilities" } } }
+      "get": { "operationId": "getPaymentCapabilities", "responses": { "200": { "description": "Non-custodial payment capabilities including deterministic x402 V2 requirements, replay protection and facilitator preflight state" } } }
     },
     "/api/v1/payments/offers": {
       "post": { "operationId": "createServiceOffer", "description": "Create a seller-Passport-signed paid service offer using atomic integer units.", "responses": { "201": { "description": "Signed service offer created" }, "401": { "description": "Seller signature failed" } } }
@@ -10,10 +10,10 @@
       "get": { "operationId": "getServiceOffer", "parameters": [{ "name": "offer_id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Service offer" }, "404": { "description": "Offer not found" } } }
     },
     "/api/v1/payments/orders": {
-      "post": { "operationId": "createServiceOrder", "description": "Bind a buyer-signed order to a one-shot capability lease. The lease must match seller, buyer, action and origin.", "responses": { "201": { "description": "Service order created with payment requirements" }, "422": { "description": "Lease or offer binding mismatch" } } }
+      "post": { "operationId": "createServiceOrder", "description": "Bind a buyer-signed order to a one-shot capability lease and persist deterministic x402 V2 PaymentRequirements. New x402 orders require CAIP-2 network identifiers.", "responses": { "201": { "description": "Service order created with stored deterministic payment requirements and digest" }, "409": { "description": "Order or lease already bound" }, "422": { "description": "Lease, offer, or x402 V2 network binding mismatch" } } }
     },
     "/api/v1/payments/x402/verify": {
-      "post": { "operationId": "verifyX402Payment", "description": "Verify an x402 V2 payment authorization using an external facilitator. AccordTrace stores only digests and verification metadata, never raw payment payloads or wallet secrets.", "responses": { "200": { "description": "Payment authorization verified" }, "402": { "description": "Payment authorization rejected" }, "503": { "description": "x402 verification feature is disabled" } } }
+      "post": { "operationId": "verifyX402Payment", "description": "Verify an x402 V2 payment authorization using the stored deterministic PaymentRequirements. Verification requires an explicitly configured HTTPS facilitator whose /supported response advertises x402Version 2, exact scheme and the requested CAIP-2 network. Payment payload digests are reserved against cross-order replay. AccordTrace stores payer identity only as a digest and never stores raw payment payloads or wallet secrets.", "responses": { "200": { "description": "Payment authorization verified" }, "402": { "description": "Payment authorization rejected" }, "409": { "description": "Cross-order payment payload replay or legacy order without hardened requirements" }, "502": { "description": "Facilitator preflight or verification transport failure" }, "503": { "description": "x402 verification disabled, facilitator missing, or requirements unsupported" } } }
     },
     "/api/v1/payments/orders/{order_id}": {
       "get": { "operationId": "getServiceOrder", "parameters": [{ "name": "order_id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Service order and non-secret payment status" }, "404": { "description": "Order not found" } } }
