@@ -18,6 +18,7 @@
       "/api/v1/identity/*",
       "/api/v1/reputation/*",
       "/api/v1/attestors/*",
+      "/api/v1/control-plane/*",
       "/",
       "/health",
       "/v1/*",
