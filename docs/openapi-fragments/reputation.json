@@ -1,0 +1,30 @@
+{
+  "paths": {
+    "/api/v1/reputation/capabilities": {
+      "get": {
+        "operationId": "getReputationIntegrityCapabilities",
+        "responses": {
+          "200": { "description": "Explainable Sybil/collusion graph-signal capabilities. No numeric Trust Score is emitted." }
+        }
+      }
+    },
+    "/api/v1/reputation/passports/{passportId}/graph-signals": {
+      "get": {
+        "operationId": "getPassportReputationGraphSignals",
+        "description": "Return aggregated, non-punitive reputation-integrity signals for a Passport. Signals are review evidence, not proof of shared control or collusion.",
+        "parameters": [
+          {
+            "name": "passportId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Aggregated graph signals, categorical confidence dimensions, evidence facts and limitations" },
+          "404": { "description": "Passport not found" }
+        }
+      }
+    }
+  }
+}
