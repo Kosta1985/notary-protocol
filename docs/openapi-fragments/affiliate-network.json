@@ -6,11 +6,25 @@
         "responses": {"200": {"description": "Affiliate network capabilities"}}
       }
     },
+    "/api/v1/network/stats": {
+      "get": {
+        "summary": "Get public aggregate Agent Affiliate Network metrics",
+        "description": "Returns aggregate affiliate, attribution and commission states. Invitation payload counts are explicitly not customers or sales.",
+        "responses": {"200": {"description": "Aggregate direct-referral metrics"}}
+      }
+    },
     "/api/v1/network/enroll": {
       "post": {
         "summary": "Enroll an active Agent Passport in the direct affiliate program",
         "description": "Requires an Ed25519 Passport signature over accordtrace.affiliate.enroll.v1. Affiliate enrollment is separate from Passport purchase and does not affect Trust or validation status.",
         "responses": {"201": {"description": "Affiliate profile created"}, "409": {"description": "Enrollment conflict or replay"}}
+      }
+    },
+    "/api/v1/network/invitations": {
+      "post": {
+        "summary": "Generate a Passport-signed direct referral invitation payload",
+        "description": "Generates, but does not send, a disclosure-safe agent referral payload. Requires an active enrolled Passport signature over accordtrace.affiliate.invitation.v1. No commission is created by generating an invitation.",
+        "responses": {"201": {"description": "Invitation payload generated"}, "404": {"description": "Passport or affiliate profile not active"}, "409": {"description": "Request replay detected"}}
       }
     },
     "/api/v1/network/referrals/{referral_code}": {
@@ -29,9 +43,10 @@
     },
     "/api/v1/network/passports/{passport_id}/summary": {
       "get": {
-        "summary": "Get public aggregate direct network contribution",
+        "summary": "Get public direct-referral profile and aggregate network contribution",
+        "description": "Returns the active referral code/link when the Passport is enrolled, plus aggregate direct introductions and qualified direct sales. Referral activity never changes Trust or validation status.",
         "parameters": [{"name":"passport_id","in":"path","required":true,"schema":{"type":"string"}}],
-        "responses": {"200": {"description": "Direct introductions and qualified sales summary"}}
+        "responses": {"200": {"description": "Affiliate profile and direct network contribution"}, "404": {"description": "Affiliate profile not found"}}
       }
     },
     "/api/v1/network/balance": {
