@@ -9,6 +9,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./dist/index.js"
+    },
+    "./trust": {
+      "types": "./src/trust.ts",
+      "import": "./dist/trust.js"
     }
   },
   "engines": { "node": ">=20" },

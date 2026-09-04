@@ -1,7 +1,7 @@
 {
   "schema_version": "ai-catalog/0.1",
   "name": "AccordTrace",
-  "description": "Portable tamper-evident proof records, cryptographic Agent Passports, and defensive security signals for AI-agent workflows.",
+  "description": "Portable tamper-evident proof records, cryptographic Agent Passports, defensive security signals, and bilateral reputation evidence for AI-agent workflows.",
   "homepage": "https://accordtrace.notary-labs.workers.dev",
   "resources": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "type": "api",
-      "name": "AccordTrace Agent Security & Trust",
+      "name": "AccordTrace Agent Security",
       "url": "https://accordtrace.notary-labs.workers.dev/api/v1/security/capabilities",
       "intents": [
         "create cryptographic agent passport",
@@ -43,6 +43,18 @@
         "receive containment recommendation"
       ],
       "notes": "v0.1 verifies Ed25519 Passport key control and security signals. Identity, marketplace ownership, payment claims, and public reputation are not implied."
+    },
+    {
+      "type": "api",
+      "name": "AccordTrace Reputation Evidence",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/trust/capabilities",
+      "intents": [
+        "sign proof-bound task delivery claim",
+        "sign accepted or disputed work claim",
+        "record bilateral payment claim",
+        "query cryptographic reputation evidence"
+      ],
+      "notes": "v0.1 reports bilateral cryptographic evidence and counterparty diversity. It does not issue a numeric trust score, prove legal identity, independently verify payment settlement, or custody funds."
     }
   ],
   "partner_program": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"

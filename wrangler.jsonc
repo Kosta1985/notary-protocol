@@ -12,6 +12,7 @@
       "/pilot/*",
       "/api/v1/marketplace/*",
       "/api/v1/security/*",
+      "/api/v1/trust/*",
       "/",
       "/health",
       "/v1/*",
