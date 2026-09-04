@@ -17,6 +17,10 @@
     "./gateway": {
       "types": "./src/gateway.ts",
       "import": "./dist/gateway.js"
+    },
+    "./payments": {
+      "types": "./src/payments.ts",
+      "import": "./dist/payments.js"
     }
   },
   "engines": { "node": ">=20" },
