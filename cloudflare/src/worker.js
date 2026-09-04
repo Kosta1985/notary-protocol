@@ -18,13 +18,15 @@ import { handleControlPlaneHardening, HardeningError } from "./control-plane-har
 import { handleLaunch } from "./launch.js";
 import { handleDeveloper, DeveloperError } from "./developer.js";
 import { handleAgentContinuity, ContinuityError, runContinuityScheduled } from "./agent-continuity.js";
+import { handleAffiliate, AffiliateError, matureAffiliateCommissions } from "./affiliate.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if(request.method === "OPTIONS" && url.pathname.startsWith("/api/v1/")) return withCors(new Response(null,{status:204}),url.pathname.startsWith("/api/v1/control-plane/")||url.pathname.startsWith("/api/v1/continuity/"));
+    if(request.method === "OPTIONS" && url.pathname.startsWith("/api/v1/")) return withCors(new Response(null,{status:204}),url.pathname.startsWith("/api/v1/control-plane/")||url.pathname.startsWith("/api/v1/continuity/")||url.pathname.startsWith("/api/v1/network/admin/"));
     if(url.pathname.startsWith("/api/v1/launch/")){ try{const r=await handleLaunch(request,env,url);if(r)return withCors(r);}catch(error){return withCors(new Response(JSON.stringify({error:"launch_request_failed",message:error instanceof Error?error.message:"Unknown error"}),{status:500,headers:{"content-type":"application/json; charset=utf-8"}}));}}
     if(url.pathname.startsWith("/api/v1/developer/")){try{const r=await handleDeveloper(request,env,url);if(r)return withCors(r);}catch(error){const status=error instanceof DeveloperError?error.status:500;return withCors(new Response(JSON.stringify({error:error instanceof DeveloperError?"invalid_developer_request":"internal_error",message:error instanceof Error?error.message:"Unknown error"}),{status,headers:{"content-type":"application/json; charset=utf-8"}}));}}
+    if(url.pathname.startsWith("/api/v1/network/")){try{const r=await handleAffiliate(request,env,url);if(r)return withCors(r,url.pathname.startsWith("/api/v1/network/admin/"));}catch(error){const status=error instanceof AffiliateError?error.status:500;return withCors(new Response(JSON.stringify({error:error instanceof AffiliateError?"invalid_affiliate_request":"internal_error",message:error instanceof Error?error.message:"Unknown error"}),{status,headers:{"content-type":"application/json; charset=utf-8"}}),url.pathname.startsWith("/api/v1/network/admin/"));}}
     if(url.pathname.startsWith("/api/v1/continuity/")){try{const r=await handleAgentContinuity(request,env,url);if(r)return withCors(r,true);}catch(error){const status=error instanceof ContinuityError?error.status:500;return withCors(new Response(JSON.stringify({error:error instanceof ContinuityError?"invalid_continuity_request":"internal_error",message:error instanceof Error?error.message:"Unknown error"}),{status,headers:{"content-type":"application/json; charset=utf-8"}}),true);}}
     if (url.pathname.startsWith("/api/v1/control-plane/maintenance/") || url.pathname.startsWith("/api/v1/control-plane/sessions/")) { try { const response = await handleControlPlaneHardening(request, env, url); if (response) return withCors(response, true); } catch (error) { const status = error instanceof HardeningError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof HardeningError ? "invalid_control_plane_hardening_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true); } }
     if (url.pathname.startsWith("/api/v1/control-plane/")) { try { const response = await handleControlPlane(request, env, url); if (response) return withCors(response, true); } catch (error) { const status = error instanceof ControlPlaneError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ControlPlaneError ? "invalid_control_plane_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } }), true); } }
@@ -40,7 +42,10 @@ export default {
     return legacyWorker.fetch(request, env, ctx);
   },
   async scheduled(controller, env, ctx) {
-    ctx.waitUntil(runContinuityScheduled(env, controller.scheduledTime));
+    ctx.waitUntil(Promise.all([
+      runContinuityScheduled(env, controller.scheduledTime),
+      matureAffiliateCommissions(env, controller.scheduledTime)
+    ]));
   }
 };
 function withCors(response, controlPlane = false) { const headers = new Headers(response.headers); headers.set("access-control-allow-origin", "*"); headers.set("access-control-allow-methods", "GET, POST, OPTIONS"); headers.set("access-control-allow-headers", "content-type, authorization"); headers.set("cache-control", "no-store"); if (controlPlane) { headers.set("content-security-policy", "default-src 'none'; frame-ancestors 'none'"); headers.set("x-content-type-options", "nosniff"); headers.set("referrer-policy", "no-referrer"); } return new Response(response.body, { status: response.status, statusText: response.statusText, headers }); }
