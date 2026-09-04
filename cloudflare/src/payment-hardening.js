@@ -36,6 +36,8 @@ async function createHardenedOrder(request,env){
 
   const payload={domain:'accordtrace.payment.service.order.v1',order_id:orderId,offer_id:offer.id,buyer_passport_id:buyer.id,seller_passport_id:offer.seller_passport_id,lease_id:leaseId,rail:offer.rail,network:offer.network,asset:offer.asset,amount_atomic:offer.amount_atomic,platform_fee_atomic:offer.platform_fee_atomic,ordered_at:body.ordered_at};
   await verifyEd25519(buyer.public_key,canonicalize(payload),body.signature);
+  const existing=await env.DB.prepare(`SELECT id FROM service_orders WHERE id=?1 OR lease_id=?2 LIMIT 1`).bind(orderId,leaseId).first();
+  if(existing)return reply({error:'order_or_lease_already_bound'},409);
   const requirements=deterministicRequirements(offer,orderId,orderedAtMs); const requirementsDigest=await sha256(canonicalize(requirements)); const now=new Date().toISOString();
   const statements=[
     env.DB.prepare(`INSERT OR IGNORE INTO service_orders (id,offer_id,buyer_passport_id,seller_passport_id,lease_id,payment_status,buyer_signature,ordered_at,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,'payment_claim',?6,?7,?8,?8)`).bind(orderId,offer.id,buyer.id,offer.seller_passport_id,leaseId,text(body.signature,1000),body.ordered_at,now),
@@ -62,9 +64,8 @@ async function verifyHardenedOrder(request,env){
   const paymentPayloadDigest=await sha256(canonicalize(paymentPayload));
   const signedPayload={domain:'accordtrace.payment.x402.verify.v1',order_id:order.id,buyer_passport_id:buyer.id,payment_payload_digest:paymentPayloadDigest,payment_requirements_digest:stored.requirements_digest,verified_at:body.verified_at};
   await verifyEd25519(buyer.public_key,canonicalize(signedPayload),body.signature);
-  const replay=await env.DB.prepare(`SELECT order_id FROM x402_payment_payload_replays WHERE payment_payload_digest=?1`).bind(paymentPayloadDigest).first();
-  if(replay&&replay.order_id!==order.id)return reply({error:'payment_payload_replay_detected'},409);
-  if(!replay)await env.DB.prepare(`INSERT INTO x402_payment_payload_replays (payment_payload_digest,order_id,first_seen_at) VALUES (?1,?2,?3)`).bind(paymentPayloadDigest,order.id,new Date().toISOString()).run();
+  const reserve=await env.DB.prepare(`INSERT OR IGNORE INTO x402_payment_payload_replays (payment_payload_digest,order_id,first_seen_at) VALUES (?1,?2,?3)`).bind(paymentPayloadDigest,order.id,new Date().toISOString()).run();
+  if((reserve.meta?.changes??1)===0){const replay=await env.DB.prepare(`SELECT order_id FROM x402_payment_payload_replays WHERE payment_payload_digest=?1`).bind(paymentPayloadDigest).first();if(!replay||replay.order_id!==order.id)return reply({error:'payment_payload_replay_detected'},409);}
 
   await assertFacilitatorSupport(env,facilitator,requirements.scheme,requirements.network);
   let verification; try{verification=await createPaymentAdapter({...env,X402_FACILITATOR_URL:facilitator},'x402').verify({paymentPayload,paymentRequirements:requirements,paymentHeaderDigest:paymentPayloadDigest});}
@@ -88,7 +89,7 @@ function deterministicRequirements(offer,orderId,orderedAtMs){const delta=Math.f
 async function publicOrder(env,id){const r=await env.DB.prepare(`SELECT id,offer_id,buyer_passport_id,seller_passport_id,lease_id,payment_status,payment_payload_digest,payment_requirements_digest,payment_reference_digest,facilitator,ordered_at,authorized_at,consumed_at,created_at,updated_at FROM service_orders WHERE id=?1`).bind(id).first();return r||null;}
 async function requirePassport(env,id){required(id,'passport_id');const p=await env.DB.prepare(`SELECT id,public_key,status FROM agent_passports WHERE id=?1`).bind(id).first();if(!p)throw new PaymentHardeningError('passport_not_found',404);if(p.status!=='active')throw new PaymentHardeningError('passport_not_active',403);return p;}
 async function ensureSchema(env){if(schemaReady)return;const sql=[`CREATE TABLE IF NOT EXISTS x402_order_requirements (order_id TEXT PRIMARY KEY,requirements_json TEXT NOT NULL,requirements_digest TEXT NOT NULL,created_at TEXT NOT NULL)`,`CREATE TABLE IF NOT EXISTS x402_payment_payload_replays (payment_payload_digest TEXT PRIMARY KEY,order_id TEXT NOT NULL,first_seen_at TEXT NOT NULL)`,`CREATE TABLE IF NOT EXISTS x402_facilitator_support_cache (facilitator_digest TEXT NOT NULL,scheme TEXT NOT NULL,network TEXT NOT NULL,x402_version INTEGER NOT NULL,supported INTEGER NOT NULL,checked_at TEXT NOT NULL,expires_at TEXT NOT NULL,response_digest TEXT,PRIMARY KEY (facilitator_digest,scheme,network,x402_version))`];if(typeof env.DB.batch==='function')await env.DB.batch(sql.map(s=>env.DB.prepare(s)));else for(const s of sql)await env.DB.prepare(s).run();schemaReady=true;}
-function validFacilitatorUrl(value,requiredValue){if(!value){if(requiredValue)throw new PaymentHardeningError('x402_facilitator_url_required',503);return null;}try{const u=new URL(String(value));if(u.protocol!=='https:'||u.username||u.password)throw new Error();return u.href.replace(/\/$/,'');}catch{throw new PaymentHardeningError('invalid_x402_facilitator_url',500);}}
+function validFacilitatorUrl(value,requiredValue){if(!value){if(requiredValue)throw new PaymentHardeningError('x402_facilitator_url_required',503);return null;}try{const u=new URL(String(value));if(u.protocol!=='https:'||u.username||u.password||u.search||u.hash)throw new Error();return u.href.replace(/\/$/,'');}catch{throw new PaymentHardeningError('invalid_x402_facilitator_url',500);}}
 function isVerifyEnabled(env){return String(env.X402_VERIFY_ENABLED??'false').toLowerCase()==='true';}
 function isCaip2Network(v){return /^[a-z0-9][a-z0-9-]{0,31}:[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(String(v||''));}
 function parseArray(v){try{const a=JSON.parse(v);return Array.isArray(a)?a:[];}catch{return[];}}
