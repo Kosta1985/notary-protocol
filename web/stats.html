@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Accord Trace Statistics</title>
-  <meta name="description" content="Public aggregate usage and active-agent statistics for Accord Trace cryptographic evidence infrastructure." />
+  <meta name="description" content="Public aggregate usage, active-agent and direct-referral statistics for Accord Trace." />
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
@@ -12,8 +12,14 @@
     <section class="hero">
       <p class="eyebrow">Accord Trace · v0.2.1</p>
       <h1>Public statistics</h1>
-      <p>Live service activity and privacy-preserving agent adoption metrics.</p>
-      <p><a href="/">Home</a> · <a href="/docs.html">Docs</a> · <a href="/verify.html">Verify proof</a></p>
+      <p>Live service activity, privacy-preserving agent adoption and evidence-backed direct-referral metrics.</p>
+      <p><a href="/">Home</a> · <a href="/docs.html">Docs</a> · <a href="/verify.html">Verify proof</a> · <a href="/network.html">Affiliate Network</a></p>
+    </section>
+
+    <section class="panel">
+      <h2>Agent Affiliate Network</h2>
+      <p id="affiliate-stats-note">Loading direct-referral metrics…</p>
+      <div id="affiliate-summary" class="stats-grid" hidden></div>
     </section>
 
     <section class="panel">
@@ -40,7 +46,7 @@
 
     <section class="panel">
       <h2>How counting works</h2>
-      <p>Service events are aggregate counters. Identified-agent metrics use a client-generated pseudonymous identifier; the service stores only a one-way hash for counting active and returning agents. IP addresses are not used to manufacture an agent count. Monitoring and synthetic smoke-test traffic are excluded where supported.</p>
+      <p>Service events are aggregate counters. Identified-agent metrics use a client-generated pseudonymous identifier; the service stores only a one-way hash for counting active and returning agents. Affiliate metrics come from explicit enrollment, attribution and commission ledger states. An invitation payload is not counted as a customer, sale, earned commission or paid commission. IP addresses are not used to manufacture agent counts.</p>
     </section>
   </main>
   <script src="/stats.js" defer></script>
