@@ -5,34 +5,30 @@ import { readFile } from "node:fs/promises";
 const moduleSource = await readFile(new URL("../src/security.js", import.meta.url), "utf8");
 const migrationSource = await readFile(new URL("../migrations/0005_agent_security.sql", import.meta.url), "utf8");
 
-test("security module exposes passport, events and passive canary routes", () => {
-  for (const fragment of [
-    "/api/v1/security/capabilities",
-    "/api/v1/security/passports",
-    "/api/v1/security/events",
-    "/api/v1/security/canaries",
-    "/api/v1/security/canaries/check"
-  ]) assert.match(moduleSource, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+test("passport ownership is Ed25519 signed and key-derived", () => {
+  assert.match(moduleSource, /passportIdFor/);
+  assert.match(moduleSource, /verifyEd25519/);
+  assert.match(moduleSource, /profile signature is not newer/);
 });
 
-test("unverified reports cannot change trust score", () => {
-  assert.match(moduleSource, /const trustDelta = verified \? policy\.delta : 0/);
-  assert.match(moduleSource, /Unverified reports never change score/);
+test("no misleading public trust score is issued", () => {
+  assert.match(moduleSource, /trust_score: null/);
+  assert.match(moduleSource, /provisional_unscored/);
+  assert.match(moduleSource, /claimed_not_verified/);
 });
 
-test("proof-backed events bind to AccordTrace receipts", () => {
-  assert.match(moduleSource, /SELECT receipt FROM receipts WHERE id=\?1/);
-  assert.match(moduleSource, /receipt\.evidenceDigest !== evidenceDigest/);
-  assert.match(moduleSource, /proof_evidence_mismatch/);
+test("security events require signed passport control", () => {
+  assert.match(moduleSource, /accordtrace\.security\.event\.v1/);
+  assert.match(moduleSource, /signature verification failed/);
+  assert.match(moduleSource, /reputation_effect: "none"/);
 });
 
-test("canaries are passive and do not record source IP", () => {
+test("canary creation requires passport signature and touch stores no IP", () => {
+  assert.match(moduleSource, /accordtrace\.security\.canary\.create\.v1/);
   assert.match(moduleSource, /endpoint records no source IP/);
-  assert.match(moduleSource, /'canary_touch',90,0,0,'isolate'/);
+  assert.doesNotMatch(moduleSource, /request\.headers\.get\(["']cf-connecting-ip/);
 });
 
-test("migration creates passport, event and canary tables", () => {
-  for (const table of ["agent_passports", "security_events", "security_canaries"]) {
-    assert.match(migrationSource, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`));
-  }
+test("schema has passport foreign keys", () => {
+  assert.match(migrationSource, /FOREIGN KEY \(passport_id\) REFERENCES agent_passports\(id\)/);
 });
