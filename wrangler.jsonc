@@ -13,6 +13,7 @@
       "/api/v1/marketplace/*",
       "/api/v1/security/*",
       "/api/v1/trust/*",
+      "/api/v1/gateway/*",
       "/",
       "/health",
       "/v1/*",

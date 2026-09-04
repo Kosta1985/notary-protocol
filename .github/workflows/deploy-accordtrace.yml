@@ -8,6 +8,7 @@ on:
       - "web/**"
       - "cloudflare/**"
       - "scripts/prepare-cloudflare-assets.js"
+      - "docs/openapi-fragments/**"
       - ".github/workflows/deploy-accordtrace.yml"
 
 permissions:
@@ -107,7 +108,7 @@ jobs:
         if: steps.cf.outputs.available == 'true'
         run: npx wrangler@latest deploy --config wrangler.production.json
 
-      - name: Verify homepage, security and trust APIs
+      - name: Verify homepage, security, trust and gateway APIs
         if: steps.cf.outputs.available == 'true'
         shell: bash
         run: |
@@ -125,6 +126,11 @@ jobs:
           trust="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/trust/capabilities)"
           printf '%s' "$trust" | grep -q 'AccordTrace Reputation Evidence'
           printf '%s' "$trust" | grep -q 'bilateral_payment_evidence'
+          gateway="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/gateway/capabilities)"
+          printf '%s' "$gateway" | grep -q 'AccordTrace Capability Gateway'
+          printf '%s' "$gateway" | grep -q 'issuer_kill_switch'
+          openapi="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/openapi.json)"
+          printf '%s' "$openapi" | grep -q '/api/v1/gateway/authorize'
 
       - name: Deployment status
         if: always()

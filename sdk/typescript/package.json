@@ -13,6 +13,10 @@
     "./trust": {
       "types": "./src/trust.ts",
       "import": "./dist/trust.js"
+    },
+    "./gateway": {
+      "types": "./src/gateway.ts",
+      "import": "./dist/gateway.js"
     }
   },
   "engines": { "node": ">=20" },
