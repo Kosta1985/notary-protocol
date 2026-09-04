@@ -1,0 +1,56 @@
+{
+  "paths": {
+    "/api/v1/passport-product/capabilities": {
+      "get": {
+        "summary": "Get Agent Passport Certificate product capabilities and launch gates",
+        "responses": {"200": {"description": "Passport Certificate product policy and readiness"}}
+      }
+    },
+    "/api/v1/passport-product/checkout": {
+      "post": {
+        "summary": "Create a signed US$2 Agent Passport Certificate Checkout session",
+        "description": "Requires an active cryptographic Agent Passport signature over accordtrace.passport-product.checkout.v1. The affiliate program is separate and optional. If referral_code is supplied, the referred Passport must already have cryptographically reserved that direct attribution.",
+        "responses": {
+          "201": {"description": "Dedicated Stripe Checkout session created"},
+          "409": {"description": "Replay, open-order, existing-certificate, or referral-attribution conflict"},
+          "503": {"description": "Commercial launch gates are not complete"}
+        }
+      }
+    },
+    "/api/v1/passport-product/stripe/webhook": {
+      "post": {
+        "summary": "Receive verified Stripe events for the Agent Passport Certificate product",
+        "description": "Stripe HMAC signature verification is performed on the untouched raw body before parsing. Only verified paid events with the exact configured product amount/currency can fulfill a Certificate and qualify a direct referral commission.",
+        "responses": {"200": {"description": "Event received or idempotent duplicate"}, "400": {"description": "Invalid Stripe signature/event"}}
+      }
+    },
+    "/api/v1/passport-product/orders/{order_id}": {
+      "get": {
+        "summary": "Read non-sensitive Passport Certificate order state",
+        "parameters": [{"name":"order_id","in":"path","required":true,"schema":{"type":"string"}}],
+        "responses": {"200": {"description": "Order state and issued Certificate reference"}, "404": {"description": "Order not found"}}
+      }
+    },
+    "/api/v1/passport-product/certificates/{certificate_id}": {
+      "get": {
+        "summary": "Read a portable AccordTrace-signed Agent Passport Certificate",
+        "parameters": [{"name":"certificate_id","in":"path","required":true,"schema":{"type":"string"}}],
+        "responses": {"200": {"description": "Signed Certificate plus current commercial state"}, "404": {"description": "Certificate not found"}}
+      }
+    },
+    "/api/v1/passport-product/passports/{passport_id}/certificate": {
+      "get": {
+        "summary": "Find the initial Passport Certificate associated with a cryptographic Agent Passport",
+        "parameters": [{"name":"passport_id","in":"path","required":true,"schema":{"type":"string"}}],
+        "responses": {"200": {"description": "Certificate reference"}, "404": {"description": "Certificate not found"}}
+      }
+    },
+    "/api/v1/passport-product/certificates/verify": {
+      "post": {
+        "summary": "Verify an Agent Passport Certificate issuer signature",
+        "description": "Checks the Certificate schema, AccordTrace issuer key and Ed25519 signature. A valid Certificate proves historical AccordTrace issuance only, not legal identity, KYC, Trust, safety or validation.",
+        "responses": {"200": {"description": "Valid Certificate"}, "422": {"description": "Certificate verification failed"}}
+      }
+    }
+  }
+}
