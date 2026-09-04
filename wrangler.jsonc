@@ -5,6 +5,9 @@
   "compatibility_date": "2026-08-24",
   "workers_dev": true,
   "preview_urls": true,
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
   "assets": {
     "directory": "cloudflare/public",
     "binding": "ASSETS",
@@ -22,6 +25,7 @@
       "/api/v1/reputation/*",
       "/api/v1/attestors/*",
       "/api/v1/control-plane/*",
+      "/api/v1/continuity/*",
       "/api/v1/launch/*",
       "/api/v1/developer/*",
       "/",
