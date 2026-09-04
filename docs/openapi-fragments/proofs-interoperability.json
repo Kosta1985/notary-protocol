@@ -3,8 +3,8 @@
     "/api/v1/proofs": {
       "post": {
         "operationId": "createAccordTraceProof",
-        "description": "Create an issuer-signed proof bound to the canonical SHA-256 digest of submitted JSON-compatible data. Submitted data is not stored in the proof record.",
-        "responses": { "201": { "description": "Proof created" }, "400": { "description": "Invalid proof request" }, "503": { "description": "Issuer signing key unavailable" } }
+        "description": "Create an AccordTrace service-recorded proof bound to the canonical SHA-256 digest of submitted JSON-compatible data. Submitted data is not stored in the proof record. When an Ed25519 issuer key is configured the proof also carries an issuer signature; otherwise integrity_mode is service_recorded_hash and issuer is null.",
+        "responses": { "201": { "description": "Proof created" }, "400": { "description": "Invalid proof request" }, "503": { "description": "A configured issuer signing key is invalid" } }
       }
     },
     "/api/v1/proofs/{proof_id}": {
@@ -17,8 +17,8 @@
     "/api/v1/verify": {
       "post": {
         "operationId": "verifyAccordTraceProof",
-        "description": "Verify the stored AccordTrace issuer signature and optionally compare supplied data or a supplied hash to the proof digest.",
-        "responses": { "200": { "description": "Verification result" }, "404": { "description": "Proof not found" } }
+        "description": "Verify the AccordTrace service record, verify an issuer signature when present, and optionally compare supplied data or a supplied hash to the proof digest.",
+        "responses": { "200": { "description": "Verification result with integrity_mode, hash_match and signature_valid" }, "404": { "description": "Proof not found" } }
       }
     },
     "/api/v1/hash": {
