@@ -1,0 +1,36 @@
+{
+  "paths": {
+    "/api/v1/proofs": {
+      "post": {
+        "operationId": "createAccordTraceProof",
+        "description": "Create an issuer-signed proof bound to the canonical SHA-256 digest of submitted JSON-compatible data. Submitted data is not stored in the proof record.",
+        "responses": { "201": { "description": "Proof created" }, "400": { "description": "Invalid proof request" }, "503": { "description": "Issuer signing key unavailable" } }
+      }
+    },
+    "/api/v1/proofs/{proof_id}": {
+      "get": {
+        "operationId": "getAccordTraceProof",
+        "parameters": [{ "name": "proof_id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Public non-secret proof metadata" }, "404": { "description": "Proof not found" } }
+      }
+    },
+    "/api/v1/verify": {
+      "post": {
+        "operationId": "verifyAccordTraceProof",
+        "description": "Verify the stored AccordTrace issuer signature and optionally compare supplied data or a supplied hash to the proof digest.",
+        "responses": { "200": { "description": "Verification result" }, "404": { "description": "Proof not found" } }
+      }
+    },
+    "/api/v1/hash": {
+      "post": {
+        "operationId": "hashAccordTraceContent",
+        "description": "Compute the AccordTrace canonical SHA-256 digest without creating a proof.",
+        "responses": { "200": { "description": "Canonical digest" } }
+      }
+    },
+    "/mcp": {
+      "get": { "operationId": "getMcpStatus", "responses": { "200": { "description": "Remote MCP transport status" } } },
+      "post": { "operationId": "callMcp", "description": "Streamable-HTTP JSON-RPC MCP endpoint for AccordTrace proof tools.", "responses": { "200": { "description": "MCP JSON-RPC response" } } }
+    }
+  }
+}
