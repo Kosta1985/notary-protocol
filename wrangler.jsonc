@@ -15,6 +15,7 @@
       "/api/v1/trust/*",
       "/api/v1/gateway/*",
       "/api/v1/payments/*",
+      "/api/v1/identity/*",
       "/",
       "/health",
       "/v1/*",

@@ -5,10 +5,28 @@ import { handleTrust, TrustError } from "./trust.js";
 import { GatewayError } from "./gateway.js";
 import { handlePaymentBoundGateway } from "./gateway-payment-guard.js";
 import { handlePayments, PaymentError } from "./payments.js";
+import { handleIdentity, IdentityError } from "./identity.js";
 
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+
+    if (url.pathname.startsWith("/api/v1/identity/")) {
+      try {
+        const response = await handleIdentity(request, env, url);
+        if (response) return withCors(response);
+      } catch (error) {
+        const status = error instanceof IdentityError ? error.status : 500;
+        const body = {
+          error: error instanceof IdentityError ? "invalid_identity_request" : "internal_error",
+          message: error instanceof Error ? error.message : "Unknown error"
+        };
+        return withCors(new Response(JSON.stringify(body), {
+          status,
+          headers: { "content-type": "application/json; charset=utf-8" }
+        }));
+      }
+    }
 
     if (url.pathname.startsWith("/api/v1/payments/")) {
       try {
