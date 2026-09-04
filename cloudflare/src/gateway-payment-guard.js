@@ -11,7 +11,22 @@ export async function handlePaymentBoundGateway(request, env, url = new URL(requ
   const leaseId = String(body?.lease_id ?? "").trim();
   if (!leaseId) return handleGateway(request, env, url);
 
-  const order = await env.DB.prepare("SELECT id,payment_status FROM service_orders WHERE lease_id=?1 LIMIT 1").bind(leaseId).first();
+  let order;
+  try {
+    order = await env.DB.prepare("SELECT id,payment_status FROM service_orders WHERE lease_id=?1 LIMIT 1").bind(leaseId).first();
+  } catch (error) {
+    if (isMissingTable(error, "service_orders")) {
+      return json({
+        decision: {
+          allowed: false,
+          reason: "payment_schema_unavailable",
+          lease_id: leaseId,
+          remediation: "Apply AccordTrace payment migrations before enabling payment-bound gateway authorization."
+        }
+      }, 503);
+    }
+    throw error;
+  }
   if (!order) return handleGateway(request, env, url);
   if (order.payment_status !== "payment_authorized") {
     return json({
@@ -69,9 +84,14 @@ export async function handlePaymentBoundGateway(request, env, url = new URL(requ
 }
 
 async function rollback(env, orderId, consumedAt) {
-  await env.DB.prepare("UPDATE service_orders SET payment_status='payment_authorized',consumed_at=NULL,updated_at=?1 WHERE id=?2 AND payment_status='consumed' AND consumed_at=?1")
-    .bind(consumedAt, orderId).run();
+  try {
+    await env.DB.prepare("UPDATE service_orders SET payment_status='payment_authorized',consumed_at=NULL,updated_at=?1 WHERE id=?2 AND payment_status='consumed' AND consumed_at=?1")
+      .bind(consumedAt, orderId).run();
+  } catch (error) {
+    if (!isMissingTable(error, "service_orders")) throw error;
+  }
 }
+function isMissingTable(error, table) { const m=String(error?.message??error??"").toLowerCase(); return m.includes("no such table")&&m.includes(String(table).toLowerCase()); }
 function normalizeAction(value) { return String(value ?? "").trim().toLowerCase(); }
 function normalizeOrigin(value) { try { return new URL(String(value ?? "")).origin; } catch { return ""; } }
 function parseArray(value) { try { return JSON.parse(value || "[]"); } catch { return []; } }

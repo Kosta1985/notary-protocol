@@ -22,6 +22,7 @@
     "seo:submit": "node scripts/submit-indexnow.js",
     "smoke:live": "node scripts/live-smoke.js",
     "smoke:control-plane": "node scripts/control-plane-smoke.js",
+    "smoke:payments": "node scripts/payments-smoke.js",
     "adoption:report": "node scripts/adoption-report.js"
   },
   "license": "MIT"
