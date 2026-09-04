@@ -1,0 +1,22 @@
+{
+  "paths": {
+    "/api/v1/payments/capabilities": {
+      "get": { "operationId": "getPaymentCapabilities", "responses": { "200": { "description": "Non-custodial payment and x402 verification capabilities" } } }
+    },
+    "/api/v1/payments/offers": {
+      "post": { "operationId": "createServiceOffer", "description": "Create a seller-Passport-signed paid service offer using atomic integer units.", "responses": { "201": { "description": "Signed service offer created" }, "401": { "description": "Seller signature failed" } } }
+    },
+    "/api/v1/payments/offers/{offer_id}": {
+      "get": { "operationId": "getServiceOffer", "parameters": [{ "name": "offer_id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Service offer" }, "404": { "description": "Offer not found" } } }
+    },
+    "/api/v1/payments/orders": {
+      "post": { "operationId": "createServiceOrder", "description": "Bind a buyer-signed order to a one-shot capability lease. The lease must match seller, buyer, action and origin.", "responses": { "201": { "description": "Service order created with payment requirements" }, "422": { "description": "Lease or offer binding mismatch" } } }
+    },
+    "/api/v1/payments/x402/verify": {
+      "post": { "operationId": "verifyX402Payment", "description": "Verify an x402 V2 payment authorization using an external facilitator. AccordTrace stores only digests and verification metadata, never raw payment payloads or wallet secrets.", "responses": { "200": { "description": "Payment authorization verified" }, "402": { "description": "Payment authorization rejected" }, "503": { "description": "x402 verification feature is disabled" } } }
+    },
+    "/api/v1/payments/orders/{order_id}": {
+      "get": { "operationId": "getServiceOrder", "parameters": [{ "name": "order_id", "in": "path", "required": true, "schema": { "type": "string" } }], "responses": { "200": { "description": "Service order and non-secret payment status" }, "404": { "description": "Order not found" } } }
+    }
+  }
+}
