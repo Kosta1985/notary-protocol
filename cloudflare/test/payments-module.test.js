@@ -50,5 +50,6 @@ test("gateway consumes authorized paid order atomically and rolls back denied po
 test("AccordTrace remains non-custodial", () => {
   assert.match(payments, /custody: "none"/);
   assert.match(payments, /settlement_status: "not_settled_by_accordtrace"/);
-  assert.doesNotMatch(payments, /seed phrase|private key.*body|transferFrom|sendTransaction/i);
+  assert.match(payments, /never requests wallet seed phrases or private keys/);
+  assert.doesNotMatch(payments, /transferFrom\s*\(|sendTransaction\s*\(|eth_sendTransaction|wallet_sendTransaction|private_key\s*[:=]|seed_phrase\s*[:=]/i);
 });
