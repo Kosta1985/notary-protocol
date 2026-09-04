@@ -79,9 +79,7 @@ const workerV2 = read('cloudflare/src/worker-v2.js');
 for (const marker of ['handleInteroperability', 'handleProofs', 'coreWorker.fetch', 'coreWorker.scheduled']) {
   if (!workerV2.includes(marker)) problems.push(`worker_v2_missing:${marker}`);
 }
-if (workerV2.indexOf('handleInteroperability') > workerV2.indexOf('coreWorker.fetch')) {
-  problems.push('worker_v2_interoperability_order_invalid');
-}
+if (workerV2.indexOf('handleInteroperability') > workerV2.indexOf('coreWorker.fetch')) problems.push('worker_v2_interoperability_order_invalid');
 
 const interoperability = read('cloudflare/src/interoperability.js');
 for (const marker of ['2026-07-28', 'accord_trace_verify', 'accord_trace_create_proof', 'TASK_STATE_COMPLETED', 'SendMessage']) {
@@ -138,13 +136,7 @@ const launch = read('cloudflare/src/launch.js');
 if (!launch.includes('handleStripe')) problems.push('launch_route_missing:handleStripe');
 
 const affiliate = read('cloudflare/src/affiliate.js');
-for (const marker of [
-  'single_level_direct_product_referral',
-  'no_multilevel_downline_commission',
-  'self_referral_not_allowed',
-  'shared_payment_identity_review',
-  'cash_payouts_enabled:false'
-]) {
+for (const marker of ['single_level_direct_product_referral', 'no_multilevel_downline_commission', 'self_referral_not_allowed', 'shared_payment_identity_review', 'cash_payouts_enabled:false']) {
   if (!affiliate.includes(marker)) problems.push(`affiliate_boundary_missing:${marker}`);
 }
 
@@ -182,7 +174,7 @@ for (const marker of ['/ai.html', '/network.html', '/llms.txt', '/llms-full.txt'
 }
 
 const liveAgentCheck = read('scripts/live-agent-check.mjs');
-for (const marker of ['"rest": "passed"', '"a2a": "passed"', '"mcp": "passed"', 'affiliate_network', 'passport_product_safety']) {
+for (const marker of ['rest: "passed"', 'a2a: "passed"', 'mcp: "passed"', 'affiliate_network', 'passport_product_safety']) {
   if (!liveAgentCheck.includes(marker)) problems.push(`live_agent_check_missing:${marker}`);
 }
 
