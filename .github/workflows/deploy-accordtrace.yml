@@ -7,7 +7,7 @@ on:
     paths:
       - "web/**"
       - "cloudflare/**"
-      - "scripts/prepare-cloudflare-assets.js"
+      - "scripts/**"
       - "docs/openapi-fragments/**"
       - ".github/workflows/deploy-accordtrace.yml"
 
@@ -21,7 +21,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       CF_TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CF_TOKEN_2: ${{ secrets.CLOUDFLARE_TOKEN }}
@@ -37,6 +37,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Validate release candidate
+        run: |
+          npm test
+          npm run production:check
+          npm run cf:prepare
+          npm run accordtrace:metadata
+
       - name: Detect Cloudflare deployment credentials
         id: cf
         shell: bash
@@ -48,11 +55,10 @@ jobs:
           done
           if [[ -z "$token" ]]; then
             echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "Cloudflare deployment skipped: no API token is configured in this repository. CI will still test the release candidate."
+            echo "Cloudflare deployment skipped: no API token is configured. The release candidate was still fully validated."
             exit 0
           fi
           echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
-
           account_id=""
           for candidate in "${CF_ACCOUNT_1:-}" "${CF_ACCOUNT_2:-}" "${CF_ACCOUNT_3:-}" "${CF_ACCOUNT_4:-}"; do
             if [[ -n "$candidate" ]]; then account_id="$candidate"; break; fi
@@ -68,10 +74,7 @@ jobs:
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
           echo "available=true" >> "$GITHUB_OUTPUT"
 
-      - name: Test
-        run: npm test
-
-      - name: Preserve live AccordTrace D1 binding
+      - name: Preserve live D1 binding and stamp release
         if: steps.cf.outputs.available == 'true'
         shell: bash
         run: |
@@ -89,55 +92,34 @@ jobs:
           fi
           node - "$db_id" <<'NODE'
           import fs from 'node:fs';
-          const dbId = process.argv[2];
-          const config = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
-          config.name = 'accordtrace';
-          config.d1_databases[0].database_id = dbId;
-          fs.writeFileSync('wrangler.production.json', JSON.stringify(config, null, 2));
+          const dbId=process.argv[2];
+          const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          config.name='accordtrace';
+          config.d1_databases[0].database_id=dbId;
+          config.vars={...(config.vars||{}),ACCORDTRACE_RELEASE_SHA:process.env.GITHUB_SHA};
+          fs.writeFileSync('wrangler.production.json',JSON.stringify(config,null,2));
           NODE
 
       - name: Apply production D1 migrations
         if: steps.cf.outputs.available == 'true'
         run: npx wrangler@latest d1 migrations apply DB --remote --config wrangler.production.json
 
-      - name: Prepare production assets
-        if: steps.cf.outputs.available == 'true'
-        run: npm run cf:prepare
-
       - name: Deploy live worker and assets
         if: steps.cf.outputs.available == 'true'
         run: npx wrangler@latest deploy --config wrangler.production.json
 
-      - name: Verify homepage, security, trust and gateway APIs
+      - name: Verify exact production release
         if: steps.cf.outputs.available == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          body="$(curl --fail --silent --show-error -H 'x-notary-monitor: live-smoke' https://accordtrace.notary-labs.workers.dev/)"
-          printf '%s' "$body" | grep -q 'Infrastructure for accountable AI agents'
-          if printf '%s' "$body" | grep -q 'class="brand-mark"'; then
-            echo "Old brand mark is still present" >&2
-            exit 4
-          fi
-          curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/health
-          security="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/security/capabilities)"
-          printf '%s' "$security" | grep -q 'AccordTrace Agent Security & Trust'
-          printf '%s' "$security" | grep -q 'passive_canaries'
-          trust="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/trust/capabilities)"
-          printf '%s' "$trust" | grep -q 'AccordTrace Reputation Evidence'
-          printf '%s' "$trust" | grep -q 'bilateral_payment_evidence'
-          gateway="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/api/v1/gateway/capabilities)"
-          printf '%s' "$gateway" | grep -q 'AccordTrace Capability Gateway'
-          printf '%s' "$gateway" | grep -q 'issuer_kill_switch'
-          openapi="$(curl --fail --silent --show-error https://accordtrace.notary-labs.workers.dev/openapi.json)"
-          printf '%s' "$openapi" | grep -q '/api/v1/gateway/authorize'
+        env:
+          EXPECTED_RELEASE_SHA: ${{ github.sha }}
+        run: npm run smoke:production
 
       - name: Deployment status
         if: always()
         shell: bash
         run: |
           if [[ "${{ steps.cf.outputs.available }}" == "true" ]]; then
-            echo "Cloudflare deployment path was enabled for this run."
+            echo "Cloudflare deployment path ran with release SHA verification."
           else
-            echo "Release candidate tested successfully; Cloudflare deployment remains pending because repository credentials are not configured."
+            echo "Release candidate is ready; production deployment remains pending only because Cloudflare credentials are not configured."
           fi
