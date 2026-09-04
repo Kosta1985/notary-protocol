@@ -1,13 +1,10 @@
 name: Accord Trace Agenstry discovery
 
 on:
+  workflow_run:
+    workflows: ["Deploy AccordTrace production"]
+    types: [completed]
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/agenstry-discovery.yml'
-      - 'adapters/a2a/agent-card.json'
-      - 'server.json'
   schedule:
     - cron: '17 */12 * * *'
 
@@ -20,10 +17,11 @@ concurrency:
 
 jobs:
   validate-and-check-discovery:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 3
     steps:
-      - name: Upsert Accord Trace through Agenstry public validator
+      - name: Upsert deployed Accord Trace through Agenstry public validator
         shell: bash
         run: |
           set -euo pipefail
@@ -38,6 +36,10 @@ jobs:
             echo 'Agenstry returned a JSON-RPC error.' >&2
             exit 1
           fi
+          if ! printf '%s' "$response" | jq -e '.. | objects | select(.name? == "Accord Trace")' >/dev/null; then
+            echo 'Agenstry validation response did not contain the deployed Accord Trace card.' >&2
+            exit 1
+          fi
 
       - name: Check semantic discovery queries
         shell: bash
@@ -46,7 +48,9 @@ jobs:
           for query in \
             'cryptographic proof verification for AI agents' \
             'tamper evident agent handoff receipt' \
-            'verify AI agent artifact integrity'
+            'verify AI agent artifact integrity' \
+            'AI agent affiliate referral network' \
+            'agent passport certificate readiness'
           do
             echo "=== $query ==="
             curl --fail-with-body --silent --show-error --get \
@@ -57,4 +61,5 @@ jobs:
       - name: Discovery note
         run: |
           echo 'Agenstry validation mutates/upserts its public index by design.'
-          echo 'This workflow is intentionally low-frequency and does not send unsolicited messages.'
+          echo 'Post-deploy triggering prevents indexing a stale pre-deployment Agent Card.'
+          echo 'This workflow does not send unsolicited messages.'
