@@ -26,10 +26,11 @@ test("self-attestation and indefinite claims are rejected", () => {
   assert.match(migration, /CHECK \(attestor_passport_id <> subject_passport_id\)/);
 });
 
-test("identity evidence stays unscored until anti-Sybil analysis exists", () => {
+test("identity evidence remains unscored and requires safety-qualified attestors", () => {
   assert.match(moduleSource, /trust_score:null/);
-  assert.match(moduleSource, /anti-Sybil graph analysis/);
-  assert.match(moduleSource, /distinct_attestors/);
+  assert.match(moduleSource, /attestor_safety_qualification/);
+  assert.match(moduleSource, /safety_qualified/);
+  assert.match(moduleSource, /distinct_qualified_attestors/);
 });
 
 test("schema constrains attestation categories and passport relations", () => {
