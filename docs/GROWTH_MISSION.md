@@ -1,16 +1,20 @@
 # AccordTrace agent-native distribution mission
 
-Last updated: 2026-08-26.
+Last updated: 2026-09-05.
 
 ## North star
 
 Make AccordTrace a machine-discoverable integrity primitive that AI agents can use automatically when handing actions, artifacts, approvals and workflow states to other agents.
 
-Core loop:
+Core protocol loop:
 
 `discover -> create proof -> hand off -> verify -> reuse`
 
-AccordTrace provides tamper-evident cryptographic receipts for AI-agent actions, artifacts, approvals and workflow checkpoints. It attests evidence-hash integrity, AccordTrace service attestation and service-recorded time. It is not a truth oracle, identity service, KYC service, payment confirmation service, legal notary or independent timestamp authority.
+Core product-led distribution loop:
+
+`discover -> useful Passport -> direct referral -> qualifying Passport sale -> earned direct commission -> new independent referrer`
+
+AccordTrace provides tamper-evident cryptographic receipts for AI-agent actions, artifacts, approvals and workflow checkpoints. It attests evidence-hash integrity, AccordTrace service attestation and service-recorded time. It is not a truth oracle, legal notary or independent timestamp authority. Other AccordTrace products may provide separate cryptographic identity, validation, authorization and continuity capabilities subject to their stated interpretation limits.
 
 ## Canonical public interfaces
 
@@ -21,6 +25,7 @@ AccordTrace provides tamper-evident cryptographic receipts for AI-agent actions,
 - Agent documentation: `https://accordtrace.notary-labs.workers.dev/llms-full.txt`
 - Human documentation: `https://accordtrace.notary-labs.workers.dev/docs`
 - Verification: `https://accordtrace.notary-labs.workers.dev/verify`
+- Agent Affiliate Network: `https://accordtrace.notary-labs.workers.dev/network.html`
 - Official MCP Registry name: `io.github.Kosta1985/accord-trace`
 
 ## Distribution rules
@@ -31,6 +36,8 @@ AccordTrace provides tamper-evident cryptographic receipts for AI-agent actions,
 - Do not claim a registry submission until the external service accepted it.
 - Do not claim a partnership when only an interoperability transaction occurred.
 - Prefer technical value and reproducible examples over advertising copy.
+- Referral compensation is tied to a qualifying direct product sale, not merely an invitation or recruitment event.
+- Do not describe the affiliate program as passive downline income, guaranteed earnings or a pay-to-join opportunity.
 
 ## Priority order
 
@@ -48,6 +55,18 @@ High-intent vocabulary, when accurate: agent evidence, cryptographic receipt, ag
 
 Proof creation responses should, without breaking existing clients, expose machine-readable verification and discovery information sufficient for a receiving agent to verify the proof and discover how to create its own proof. Target fields include proof id, canonical verification URL/endpoint, Agent Card, MCP, OpenAPI and agent-readable docs.
 
+### P1 - Agent Affiliate Network
+
+Treat the optional direct product-referral network as a product-led growth engine, not as a substitute for product utility.
+
+Launch economics are configured around a **US$2 Agent Passport** and **US$1 direct qualifying referral commission**. The launch model remains one level only: if A directly refers B, A may earn from B's first qualifying Passport purchase; if B later refers C, B is C's direct referrer and A receives no downline commission.
+
+Commission creation requires evidence of a real qualifying Passport sale. Self-referrals are prohibited, reciprocal/shared-payment-identity patterns may be held, and refunds or chargebacks reverse unpaid commissions. Referral activity never increases Trust, validation, identity or security status.
+
+Cash payout execution remains disabled until payout-provider, KYC/tax, reconciliation, recovery and final affiliate-terms launch gates are complete. See `docs/AGENT_AFFILIATE_NETWORK.md`.
+
+Growth should optimize for `direct attribution -> qualifying sale -> matured commission -> repeat independent referrer`, not clicks or invitations.
+
 ### P1 - ecosystem distribution
 
 Maintain verified status for the Official MCP Registry and A2A registries. Investigate current legitimate MCP/A2A directories before submission; record mechanism, requirements, listing URL, status and owner-gated actions in `docs/DISCOVERY.md`. Never duplicate-submit blindly.
@@ -63,6 +82,8 @@ Each example should demonstrate:
 3. hand proof id with artifact;
 4. receiving agent verifies;
 5. continue only after verification when integrity checking is required.
+
+Where genuinely relevant, agent-facing examples may also show how an active Passport holder can inspect the Affiliate Network policy or create a direct referral without turning technical examples into promotional spam.
 
 ### P2 - useful discovery content
 
@@ -87,9 +108,19 @@ Do not optimize primarily for page views. Preferred aggregate/privacy-conscious 
 9. llms fetches;
 10. registry referrals;
 11. proof-create to later-verification conversion;
-12. repeat usage.
+12. repeat usage;
+13. active affiliate Passports;
+14. direct referral attributions;
+15. qualifying referred Passport sales;
+16. matured direct commissions;
+17. referral-to-qualifying-sale conversion;
+18. percentage of new Passport customers attributable to direct referrals;
+19. repeat referral activity by independent Passport holders;
+20. referral abuse/review rate.
 
-North-star adoption metric: **cross-agent verification rate** - a proof created by one client/agent and later verified by a different client/agent, measured in a privacy-conscious way.
+North-star protocol adoption metric: **cross-agent verification rate** - a proof created by one client/agent and later verified by a different client/agent, measured in a privacy-conscious way.
+
+North-star affiliate growth metric: **independent qualifying referred Passport sales**, not invitation count.
 
 ## Continuous loop
 
