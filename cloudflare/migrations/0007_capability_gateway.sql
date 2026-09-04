@@ -31,7 +31,6 @@ CREATE TABLE IF NOT EXISTS gateway_requests (
   status TEXT NOT NULL CHECK (status IN ('pending','decided')),
   decision_id TEXT,
   created_at TEXT NOT NULL,
-  FOREIGN KEY (lease_id) REFERENCES capability_leases(id),
   FOREIGN KEY (subject_passport_id) REFERENCES agent_passports(id)
 );
 
@@ -48,7 +47,6 @@ CREATE TABLE IF NOT EXISTS gateway_decisions (
   decided_at TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY (request_id) REFERENCES gateway_requests(id),
-  FOREIGN KEY (lease_id) REFERENCES capability_leases(id),
   FOREIGN KEY (subject_passport_id) REFERENCES agent_passports(id)
 );
 CREATE INDEX IF NOT EXISTS idx_gateway_decisions_lease
