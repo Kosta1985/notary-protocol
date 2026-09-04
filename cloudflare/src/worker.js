@@ -7,9 +7,11 @@ import { handlePaymentBoundGateway } from "./gateway-payment-guard.js";
 import { handlePayments, PaymentError } from "./payments.js";
 import { handlePaymentHardening, PaymentHardeningError } from "./payment-hardening.js";
 import { handleIdentity, IdentityError } from "./identity.js";
+import { handleIdentityHardening, IdentityHardeningError } from "./identity-hardening.js";
 import { handleValidation, ValidationError } from "./validation.js";
 import { handleValidationDns, ValidationDnsError } from "./validation-dns.js";
 import { handleReputation, ReputationError } from "./reputation.js";
+import { handleReputationHardening } from "./reputation-hardening.js";
 import { handleAttestorSafety, SafetyError } from "./attestor-safety.js";
 import { handleControlPlane, ControlPlaneError } from "./control-plane.js";
 import { handleControlPlaneHardening, HardeningError } from "./control-plane-hardening.js";
@@ -34,6 +36,8 @@ export default {
       catch (error) { const status = error instanceof SafetyError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof SafetyError ? "invalid_attestor_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/reputation/")) {
+      try { const hardened = await handleReputationHardening(request, env, url); if (hardened) return withCors(hardened); }
+      catch (error) { return withCors(new Response(JSON.stringify({ error:"invalid_reputation_hardening_request",message:error instanceof Error?error.message:"Unknown error" }), { status:500, headers: { "content-type": "application/json; charset=utf-8" } })); }
       try { const response = await handleReputation(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof ReputationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ReputationError ? "invalid_reputation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
@@ -44,6 +48,8 @@ export default {
       catch (error) { const status = error instanceof ValidationError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof ValidationError ? "invalid_validation_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
     if (url.pathname.startsWith("/api/v1/identity/")) {
+      try { const hardened = await handleIdentityHardening(request, env, url); if (hardened) return withCors(hardened); }
+      catch (error) { const status = error instanceof IdentityHardeningError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof IdentityHardeningError ? "invalid_identity_hardening_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
       try { const response = await handleIdentity(request, env, url); if (response) return withCors(response); }
       catch (error) { const status = error instanceof IdentityError ? error.status : 500; return withCors(new Response(JSON.stringify({ error: error instanceof IdentityError ? "invalid_identity_request" : "internal_error", message: error instanceof Error ? error.message : "Unknown error" }), { status, headers: { "content-type": "application/json; charset=utf-8" } })); }
     }
