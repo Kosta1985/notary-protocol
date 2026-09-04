@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "notary-protocol",
-  "main": "cloudflare/src/worker.js",
+  "main": "cloudflare/src/worker-v2.js",
   "compatibility_date": "2026-08-24",
   "workers_dev": true,
   "preview_urls": true,
@@ -30,10 +30,14 @@
       "/api/v1/passport-product/*",
       "/api/v1/launch/*",
       "/api/v1/developer/*",
+      "/api/v1/proofs*",
+      "/api/v1/hash",
+      "/api/v1/verify",
       "/",
       "/health",
       "/v1/*",
       "/a2a",
+      "/mcp",
       "/openapi.json",
       "/.well-known/*"
     ]
