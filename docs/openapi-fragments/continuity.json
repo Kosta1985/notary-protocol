@@ -1,0 +1,14 @@
+{
+  "paths": {
+    "/api/v1/continuity/capabilities": {"get":{"summary":"Describe Agent Continuity Monitor capabilities","responses":{"200":{"description":"Capability metadata"}}}},
+    "/api/v1/continuity/assess": {"get":{"summary":"Assess one Agent Passport using operational continuity evidence","parameters":[{"name":"passport_id","in":"query","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Categorical assessment"},"401":{"description":"Authentication required"}}}},
+    "/api/v1/continuity/fleets": {"get":{"summary":"List monitored fleets","responses":{"200":{"description":"Fleet list"}}},"post":{"summary":"Create a monitored fleet","responses":{"201":{"description":"Fleet created"}}}},
+    "/api/v1/continuity/fleets/{fleet_id}/members": {"post":{"summary":"Add or reactivate a monitored Passport","parameters":[{"name":"fleet_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"201":{"description":"Member active"}}}},
+    "/api/v1/continuity/fleets/{fleet_id}/members/{passport_id}/heartbeat": {"post":{"summary":"Record operator-observed heartbeat context","parameters":[{"name":"fleet_id","in":"path","required":true,"schema":{"type":"string"}},{"name":"passport_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Heartbeat recorded"}}}},
+    "/api/v1/continuity/fleets/{fleet_id}/scan": {"post":{"summary":"Run a fleet continuity scan now","parameters":[{"name":"fleet_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Scan summary"}}}},
+    "/api/v1/continuity/fleets/{fleet_id}/summary": {"get":{"summary":"Read fleet continuity summary","parameters":[{"name":"fleet_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Fleet summary"}}}},
+    "/api/v1/continuity/incidents": {"get":{"summary":"List continuity incidents","responses":{"200":{"description":"Incident list"}}}},
+    "/api/v1/continuity/incidents/{incident_id}/acknowledge": {"post":{"summary":"Acknowledge a continuity incident","parameters":[{"name":"incident_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Incident acknowledged"}}}},
+    "/api/v1/continuity/incidents/{incident_id}/resolve": {"post":{"summary":"Resolve a continuity incident after human review","parameters":[{"name":"incident_id","in":"path","required":true,"schema":{"type":"string"}}],"responses":{"200":{"description":"Incident resolved"}}}}
+  }
+}
