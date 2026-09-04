@@ -16,6 +16,10 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Build Cloudflare assets and merged OpenAPI
+        run: |
+          npm run cf:prepare
+          node -e "const fs=require('fs'); const spec=JSON.parse(fs.readFileSync('cloudflare/public/openapi.json','utf8')); if(!spec.paths['/api/v1/gateway/authorize']) process.exit(2); if(!spec.components?.schemas?.CapabilityLeaseRequest) process.exit(3);"
       - name: Verify Accord Trace metadata consistency
         run: npm run accordtrace:metadata
       - run: python -m compileall -q sdk/python/notary_protocol
