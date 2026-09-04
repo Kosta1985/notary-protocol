@@ -40,8 +40,9 @@ test("gateway is a decision service and never requests credentials", () => {
   assert.match(moduleSource, /never asks an agent to disclose API keys/);
 });
 
-test("migration binds leases and decisions to cryptographic Passports", () => {
-  assert.match(migrationSource, /REFERENCES agent_passports/);
-  assert.match(migrationSource, /REFERENCES capability_leases/);
+test("migration binds leases requests and decisions to cryptographic Passports", () => {
+  assert.match(migrationSource, /FOREIGN KEY \(issuer_passport_id\) REFERENCES agent_passports/);
+  assert.match(migrationSource, /FOREIGN KEY \(subject_passport_id\) REFERENCES agent_passports/);
+  assert.match(migrationSource, /FOREIGN KEY \(request_id\) REFERENCES gateway_requests/);
   assert.match(migrationSource, /request_id TEXT NOT NULL UNIQUE/);
 });
