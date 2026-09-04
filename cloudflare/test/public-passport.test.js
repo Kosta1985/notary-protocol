@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';
+const page=fs.readFileSync(new URL('../../web/agents.html',import.meta.url),'utf8');const js=fs.readFileSync(new URL('../../web/agents.js',import.meta.url),'utf8');const wrangler=fs.readFileSync(new URL('../../wrangler.jsonc',import.meta.url),'utf8');
+test('public Passport page states evidence limits and avoids trust scoring',()=>{assert.match(page,/not a legal identity certificate/i);assert.match(page,/not a.*Trust Score/i);assert.doesNotMatch(page,/\d+\/100|trust score:\s*\d+/i);});
+test('badges are evidence-specific and link back to Passport evidence',()=>{assert.match(js,/Evidence-specific badge/);assert.match(js,/agents\.html\?id=/);assert.match(js,/does not claim general trustworthiness/);assert.doesNotMatch(js,/AccordTrace Trusted|Trusted Agent/);});
+test('launch developer and public profile routes are Worker-first',()=>{for(const route of ['/api/v1/launch/*','/api/v1/developer/*','/agents/*','/badges/*'])assert.match(wrangler,new RegExp(route.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));});
