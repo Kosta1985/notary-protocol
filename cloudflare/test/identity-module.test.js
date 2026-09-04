@@ -9,9 +9,9 @@ test("identity API exposes third-party attestations, revocation and evidence", (
   for (const fragment of [
     "/api/v1/identity/capabilities",
     "/api/v1/identity/attestations",
-    "/api/v1/identity/attestations/revoke",
-    "/api/v1/identity/passports/"
+    "/api/v1/identity/attestations/revoke"
   ]) assert.match(moduleSource, new RegExp(fragment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.match(moduleSource, /identity\\\/passports\\\/\(\[\^\/\]\+\)\\\/evidence/);
 });
 
 test("identity claims are domain-separated Ed25519 signatures", () => {
