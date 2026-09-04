@@ -3,14 +3,16 @@ import { PaymentAdapterError } from "./index.js";
 const JSON_HEADERS = { "content-type": "application/json" };
 
 export function createX402Adapter(env) {
-  const facilitator = normalizeFacilitator(env.X402_FACILITATOR_URL);
   const enabled = String(env.X402_VERIFY_ENABLED ?? "false").toLowerCase() === "true";
+  const facilitator = normalizeFacilitator(env.X402_FACILITATOR_URL, enabled);
 
   return {
     rail: "x402",
     mode: enabled ? "verify" : "disabled",
+    facilitator,
     async verify({ paymentPayload, paymentRequirements, paymentHeaderDigest }) {
       if (!enabled) throw new PaymentAdapterError("x402_verification_disabled", 503);
+      if (!facilitator) throw new PaymentAdapterError("x402_facilitator_url_required", 503);
       if (!paymentPayload || typeof paymentPayload !== "object" || Array.isArray(paymentPayload)) {
         throw new PaymentAdapterError("invalid_x402_payment_payload", 400);
       }
@@ -25,7 +27,9 @@ export function createX402Adapter(env) {
           x402Version: 2,
           paymentPayload,
           paymentRequirements
-        })
+        }),
+        redirect: "error",
+        signal: AbortSignal.timeout(5000)
       });
       let result;
       try { result = await response.json(); }
@@ -47,11 +51,14 @@ export function createX402Adapter(env) {
   };
 }
 
-function normalizeFacilitator(value) {
-  if (!value) return "https://x402.org/facilitator";
+function normalizeFacilitator(value, required) {
+  if (!value) {
+    if (required) throw new PaymentAdapterError("x402_facilitator_url_required", 503);
+    return null;
+  }
   try {
     const url = new URL(String(value));
-    if (url.protocol !== "https:" || url.username || url.password) throw new Error();
+    if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error();
     return url.href.replace(/\/$/, "");
   } catch {
     throw new PaymentAdapterError("invalid_x402_facilitator_url", 500);
