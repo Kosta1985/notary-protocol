@@ -7,6 +7,9 @@ const source=fs.readFileSync(new URL('../cloudflare/src/passport-product.js',imp
 const settlement=fs.readFileSync(new URL('../cloudflare/src/affiliate-settlement.js',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../cloudflare/migrations/0021_passport_certificate_commerce.sql',import.meta.url),'utf8');
 const worker=fs.readFileSync(new URL('../cloudflare/src/worker.js',import.meta.url),'utf8');
+const wrangler=fs.readFileSync(new URL('../wrangler.jsonc',import.meta.url),'utf8');
+const success=fs.readFileSync(new URL('../web/passport-checkout-success.html',import.meta.url),'utf8');
+const successJs=fs.readFileSync(new URL('../web/passport-checkout-success.js',import.meta.url),'utf8');
 
 test('Passport Certificate launch policy is $2 and disabled until every commercial gate exists',async()=>{
   const request=new Request('https://accordtrace.test/api/v1/passport-product/capabilities');
@@ -88,9 +91,17 @@ test('certificate verification requires a valid AccordTrace issuer signature',as
   assert.ok(body.checks.every(check=>check.passed));
 });
 
-test('Worker exposes dedicated Passport product router before legacy fallback',()=>{
+test('Worker and Cloudflare asset routing expose the dedicated Passport product API',()=>{
   assert.match(worker,/handlePassportProduct/);
   assert.ok(worker.indexOf('handlePassportProduct(request,env,url)')<worker.indexOf('return legacyWorker.fetch'));
+  assert.match(wrangler,/\/api\/v1\/passport-product\/\*/);
+});
+
+test('Passport checkout success page never treats the redirect as payment truth',()=>{
+  assert.match(success,/Returning from Stripe is not proof of payment/i);
+  assert.match(successJs,/Server-confirmed order state/);
+  assert.match(successJs,/Do not infer payment, fulfillment or commission from the browser redirect/i);
+  assert.doesNotMatch(successJs,/session_id.*paid|payment_status\s*=\s*['"]paid['"]/i);
 });
 
 function canonicalize(v){if(v===null||typeof v==='boolean'||typeof v==='string'||typeof v==='number')return JSON.stringify(v);if(Array.isArray(v))return`[${v.map(canonicalize).join(',')}]`;return`{${Object.keys(v).sort().map(k=>`${JSON.stringify(k)}:${canonicalize(v[k])}`).join(',')}}`}
