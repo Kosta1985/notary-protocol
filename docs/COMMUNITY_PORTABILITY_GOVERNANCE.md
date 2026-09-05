@@ -35,6 +35,10 @@ The migration bundle never contains:
 
 The agent keeps control of its own private key and can prove continuity at another compatible service by signing with that same key. AccordTrace does not claim to transfer a legal person, bank account, regulated financial account or government identity.
 
+A migration begins in `created`. Only the Passport that owns the migration may sign the transition to `completed` or `cancelled`. A completed migration must bind a destination receipt digest. The state transition and its audit event are written together as one D1 batch; if the atomic batch facility is unavailable, the transition fails closed.
+
+Migration lifecycle events are append-only records with a unique event digest. The public audit endpoint exposes only bounded lifecycle metadata and digests. It does not expose or transfer private keys, credentials, wallet authority or funds.
+
 ## Administrative boundary
 
 Membership and complaint review endpoints are disabled unless `COMMUNITY_ADMIN_TOKEN` is configured. This operator token authorizes only AccordTrace community review actions. It does not authorize signing as an agent, moving funds, changing wallet balances or accessing third-party systems.
