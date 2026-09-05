@@ -1,14 +1,24 @@
 {
   "paths": {
+    "/api/v1/agent/wallet-capabilities": {
+      "get": {
+        "operationId": "getAgentWalletCapabilities",
+        "summary": "Discover the machine Agent Wallet contract",
+        "description": "Public read-only discovery for autonomous agents. Returns feature gates, Ed25519 request-signing rules, USDC amount representation, policy decisions, machine endpoints and the explicit no-credit/no-lending boundary. It never creates a wallet or moves funds.",
+        "responses": { "200": { "description": "Machine-readable Agent Wallet capability contract" } }
+      }
+    },
     "/api/v1/agent/wallet": {
       "get": {
         "operationId": "getOwnAgentWallet",
         "summary": "Get the authenticated agent wallet",
+        "description": "Requires X-Accord-Passport-Id, X-Accord-Timestamp, X-Accord-Nonce and X-Accord-Signature over the accordtrace.agent.request.v1 payload.",
         "responses": { "200": { "description": "Wallet state" }, "401": { "description": "Signed agent request required" }, "404": { "description": "Wallet feature disabled" } }
       },
       "post": {
         "operationId": "createOwnAgentWallet",
         "summary": "Create a feature-flagged test wallet for the authenticated Agent Passport",
+        "description": "The active Passport Ed25519 key signs the exact request path, query and raw-body hash. Wallet identity is separate per Passport.",
         "responses": { "201": { "description": "Wallet created" }, "401": { "description": "Signed agent request required" }, "422": { "description": "Wallet policy or mode invalid" } }
       }
     },
@@ -22,9 +32,13 @@
       "post": {
         "operationId": "createAgentPayment",
         "summary": "Create a policy-controlled funded agent-to-agent payment",
-        "description": "Requires a signed agent request and Idempotency-Key. Settlement is allowed only from funds already available in the sender wallet. Credit, loans, borrowing, overdrafts, leverage and debt creation are outside this API. Guardian approval cannot bypass insufficient funds. The current MVP executes only the explicit simulated test provider; production/on-chain execution remains fail-closed.",
+        "description": "Requires a Passport-signed request and Idempotency-Key. Settlement is allowed only from funds already available in the sender wallet. Credit, loans, borrowing, overdrafts, leverage and debt creation are outside this API. Guardian approval cannot create funds or bypass insufficient balance. The current MVP executes only the explicit simulated test provider; production/on-chain execution remains fail-closed.",
         "parameters": [
-          { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "minLength": 8, "maxLength": 128 } }
+          { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "minLength": 8, "maxLength": 128 } },
+          { "name": "X-Accord-Passport-Id", "in": "header", "required": true, "schema": { "type": "string" } },
+          { "name": "X-Accord-Timestamp", "in": "header", "required": true, "schema": { "type": "string", "format": "date-time" } },
+          { "name": "X-Accord-Nonce", "in": "header", "required": true, "schema": { "type": "string", "minLength": 8 } },
+          { "name": "X-Accord-Signature", "in": "header", "required": true, "schema": { "type": "string", "description": "base64url Ed25519 signature over canonical accordtrace.agent.request.v1 payload" } }
         ],
         "requestBody": {
           "required": true,
