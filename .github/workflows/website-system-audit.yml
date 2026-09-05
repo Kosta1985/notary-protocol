@@ -56,6 +56,11 @@ jobs:
       - name: Read-only statistics snapshots and keyboard refresh
         if: always()
         run: node scripts/audit/website-statistics.mjs
+      - name: Read-only public evidence pages and independent capability checks
+        if: always()
+        env:
+          EXPECTED_RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+        run: node scripts/audit/website-evidence.mjs
       - name: Upload audit evidence
         if: always()
         uses: actions/upload-artifact@v4

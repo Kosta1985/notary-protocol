@@ -5,6 +5,7 @@ const input = document.querySelector('#verify-id');
 const out = document.querySelector('#verify-result');
 let current = null;
 let sequence = 0;
+let suspended = false;
 
 function show(title, message, details, outcome = 'record') {
   out.className = 'verify-result show';
@@ -24,6 +25,7 @@ function show(title, message, details, outcome = 'record') {
 }
 form?.addEventListener('submit', async event => {
   event.preventDefault();
+  if (suspended) return;
   current?.abort();
   const controller = new AbortController();
   current = controller;
@@ -49,4 +51,9 @@ input?.addEventListener('input', () => {
   out.setAttribute('aria-busy', 'false');
   show('Reference changed', 'Press Verify to check the new reference.');
 });
-window.addEventListener('pagehide', () => current?.abort());
+window.addEventListener('pagehide', () => {
+  suspended = true; sequence++; current?.abort(); current = null;
+  out.setAttribute('aria-busy', 'false');
+  show('Recheck required', 'The page was left. Verify again before relying on the current evidence or Certificate state.');
+});
+window.addEventListener('pageshow', () => { suspended = false; });
