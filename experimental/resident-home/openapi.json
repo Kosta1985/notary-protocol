@@ -1,0 +1,427 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Accord Trace Resident Home OFFLINE reference",
+    "version": "0.1.0",
+    "description": "Not mounted in the production Worker. Synthetic data only. No public signup, external backup, cloud resources, billing, compute or automatic migration."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8788/api/v1/resident-home"
+    }
+  ],
+  "security": [
+    {
+      "ScopedLocalSession": []
+    }
+  ],
+  "paths": {
+    "/profile": {
+      "get": {
+        "summary": "Read independent local profile states; not publicly published.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        }
+      }
+    },
+    "/cancel": {
+      "post": {
+        "summary": "Cancel LOCAL entitlement only. Does not cancel a Stripe subscription. Thirty-day grace is a test fixture.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false
+              }
+            }
+          }
+        }
+      }
+    },
+    "/snapshots": {
+      "post": {
+        "summary": "Save a strict counter checkpoint, at most 4 MiB actual request body; idempotent replay returns the same id.",
+        "responses": {
+          "201": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "schema_version",
+                  "counter",
+                  "step",
+                  "completed_operations"
+                ],
+                "properties": {
+                  "schema_version": {
+                    "const": "1.0"
+                  },
+                  "counter": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "step": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "completed_operations": {
+                    "type": "array",
+                    "maxItems": 1024,
+                    "uniqueItems": true,
+                    "items": {
+                      "type": "string",
+                      "pattern": "^op_[a-f0-9]{32}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          }
+        ]
+      }
+    },
+    "/snapshots/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^rh_[a-f0-9]{32}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read and integrity-check one owned checkpoint.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an old checkpoint only while the current checkpoint verifies.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        }
+      }
+    },
+    "/snapshots/{id}/export": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^rh_[a-f0-9]{32}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Export manifest and state using the separately bounded maintenance budget; no keys or permissions.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        }
+      }
+    },
+    "/inbox": {
+      "post": {
+        "summary": "Store synthetic text with durable outbox record; actual envelope <=32000 bytes. No notification is sent.",
+        "responses": {
+          "201": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "topic",
+                  "text"
+                ],
+                "properties": {
+                  "topic": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{1,80}$"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 32000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 80,
+              "pattern": "^[A-Za-z0-9_-]+$"
+            }
+          }
+        ]
+      },
+      "get": {
+        "summary": "Page owned inbox metadata; this cursor is not a cross-tenant activity feed.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        },
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 25
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/inbox/{id}": {
+      "parameters": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "schema": {
+            "type": "string",
+            "pattern": "^rh_[a-f0-9]{32}$"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Read and decrypt one owned synthetic message.",
+        "responses": {
+          "200": {
+            "description": "Local result only; no payment, compute or cloud provider invoked."
+          },
+          "default": {
+            "description": "Bounded JSON error with error.code, message and reset_at. No internal traces."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ScopedLocalSession": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "Local fixture token, restricted server-side to one tenant and agent. Not a production Passport credential."
+      }
+    },
+    "schemas": {
+      "State": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "counter",
+          "step",
+          "completed_operations"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "1.0"
+          },
+          "counter": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "step": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "completed_operations": {
+            "type": "array",
+            "maxItems": 1024,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "pattern": "^op_[a-f0-9]{32}$"
+            }
+          }
+        }
+      },
+      "Manifest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "agent_id",
+          "snapshot_id",
+          "created_at",
+          "framework",
+          "required_runtime",
+          "last_consistent_step",
+          "objects",
+          "integrity"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "1.0"
+          },
+          "tenant_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$"
+          },
+          "agent_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,80}$"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "pattern": "^rh_[a-f0-9]{32}$"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "framework": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "version"
+            ],
+            "properties": {
+              "name": {
+                "const": "accord-counter"
+              },
+              "version": {
+                "const": "1.0.0"
+              }
+            }
+          },
+          "required_runtime": {
+            "const": "node>=22.16"
+          },
+          "last_consistent_step": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "integrity": {
+            "const": "service-recorded-sha256"
+          },
+          "objects": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "name",
+                "bytes",
+                "sha256"
+              ],
+              "properties": {
+                "name": {
+                  "const": "state.json"
+                },
+                "bytes": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 4194304
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{64}$"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

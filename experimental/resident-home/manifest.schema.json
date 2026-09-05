@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Accord Trace local counter checkpoint export v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "manifest",
+    "state"
+  ],
+  "properties": {
+    "manifest": {
+      "$ref": "#/$defs/Manifest"
+    },
+    "state": {
+      "$ref": "#/$defs/State"
+    }
+  },
+  "$defs": {
+    "Manifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "tenant_id",
+        "agent_id",
+        "snapshot_id",
+        "created_at",
+        "framework",
+        "required_runtime",
+        "last_consistent_step",
+        "objects",
+        "integrity"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "tenant_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,80}$"
+        },
+        "agent_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{1,80}$"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "pattern": "^rh_[a-f0-9]{32}$"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "framework": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "const": "accord-counter"
+            },
+            "version": {
+              "const": "1.0.0"
+            }
+          }
+        },
+        "required_runtime": {
+          "const": "node>=22.16"
+        },
+        "last_consistent_step": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "integrity": {
+          "const": "service-recorded-sha256"
+        },
+        "objects": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "bytes",
+              "sha256"
+            ],
+            "properties": {
+              "name": {
+                "const": "state.json"
+              },
+              "bytes": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4194304
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            }
+          }
+        }
+      }
+    },
+    "State": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "counter",
+        "step",
+        "completed_operations"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "counter": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "step": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "completed_operations": {
+          "type": "array",
+          "maxItems": 1024,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^op_[a-f0-9]{32}$"
+          }
+        }
+      }
+    }
+  }
+}
