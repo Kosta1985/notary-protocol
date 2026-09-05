@@ -10,10 +10,12 @@ const secondarySmoke = fs.readFileSync(new URL('../.github/workflows/accord-trac
 const launch = fs.readFileSync(new URL('../cloudflare/src/launch.js', import.meta.url), 'utf8');
 const wrangler = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
 
-test('readiness validator requires contiguous migrations and commercial assets', () => {
+test('readiness validator requires contiguous migrations and current commercial assets', () => {
   assert.match(ready, /migration_sequence/);
   assert.match(ready, /expected_at_least_21/);
   for (const marker of [
+    'web/passport.html',
+    'web/passport.js',
     'web/verify.html',
     'web/developers.html',
     'web/checkout-success.html',
@@ -23,6 +25,20 @@ test('readiness validator requires contiguous migrations and commercial assets',
     'runContinuityScheduled',
     'handleAffiliate',
     'matureAffiliateCommissions'
+  ]) assert.ok(ready.includes(marker));
+});
+
+test('readiness locks the US$2 Passport and US$1 one-level referral launch contract', () => {
+  for (const marker of [
+    'agent_passport_certificate',
+    'price_atomic: 200',
+    'direct_commission_atomic: 100',
+    'referral_levels: 1',
+    'Sample Agent Passport Certificate',
+    'checkout remains fail-closed',
+    'No downline',
+    'Cash payout rail is not yet enabled',
+    '/passport.html'
   ]) assert.ok(ready.includes(marker));
 });
 
