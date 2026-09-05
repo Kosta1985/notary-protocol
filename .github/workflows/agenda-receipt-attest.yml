@@ -1,20 +1,27 @@
-name: One-time corrected Agenda receipt attestation
+name: Manual corrected Agenda receipt attestation
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/agenda-receipt-attest.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_attest:
+        description: 'Type ATTEST to create the synthetic corrected receipt proof'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-agenda-receipt-attest
+  cancel-in-progress: false
+
 jobs:
   attest:
+    if: ${{ inputs.confirm_attest == 'ATTEST' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Attest corrected receipt
         shell: bash
         run: |
@@ -30,7 +37,13 @@ jobs:
               corrected_receipt: true
             }
           }' partners/receipts/agenda-20260826-01.json > agenda-attestation/request.json
-          status="$(curl --silent --show-error             --output agenda-attestation/proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-attestation/request.json             'https://accordtrace.notary-labs.workers.dev/api/v1/proofs')"
+          status="$(curl --silent --show-error \
+            --output agenda-attestation/proof.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data-binary @agenda-attestation/request.json \
+            'https://accordtrace.notary-labs.workers.dev/api/v1/proofs')"
           test "$status" = "201"
           jq -e '.proof_id | startswith("atp_")' agenda-attestation/proof.json >/dev/null
           jq . agenda-attestation/proof.json
@@ -40,3 +53,7 @@ jobs:
           path: agenda-attestation/proof.json
           if-no-files-found: error
           retention-days: 30
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'Creating the synthetic proof requires workflow_dispatch plus the exact ATTEST confirmation.'
