@@ -1,35 +1,102 @@
-name: One-time secondary A2A registry submission
+name: Manual secondary A2A registry submission
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/secondary-a2a-submit.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: accordtrace-secondary-a2a-submit
+  cancel-in-progress: false
 
 jobs:
   submit:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Register AccordTrace
+      - name: Verify canonical Accord Trace Agent Card before submission
         shell: bash
         run: |
           set -euo pipefail
-          card="https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+          card='https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json'
+          response="$(curl --fail-with-body --silent --show-error "$card")"
+          printf '%s\n' "$response" | jq .
+          printf '%s' "$response" | jq -e '
+            .name == "Accord Trace"
+            and (.supportedInterfaces[0].protocolVersion == "1.0")
+            and ([.skills[].id] | (
+              index("notarize_evidence") != null
+              and index("verify_proof") != null
+              and index("get_proof") != null
+              and index("hash_content") != null
+              and index("network_capabilities") != null
+              and index("network_stats") != null
+              and index("passport_product_capabilities") != null
+              and index("resolve_referral") != null
+            ))
+          ' >/dev/null
+
+      - name: Register Accord Trace once
+        shell: bash
+        run: |
+          set -euo pipefail
+          card='https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json'
           payload="$(jq -nc --arg wellKnownURI "$card" '{wellKnownURI:$wellKnownURI}')"
-          result="$(curl --silent --show-error -X POST             -H "content-type: application/json" --data "$payload"             -w '\nHTTP_STATUS:%{http_code}'             "https://a2aregistry.org/api/agents/register")"
+          result="$(curl --silent --show-error \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data "$payload" \
+            --write-out '\nHTTP_STATUS:%{http_code}' \
+            'https://a2aregistry.org/api/agents/register')"
           status="$(printf '%s' "$result" | sed -n 's/^HTTP_STATUS://p')"
           body="$(printf '%s' "$result" | sed '/^HTTP_STATUS:/d')"
           printf 'Registration HTTP %s\n' "$status"
           printf '%s' "$body" | jq . || printf '%s\n' "$body"
-          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then exit 1; fi
+          if [[ "$status" -lt 200 || "$status" -ge 300 ]]; then
+            echo 'Secondary A2A registry rejected the explicit manual submission.' >&2
+            exit 1
+          fi
 
-      - name: Verify search
+      - name: Verify exact registry listing
         shell: bash
         run: |
           set -euo pipefail
-          sleep 3
-          curl --fail --silent --show-error             "https://a2aregistry.org/api/agents?search=AccordTrace" | jq .
+          card='https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json'
+          search_url='https://a2aregistry.org/api/agents?search=Accord%20Trace'
+
+          for attempt in 1 2 3 4 5; do
+            echo "Registry verification attempt ${attempt}/5"
+            response="$(curl --fail-with-body --silent --show-error "$search_url")"
+            printf '%s\n' "$response" | jq .
+
+            if printf '%s' "$response" | jq -e --arg card "$card" '
+              .. | objects |
+              select(.name? == "Accord Trace") |
+              [
+                .wellKnownURI?,
+                .wellKnownUri?,
+                .agentCardUri?,
+                .agentCardURI?,
+                .agentCardUrl?,
+                .agent_card_uri?,
+                .cardUrl?,
+                .card_url?
+              ] |
+              any(. == $card)
+            ' >/dev/null; then
+              echo 'Verified exact Accord Trace listing with canonical Agent Card URI.'
+              exit 0
+            fi
+
+            if [[ "$attempt" -lt 5 ]]; then sleep 3; fi
+          done
+
+          echo 'Manual submission returned success, but the exact Accord Trace listing with canonical card URI was not observable.' >&2
+          exit 1
+
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'It submits only after an explicit workflow_dispatch action.'
+          echo 'Repeated unsolicited submissions are intentionally not automated.'
