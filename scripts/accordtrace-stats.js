@@ -37,6 +37,7 @@ export async function probeAccordTrace(fetcher = fetch) {
   ]);
   const homepageText = homepage.ok ? await homepage.text() : "";
   const agentMetrics = normalizeAgentMetrics(accordTraceStats.body);
+  const totals = accordTraceStats.body?.totals ?? {};
 
   return {
     generatedAt: new Date().toISOString(),
@@ -56,9 +57,17 @@ export async function probeAccordTrace(fetcher = fetch) {
       publicStatsStatus: accordTraceStats.status,
       publicStats: accordTraceStats.body,
       agentMetrics,
-      verifiedProofCount: accordTraceStats.body?.totals?.verification_valid ?? accordTraceStats.body?.totals?.proof_verified ?? null,
+      modernUsage: {
+        proofsCreated: totals.proof_created ?? 0,
+        proofsVerified: totals.proof_verified ?? 0,
+        proofVerificationFailures: totals.proof_verification_failed ?? 0,
+        mcpRequests: totals.mcp_request ?? 0,
+        mcpToolCalls: totals.mcp_tool_call ?? 0,
+        a2aRequests: totals.a2a_request ?? 0
+      },
+      verifiedProofCount: totals.proof_verified ?? totals.verification_valid ?? null,
       note: accordTraceStats.status === 200
-        ? null
+        ? "Modern usage counters exclude monitoring traffic and explicitly synthetic proof records; they are operational adoption signals, not billing or identity evidence."
         : "AccordTrace does not currently expose a public aggregate statistics endpoint."
     },
     legacyNotaryProtocol: {
