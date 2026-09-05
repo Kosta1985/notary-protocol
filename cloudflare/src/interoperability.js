@@ -3,6 +3,7 @@ import { handleAffiliate } from "./affiliate.js";
 import { handleAffiliateGrowth } from "./affiliate-growth.js";
 import { handlePassportProduct } from "./passport-product.js";
 import { passportSafeEnv } from "./passport-signer-readiness.js";
+import { recordUsage } from "./usage-analytics.js";
 
 const MCP_VERSION = "2026-07-28";
 const MCP_VERSIONS = [MCP_VERSION, "2025-11-25", "2025-06-18"];
@@ -36,8 +37,9 @@ async function handleA2A(request, env) {
   const message = body?.params?.message ?? body?.message;
   const instruction = extractAction(message);
   if (!instruction) return rpcError(body?.id ?? null, -32602, "A2A message must include an AccordTrace action and arguments");
+  await recordUsage(env, "a2a_request", { request });
   try {
-    const result = await executeAction(env, instruction.action, instruction.arguments);
+    const result = await executeAction(env, instruction.action, instruction.arguments, request);
     return json({
       jsonrpc: "2.0",
       id: body?.id ?? null,
@@ -58,6 +60,7 @@ async function handleMcp(request, env) {
   const body = await readJson(request);
   const id = body?.id ?? null;
   const method = String(body?.method ?? "");
+  await recordUsage(env, "mcp_request", { request });
   try {
     if (method === "server/discover") {
       return rpcResult(id, { name: "accord-trace", version: "0.2.1", supportedVersions: MCP_VERSIONS, transport: "streamable-http", capabilities: { tools: {} } });
@@ -74,7 +77,8 @@ async function handleMcp(request, env) {
       const args = body?.params?.arguments ?? {};
       const action = MCP_ACTIONS[name];
       if (!action) return rpcError(id, -32601, `Unknown AccordTrace tool: ${name}`);
-      const result = await executeAction(env, action, args);
+      await recordUsage(env, "mcp_tool_call", { request });
+      const result = await executeAction(env, action, args, request);
       return rpcResult(id, { content: [{ type: "text", text: JSON.stringify(result) }], structuredContent: result, isError: false });
     }
     return rpcError(id, -32601, `Method not found: ${method}`);
@@ -139,14 +143,14 @@ function mcpTools() {
   ];
 }
 
-async function executeAction(env, action, args = {}) {
+async function executeAction(env, action, args = {}, request = null) {
   switch (action) {
     case "notarize_evidence":
     case "create_proof":
       if (!Object.prototype.hasOwnProperty.call(args, "data")) throw new ProofError("data is required");
-      return createProof(env, args.data, args.metadata ?? null);
+      return createProof(env, args.data, args.metadata ?? null, request);
     case "verify_proof":
-      return verifyProof(env, args);
+      return verifyProof(env, args, request);
     case "get_proof":
       return getProof(env, String(args?.proof_id ?? ""));
     case "hash_content":
