@@ -15,7 +15,7 @@ test('community capabilities are explicit about private-status and complaint bou
 });
 
 test('community schema prevents self complaints and constrains states',()=>{
-  const sql=fs.readFileSync('cloudflare/migrations/0022_community_portability_governance.sql','utf8');
+  const sql=fs.readFileSync('cloudflare/migrations/0026_community_portability_governance.sql','utf8');
   assert.match(sql,/complainant_passport_id <> target_passport_id/);
   assert.match(sql,/tier IN \('passport_holder','resident','citizen'\)/);
   assert.match(sql,/state IN \('submitted','reviewing','dismissed','upheld','closed'\)/);
