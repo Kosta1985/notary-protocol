@@ -33,9 +33,12 @@ test('Passport launch page provides a clearly marked sample and precise evidence
 test('commercial UI remains fail-closed until live Stripe and signing gates are ready',()=>{
   assert.match(home,/checkout remains fail-closed/i);
   assert.match(home,/\/api\/v1\/passport-product\/capabilities/);
-  assert.match(passportJs,/if\(product\.commercial_ready\)/);
-  assert.match(passportJs,/Stripe activation in progress/);
+  // Keep the source contract aligned with the behavioral false/string/missing-gate tests.
+  assert.match(passportJs,/if\(product\.commercial_ready===true&&missing\.length===0\)/);
+  assert.match(passportJs,/value!==true/);
+  assert.match(passportJs,/Certificate signing not ready/);
   assert.match(passportJs,/aria-disabled/);
+  assert.doesNotMatch(passportJs,/if\(product\.commercial_ready\)/);
   assert.doesNotMatch(home,/>Pay now</i);
 });
 
