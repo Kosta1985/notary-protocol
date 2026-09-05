@@ -5,10 +5,12 @@ import { handleInteroperability } from "./interoperability.js";
 import { handleProofs, ProofError } from "./proofs.js";
 import { passportSafeEnv } from "./passport-signer-readiness.js";
 import { handleAgentWallet, agentWalletErrorResponse } from "./agent-wallet.js";
+import { handleWalletCapabilities } from "./wallet-capabilities.js";
 
 const application = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    const walletCapabilitiesRoute = url.pathname === '/api/v1/agent/wallet-capabilities';
     const walletRoute = url.pathname.startsWith('/api/v1/agent/') || url.pathname.startsWith('/api/v1/wallet-admin/');
     if (request.method === "OPTIONS" && (url.pathname === "/mcp" || url.pathname === "/a2a" || url.pathname.startsWith("/api/v1/proofs") || url.pathname === "/api/v1/hash" || url.pathname === "/api/v1/verify" || url.pathname === "/api/v1/stats" || walletRoute)) {
       return cors(new Response(null, { status: 204 }));
@@ -18,6 +20,11 @@ const application = {
       const statsUrl = new URL("/v1/stats", request.url);
       const statsRequest = new Request(statsUrl, { method: "GET", headers: request.headers });
       return cors(await coreWorker.fetch(statsRequest, env, ctx));
+    }
+
+    if (walletCapabilitiesRoute) {
+      const response = handleWalletCapabilities(request, env, url);
+      if (response) return cors(response);
     }
 
     if (walletRoute) {
