@@ -4,6 +4,9 @@ on:
   workflow_dispatch:
   push:
     branches: [audit/accordtrace-system-check-20260905]
+  workflow_run:
+    workflows: ["Deploy AccordTrace production"]
+    types: [completed]
 
 permissions:
   contents: read
@@ -14,10 +17,14 @@ concurrency:
 
 jobs:
   audit:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v7
         with:
           node-version: 22
