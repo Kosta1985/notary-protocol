@@ -4,9 +4,23 @@
 
 **Cryptographic receipts, portable Agent Passports, and verifiable infrastructure for AI agents.**
 
-## Launch: US$2 Agent Passport Certificate
+## Start here: free public-beta handoff test
 
-AccordTrace now has a dedicated commercial launch product: the **Agent Passport Certificate** at a **US$2 one-time launch price**.
+**Pass the proof. Not just the claim.** Create synthetic evidence, verify the original, change one field and require rejection. No account, card or model API key is needed for the REST starter.
+
+[Run the handoff test](https://accordtrace.notary-labs.workers.dev/start.html?utm_source=github&utm_medium=owned&utm_campaign=handoff_beta_20260905) · [Read the source](./examples/agent-handoff/campaign.mjs) · [Share a result](https://github.com/Kosta1985/notary-protocol/issues/17)
+
+```bash
+node examples/agent-handoff/campaign.mjs --source github
+```
+
+Requires Node.js 22+ and a clone of this repository. Running it creates one **synthetic public proof** and verifies it twice. A one-client test is not an independent two-agent integration report. Use synthetic/non-sensitive data only.
+
+**Paid Passport checkout remains on hold and cash referral payouts are disabled.** The policy below is not an available purchase or earnings offer. [Active campaign and publishing drafts](./docs/campaigns/2026-09-beta/README.md).
+
+## Upcoming: US$2 Agent Passport Certificate
+
+AccordTrace has a configured, not-yet-activated commercial product: the **Agent Passport Certificate** at a **US$2 one-time launch price**.
 
 - Product page: https://accordtrace.notary-labs.workers.dev/passport.html
 - Sample Certificate: https://accordtrace.notary-labs.workers.dev/passport.html#sample
@@ -28,7 +42,7 @@ There are **no downline commissions**. If B later directly refers C, B is C's di
 
 The production referral logic records signed attribution, qualifying sales, holds, earned commission states, and reversals. **Cash payout execution remains disabled** until the payout-provider, KYC/tax, and final affiliate-terms gates are activated. Do not interpret an earned ledger state as paid cash.
 
-Commercial checkout itself remains fail-closed until the live capability endpoint reports Stripe price, Stripe secret, verified webhook secret, and Certificate signing key readiness.
+Commercial checkout remains fail-closed. Activation requires the explicit checkout gate, Stripe and signing readiness, a completed isolated Stripe Sandbox end-to-end test, and secure operator key recovery. A readiness boolean alone is not evidence of a completed payment.
 
 ## Core public evidence infrastructure
 
@@ -107,7 +121,7 @@ AccordTrace is intended to be callable infrastructure, not a closed dashboard. I
 
 Suggested neutral description:
 
-> AccordTrace provides portable, tamper-evident receipts for AI-agent actions, artifacts, approvals, and workflow handoffs, plus a US$2 portable Agent Passport Certificate and a one-level direct referral program with a US$1 qualifying commission.
+> AccordTrace offers free public-beta evidence checks for AI-agent handoffs through REST, MCP and A2A. Record synthetic evidence, verify the original and reject mutations. Paid Passport checkout and cash referral payouts remain on hold.
 
 External agents can create and verify tamper-evident records anonymously for synthetic public-beta tests. AccordTrace attests integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
 
@@ -118,7 +132,7 @@ Create a proof:
 ```bash
 curl -X POST https://accordtrace.notary-labs.workers.dev/api/v1/proofs \
   -H 'content-type: application/json' \
-  -d '{"data":{"event":"agent.handoff","artifact":"synthetic-demo"}}'
+  -d '{"data":{"event":"agent.handoff","artifact":"synthetic-demo"},"metadata":{"synthetic":true}}'
 ```
 
 Then verify the returned proof ID with the exact same evidence through the verification endpoint or another supported agent interface.

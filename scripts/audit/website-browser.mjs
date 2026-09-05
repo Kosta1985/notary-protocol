@@ -13,7 +13,7 @@ try {
   for (const [device, viewport] of [['desktop', { width: 1440, height: 1000 }], ['mobile', { width: 390, height: 844 }]]) {
     const context = await browser.newContext({ viewport, extraHTTPHeaders: { 'x-notary-monitor': 'website-browser-audit', 'x-accordtrace-telemetry': 'exclude' } });
     await context.route('**/*', route => ['GET', 'HEAD', 'OPTIONS'].includes(route.request().method()) ? route.continue() : route.abort('blockedbyclient'));
-    for (const route of ['/', '/passport.html', '/network.html', '/developers.html', '/verify.html', '/stats.html', '/agents.html']) {
+    for (const route of ['/', '/start.html', '/passport.html', '/network.html', '/developers.html', '/verify.html', '/stats.html', '/agents.html']) {
       const page = await context.newPage();
       const errors = [];
       const badResponses = [];
