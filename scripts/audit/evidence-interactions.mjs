@@ -76,7 +76,7 @@ try {
     if (p.includes('/security/')) await sleep(1500); return json(caps(p));
   }, async page => {
     await page.waitForFunction(() => document.querySelector('[data-service-path="/api/v1/validation/capabilities"] .tag').textContent === 'API responding');
-    assert.equal(await page.locator('[data-service-path="/api/v1/security/capabilities"] .tag').innerText(), 'Checking');
+    assert.equal(await page.locator('[data-service-path="/api/v1/security/capabilities"] .tag').textContent(), 'Checking');
     await page.waitForFunction(() => !document.querySelector('#service-refresh').disabled);
   });
   let recovered = false;
@@ -89,7 +89,7 @@ try {
   });
   await scenario('contradictory purchase readiness is not a confirmed capability', '/dashboard.html', p => json(p.includes('passport-product') ? { ...caps(p), commercial_ready: true } : caps(p)), async page => {
     await page.waitForFunction(() => !document.querySelector('#service-refresh').disabled);
-    assert.equal(await page.locator('[data-service-path="/api/v1/passport-product/capabilities"] .tag').innerText(), 'Not confirmed');
+    assert.equal(await page.locator('[data-service-path="/api/v1/passport-product/capabilities"] .tag').textContent(), 'Not confirmed');
     assert.equal(await page.locator('#service-status .tag', { hasText: 'API responding' }).count(), 3);
   });
   let oversized = true;
