@@ -1,0 +1,16 @@
+{
+  "paths": {
+    "/api/v1/stats": {
+      "get": {
+        "operationId": "getModernPublicStats",
+        "summary": "Read aggregate Accord Trace usage statistics",
+        "description": "Canonical modern alias for the anonymous 30-day aggregate usage window. Modern proof creation/verification and MCP/A2A request counters exclude Accord Trace monitoring traffic and explicitly synthetic proof records. These metrics are operational adoption signals, not billing, identity, legal, sales, or trust evidence.",
+        "responses": {
+          "200": {
+            "description": "Anonymous aggregate Accord Trace activity for the last 30 days"
+          }
+        }
+      }
+    }
+  }
+}
