@@ -73,7 +73,7 @@ jobs:
             const context=await browser.newContext({extraHTTPHeaders:{'x-notary-monitor':'functional-site-audit','x-accordtrace-telemetry':'exclude'}});
             await context.route('**/*',route=>allowRequest(route)?route.continue():route.abort('blockedbyclient'));
             for(const prefix of ['atp','ntr','atpc']){
-              const page=await context.newPage();const requests=[];page.on('request',r=>{if(r.url().includes('/api/'))requests.push(new URL(r.url()).pathname)});
+              const page=await context.newPage();const requests=[];page.on('request',r=>{if(/\/(?:api|v1)\//.test(new URL(r.url()).pathname))requests.push(new URL(r.url()).pathname)});
               const id=prefix+'_'+'0'.repeat(prefix==='ntr'?24:32);
               try{
                 await page.goto(base+'/verify.html',{waitUntil:'networkidle'});
@@ -91,7 +91,7 @@ jobs:
               if(path.includes('passport-product')){const p=await response.json();report.payment_hold={checkout_activation_enabled:p.checkout_activation_enabled,commercial_ready:p.commercial_ready,certificate_signing_enabled:p.certificate_signing_enabled};}
             }
           }finally{await browser.close()}
-          report.ok=report.pages.every(p=>p.ok)&&report.verification.every(p=>p.ok)&&report.headers.every(h=>h.nosniff==='nosniff'&&h.referrer_policy==='no-referrer'&&h.content_security_policy?.includes("frame-ancestors 'none'"));
+          report.ok=report.payment_hold?.checkout_activation_enabled===false&&report.payment_hold?.commercial_ready===false&&report.payment_hold?.certificate_signing_enabled===true&&report.pages.every(p=>p.ok)&&report.verification.every(p=>p.ok)&&report.headers.every(h=>h.nosniff==='nosniff'&&h.referrer_policy==='no-referrer'&&h.content_security_policy?.includes("frame-ancestors 'none'"));
           await fs.writeFile('.audit/functional-site.json',JSON.stringify(report,null,2));
           console.log(JSON.stringify(report,null,2));
           if(!report.ok)process.exitCode=1;
