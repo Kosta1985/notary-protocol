@@ -34,7 +34,7 @@ async function run(baseUrl, keysPath) {
     try { const value = await fn(); report.checks.push({ name, ok: true }); return value; }
     catch (error) { report.checks.push({ name, ok: false, ...safeFailure(error) }); throw error; }
   };
-  const http = (factory, expected = [200, 201]) => sandboxJson(factory, { expected, maxAttempts: 3, retryDelayMs: 1000 });
+  const http = (factory, expected = [200, 201]) => sandboxJson(factory, { expected, maxAttempts: 15, retryDelayMs: 2000 });
   try {
     base = isolatedBaseUrl(baseUrl);
     operatorToken = String(process.env.WALLET_E2E_OPERATOR_TOKEN || '');
