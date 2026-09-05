@@ -56,7 +56,9 @@
     "PASSPORT_PRODUCT_PRICE_ATOMIC": "200",
     "PASSPORT_PRODUCT_CURRENCY": "usd",
     "AFFILIATE_PASSPORT_PRICE_ATOMIC": "200",
-    "AFFILIATE_CURRENCY": "usd"
+    "AFFILIATE_CURRENCY": "usd",
+    "PASSPORT_USE_PROOF_SIGNER": "true",
+    "PASSPORT_CHECKOUT_ENABLED": "false"
   },
   "observability": {"enabled": true}
 }

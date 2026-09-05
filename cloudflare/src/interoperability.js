@@ -161,7 +161,7 @@ async function executeAction(env, action, args = {}, request = null) {
     case "network_stats":
       return readExistingPublicApi(env, "/api/v1/network/stats");
     case "passport_product_capabilities":
-      return readExistingPublicApi(passportSafeEnv(env), "/api/v1/passport-product/capabilities");
+      return readExistingPublicApi(await passportSafeEnv(env), "/api/v1/passport-product/capabilities");
     case "resolve_referral": {
       const referralCode = String(args?.referral_code ?? "").trim();
       if (!referralCode) throw new ProofError("referral_code is required");

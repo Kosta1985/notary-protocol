@@ -1,3 +1,4 @@
+import { passportSafeEnv, passportSignerState } from './passport-signer-readiness.js';
 import { qualifyDirectAffiliateSale, reverseDirectAffiliateSale } from './affiliate-settlement.js';
 
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8"};
@@ -8,6 +9,7 @@ const PRODUCT_VERSION='1';
 
 export async function handlePassportProduct(request,env,url=new URL(request.url)){
   if(!url.pathname.startsWith('/api/v1/passport-product/'))return null;
+  env=await passportSafeEnv(env);
 
   if(request.method==='GET'&&url.pathname==='/api/v1/passport-product/capabilities'){
     const policy=productPolicy(env);
@@ -20,6 +22,8 @@ export async function handlePassportProduct(request,env,url=new URL(request.url)
       checkout_enabled:policy.checkoutEnabled,
       webhook_enabled:Boolean(env.STRIPE_WEBHOOK_SECRET),
       certificate_signing_enabled:Boolean(env.NOTARY_PRIVATE_JWK),
+      certificate_signer:passportSignerState(env),
+      checkout_activation_enabled:policy.activationEnabled,
       referral_pricing_consistent:policy.referralPricingConsistent,
       commercial_ready:policy.commercialReady,
       cash_affiliate_payouts_enabled:false,
@@ -102,6 +106,9 @@ export async function handlePassportProduct(request,env,url=new URL(request.url)
     if(!await verifyStripeSignature(raw,signature,env.STRIPE_WEBHOOK_SECRET))return reply({error:'invalid_stripe_signature'},400);
     let event;try{event=JSON.parse(raw);}catch{return reply({error:'invalid_stripe_event_json'},400)}
     if(!event?.id||!event?.type)return reply({error:'invalid_stripe_event'},400);
+    const mode=stripeMode(env);
+    if(mode===null)return reply({error:'stripe_mode_not_configured'},503);
+    if(event.livemode!==mode)return reply({error:'stripe_event_mode_mismatch'},400);
     const eventId=String(event.id),eventType=String(event.type),now=new Date().toISOString();
     await env.DB.prepare(`INSERT OR IGNORE INTO passport_product_stripe_events(id,event_type,created_at) VALUES(?1,?2,?3)`).bind(eventId,eventType,now).run();
     const existing=await env.DB.prepare(`SELECT processed_at FROM passport_product_stripe_events WHERE id=?1`).bind(eventId).first();
@@ -156,6 +163,9 @@ async function processStripeEvent(env,event,url){
     const orderId=String(object?.metadata?.accordtrace_passport_order_id||object?.client_reference_id||'');
     if(!/^atpo_[a-f0-9]{32}$/.test(orderId))return{ignored:true,reason:'not_a_passport_product_order'};
     const order=await getOrder(env,orderId);if(!order)return{ignored:true,reason:'passport_product_order_not_found'};
+    const bindingError=checkoutBindingError(order,object);
+    if(bindingError)return{ignored:true,reason:bindingError};
+    if(['refunded','chargeback','failed','review'].includes(order.payment_status))return{ignored:true,order_id:order.id,status:order.payment_status,reason:'order_not_fulfillable'};
     const paid=object.payment_status==='paid'||type==='checkout.session.async_payment_succeeded';
     if(!paid){await env.DB.prepare(`UPDATE passport_product_orders SET stripe_session_id=COALESCE(stripe_session_id,?1),stripe_payment_intent_id=?2,stripe_customer_id=?3,payment_status='pending',amount_total=?4,currency=?5,updated_at=?6 WHERE id=?7 AND payment_status IN ('created','pending')`).bind(nullableString(object.id),nullableString(object.payment_intent),nullableString(object.customer),nullableInt(object.amount_total),nullableString(object.currency)?.toLowerCase()||null,new Date().toISOString(),orderId).run();return{order_id:orderId,status:'pending'};}
     const policy=productPolicy(env);const amount=nullableInt(object.amount_total);const currency=nullableString(object.currency)?.toLowerCase()||null;const now=new Date().toISOString();
@@ -170,16 +180,18 @@ async function processStripeEvent(env,event,url){
   if(type==='checkout.session.async_payment_failed'||type==='checkout.session.expired'){
     const orderId=String(object?.metadata?.accordtrace_passport_order_id||object?.client_reference_id||'');
     if(!/^atpo_[a-f0-9]{32}$/.test(orderId))return{ignored:true,reason:'not_a_passport_product_order'};
+    const order=await getOrder(env,orderId);if(!order)return{ignored:true,reason:'passport_product_order_not_found'};
+    const bindingError=checkoutBindingError(order,object);if(bindingError)return{ignored:true,reason:bindingError};
     await env.DB.prepare(`UPDATE passport_product_orders SET payment_status='failed',review_reason=?1,updated_at=?2 WHERE id=?3 AND payment_status IN ('created','pending')`).bind(type,new Date().toISOString(),orderId).run();
     return{order_id:orderId,status:'failed'};
   }
   if(type==='charge.refunded'||type==='charge.dispute.created'){
     const paymentIntent=nullableString(object.payment_intent);
     if(!paymentIntent)return{ignored:true,reason:'payment_intent_missing'};
-    const order=await env.DB.prepare(`SELECT * FROM passport_product_orders WHERE stripe_payment_intent_id=?1 LIMIT 1`).bind(paymentIntent).first();
+    const order=await resolveReversalOrder(env,object,paymentIntent);
     if(!order)return{ignored:true,reason:'not_a_passport_product_payment'};
     const state=type==='charge.refunded'?'refunded':'chargeback';const now=new Date().toISOString();
-    await env.DB.prepare(`UPDATE passport_product_orders SET payment_status=?1,refunded_at=?2,updated_at=?2 WHERE id=?3 AND payment_status IN ('paid','fulfilled','review')`).bind(state,now,order.id).run();
+    await env.DB.prepare(`UPDATE passport_product_orders SET payment_status=?1,refunded_at=?2,updated_at=?2 WHERE id=?3 AND payment_status IN ('created','pending','failed','paid','fulfilled','review')`).bind(state,now,order.id).run();
     await env.DB.prepare(`UPDATE agent_passport_certificates SET state='refunded',refunded_at=?1,updated_at=?1 WHERE order_id=?2 AND state='active'`).bind(now,order.id).run();
     const reversal=await reverseDirectAffiliateSale(env,{externalOrderRef:`passport-product:${order.id}`,reasonCode:type==='charge.refunded'?'passport_product_refund':'passport_product_chargeback'});
     return{order_id:order.id,status:state,affiliate_reversal:reversal};
@@ -189,6 +201,7 @@ async function processStripeEvent(env,event,url){
 
 async function fulfillPaidOrder(env,orderId,url,stripeSession){
   let order=await getOrder(env,orderId);if(!order)throw new PassportProductError('passport_product_order_not_found',404);
+  if(!['paid','fulfilled'].includes(order.payment_status))throw new PassportProductError('passport_product_order_not_paid',409);
   const existing=await env.DB.prepare(`SELECT id,certificate_json FROM agent_passport_certificates WHERE order_id=?1`).bind(orderId).first();
   let certificateId=existing?.id||null;
   if(!existing){
@@ -229,7 +242,7 @@ async function verifyCertificate(certificate,env){
 }
 
 function productPolicy(env){
-  const priceAtomic=envInt(env.PASSPORT_PRODUCT_PRICE_ATOMIC,200,1,1_000_000),currency=String(env.PASSPORT_PRODUCT_CURRENCY||'usd').toLowerCase();const affiliatePrice=envInt(env.AFFILIATE_PASSPORT_PRICE_ATOMIC,200,1,1_000_000),affiliateCurrency=String(env.AFFILIATE_CURRENCY||'usd').toLowerCase();const referralPricingConsistent=priceAtomic===affiliatePrice&&currency===affiliateCurrency;const checkoutEnabled=Boolean(env.STRIPE_SECRET_KEY)&&Boolean(env.STRIPE_PRICE_AGENT_PASSPORT);const readiness={stripe_secret:Boolean(env.STRIPE_SECRET_KEY),stripe_price:Boolean(env.STRIPE_PRICE_AGENT_PASSPORT),stripe_webhook_secret:Boolean(env.STRIPE_WEBHOOK_SECRET),certificate_signing_key:Boolean(env.NOTARY_PRIVATE_JWK),referral_pricing_consistent:referralPricingConsistent};return{priceAtomic,currency,affiliatePrice,affiliateCurrency,referralPricingConsistent,checkoutEnabled,commercialReady:Object.values(readiness).every(Boolean),readiness};
+  const priceAtomic=envInt(env.PASSPORT_PRODUCT_PRICE_ATOMIC,200,1,1_000_000),currency=String(env.PASSPORT_PRODUCT_CURRENCY||'usd').toLowerCase();const affiliatePrice=envInt(env.AFFILIATE_PASSPORT_PRICE_ATOMIC,200,1,1_000_000),affiliateCurrency=String(env.AFFILIATE_CURRENCY||'usd').toLowerCase();const referralPricingConsistent=priceAtomic===affiliatePrice&&currency===affiliateCurrency;const checkoutEnabled=Boolean(env.STRIPE_SECRET_KEY)&&Boolean(env.STRIPE_PRICE_AGENT_PASSPORT);const activationEnabled=String(env.PASSPORT_CHECKOUT_ENABLED||'').toLowerCase()==='true';const readiness={checkout_activation:activationEnabled,stripe_secret:Boolean(env.STRIPE_SECRET_KEY),stripe_price:Boolean(env.STRIPE_PRICE_AGENT_PASSPORT),stripe_webhook_secret:Boolean(env.STRIPE_WEBHOOK_SECRET),certificate_signing_key:Boolean(env.NOTARY_PRIVATE_JWK),referral_pricing_consistent:referralPricingConsistent};return{activationEnabled,priceAtomic,currency,affiliatePrice,affiliateCurrency,referralPricingConsistent,checkoutEnabled,commercialReady:Object.values(readiness).every(Boolean),readiness};
 }
 async function activePassport(env,id){const row=await env.DB.prepare(`SELECT id,public_key,status FROM agent_passports WHERE id=?1`).bind(id).first();if(!row||row.status!=='active')throw new PassportProductError('passport_not_active',404);return row}
 async function getOrder(env,id){if(!/^atpo_[a-f0-9]{32}$/.test(String(id||'')))return null;return env.DB.prepare(`SELECT * FROM passport_product_orders WHERE id=?1`).bind(id).first()}
@@ -257,3 +270,37 @@ function randomHex(n){const b=crypto.getRandomValues(new Uint8Array(n));return[.
 async function bodyJson(request){try{return await request.json()}catch{throw new PassportProductError('request_body_must_be_json',400)}}
 function reply(body,status=200){return new Response(JSON.stringify(body),{status,headers:JSON_HEADERS})}
 export class PassportProductError extends Error{constructor(message,status=400){super(message);this.status=status}}
+
+function stripeMode(env){const match=String(env.STRIPE_SECRET_KEY||'').match(/^(?:sk|rk)_(live|test)_/);return match?match[1]==='live':null}
+function checkoutBindingError(order,session){
+  if(!order.stripe_session_id)throw new PassportProductError('stripe_session_binding_not_ready',503);
+  if(session.id!==order.stripe_session_id)return 'stripe_checkout_session_mismatch';
+  if(session.mode!=='payment')return 'stripe_checkout_mode_mismatch';
+  if(session.metadata?.accordtrace_passport_order_id!==order.id||session.client_reference_id!==order.id)return 'stripe_order_reference_mismatch';
+  if(session.metadata?.passport_id!==order.passport_id||session.metadata?.product_id!==PRODUCT_ID||session.metadata?.product_version!==PRODUCT_VERSION)return 'stripe_product_metadata_mismatch';
+  if(order.stripe_payment_intent_id&&nullableString(session.payment_intent)!==order.stripe_payment_intent_id)return 'stripe_payment_intent_mismatch';
+  return null;
+}
+async function stripeGet(env,path){
+  const key=String(env.STRIPE_SECRET_KEY||'');
+  const headers={authorization:`Basic ${btoa(`${key}:`)}`};if(env.STRIPE_API_VERSION)headers['stripe-version']=String(env.STRIPE_API_VERSION);
+  let response;try{response=await fetch(`https://api.stripe.com${path}`,{headers,redirect:'error',signal:AbortSignal.timeout(10000)})}catch{throw new PassportProductError('stripe_api_unavailable',502)}
+  if(!response.ok)throw new PassportProductError('stripe_payment_reconciliation_unavailable',502);
+  try{return await response.json()}catch{throw new PassportProductError('stripe_api_response_invalid',502)}
+}
+async function resolveReversalOrder(env,object,paymentIntent){
+  const linked=await env.DB.prepare(`SELECT * FROM passport_product_orders WHERE stripe_payment_intent_id=?1 LIMIT 1`).bind(paymentIntent).first();
+  if(linked)return linked;
+  if(!/^pi_[A-Za-z0-9]+$/.test(paymentIntent))return null;
+  // Refund/dispute notifications can arrive before checkout completion.
+  // Recover only a matching stored order, checking its actual Stripe session.
+  const intent=await stripeGet(env,`/v1/payment_intents/${encodeURIComponent(paymentIntent)}`);
+  if(intent.id!==paymentIntent||intent.livemode!==stripeMode(env))throw new PassportProductError('stripe_reconciliation_mode_mismatch',502);
+  const order=await getOrder(env,intent.metadata?.accordtrace_passport_order_id);
+  if(!order)return null;
+  if(!order.stripe_session_id)throw new PassportProductError('stripe_session_binding_not_ready',503);
+  const session=await stripeGet(env,`/v1/checkout/sessions/${encodeURIComponent(order.stripe_session_id)}`);
+  if(session.livemode!==stripeMode(env)||session.payment_intent!==paymentIntent||checkoutBindingError(order,session))throw new PassportProductError('stripe_reconciliation_binding_mismatch',502);
+  await env.DB.prepare(`UPDATE passport_product_orders SET stripe_payment_intent_id=?1,updated_at=?2 WHERE id=?3 AND stripe_payment_intent_id IS NULL`).bind(paymentIntent,new Date().toISOString(),order.id).run();
+  return {...order,stripe_payment_intent_id:paymentIntent};
+}

@@ -4,12 +4,8 @@ import fs from 'node:fs';
 import { handleInteroperability } from '../src/interoperability.js';
 import { inspectPassportSigningKey, passportSafeEnv } from '../src/passport-signer-readiness.js';
 
-const VALID_PRIVATE_JWK = JSON.stringify({
-  kty: 'OKP',
-  crv: 'Ed25519',
-  x: 'A'.repeat(43),
-  d: 'B'.repeat(43)
-});
+const keys = await crypto.subtle.generateKey({name:'Ed25519'},true,['sign','verify']);
+const VALID_PRIVATE_JWK = JSON.stringify(await crypto.subtle.exportKey('jwk',keys.privateKey));
 
 test('Passport signer readiness is fail-closed for absent and malformed JWK values', () => {
   assert.deepEqual(inspectPassportSigningKey(undefined), { configured: false, valid: false });
@@ -20,15 +16,15 @@ test('Passport signer readiness is fail-closed for absent and malformed JWK valu
   assert.deepEqual(inspectPassportSigningKey(JSON.stringify({ kty: 'OKP', crv: 'Ed25519', x: 'short', d: 'B'.repeat(43) })), { configured: true, valid: false });
 });
 
-test('structurally valid Ed25519 private JWK remains available to Passport routes', () => {
+test('structurally valid Ed25519 private JWK remains available to Passport routes', async () => {
   assert.deepEqual(inspectPassportSigningKey(VALID_PRIVATE_JWK), { configured: true, valid: true });
   const env = { NOTARY_PRIVATE_JWK: VALID_PRIVATE_JWK, OTHER_BINDING: 'kept' };
-  assert.equal(passportSafeEnv(env), env);
+  assert.equal((await passportSafeEnv(env)).NOTARY_PRIVATE_JWK, VALID_PRIVATE_JWK);
 });
 
-test('malformed configured signer is hidden only from Passport product consumers', () => {
+test('malformed configured signer is hidden only from Passport product consumers', async () => {
   const env = { NOTARY_PRIVATE_JWK: '{}', OTHER_BINDING: 'kept' };
-  const safe = passportSafeEnv(env);
+  const safe = await passportSafeEnv(env);
   assert.notEqual(safe, env);
   assert.equal(safe.NOTARY_PRIVATE_JWK, undefined);
   assert.equal(safe.OTHER_BINDING, 'kept');
@@ -71,6 +67,6 @@ test('MCP Passport capabilities cannot report malformed signer as commercially r
 
 test('production wrapper applies Passport-only signer sanitization before legacy product routes', () => {
   const source = fs.readFileSync(new URL('../src/worker-v2.js', import.meta.url), 'utf8');
-  assert.match(source, /url\.pathname\.startsWith\("\/api\/v1\/passport-product\/"\) \? passportSafeEnv\(env\) : env/);
+  assert.match(source, /url\.pathname\.startsWith\("\/api\/v1\/passport-product\/"\) \? await passportSafeEnv\(env\) : env/);
   assert.match(source, /handleProofs\(request, env, url\)/, 'proof path must retain original env so malformed issuer config still fails explicitly');
 });

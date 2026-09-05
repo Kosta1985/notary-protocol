@@ -15,7 +15,7 @@ This runbook covers the final secure activation of the US$2 Agent Passport Certi
 
 ## Secrets that must never enter source control
 
-The production Worker remains fail-closed until all three secrets below are configured in Cloudflare:
+The production Worker remains fail-closed until Stripe credentials and a cryptographically verified issuer are available, AND the explicit `PASSPORT_CHECKOUT_ENABLED` gate is enabled after sandbox validation:
 
 1. `STRIPE_SECRET_KEY`
    - Prefer a least-privilege live restricted Stripe API key when the required Checkout permissions are available.
@@ -26,21 +26,39 @@ The production Worker remains fail-closed until all three secrets below are conf
    - Never use a browser success redirect as proof of payment.
 
 3. `NOTARY_PRIVATE_JWK`
-   - Dedicated Ed25519 private JWK for AccordTrace Certificate issuance.
+   - Preferred explicit Ed25519 private JWK for AccordTrace Certificate issuance.
+   - If it is absent, `PASSPORT_USE_PROOF_SIGNER=true` explicitly permits use of the existing `PROOF_SIGNING_PRIVATE_JWK` binding for Passport routes only. The configured `PROOF_SIGNING_PUBLIC_JWK`, when present, must match.
+   - The runtime imports the key and performs an Ed25519 sign/verify self-test. Malformed explicit primary keys never fall back to another signer. No secret is copied, rotated, logged or exported by this path.
+   - `certificate_signer` in the capabilities response contains only the source binding name, a reason code and the public-key fingerprint.
    - Generate it outside source control and keep a secure recovery copy before activation.
    - The public key may be published; the private JWK must remain a Worker secret.
 
-## Current production baseline
+## Activation hold (2026-09-05)
 
-- Production release SHA: `95064c63571ed5598cc6d2e22a26844d3a966ad0`
-- Main CI #894 passed.
-- Deploy #61 passed, including exact production SHA verification.
-- Production smoke #92 passed.
-- Live contract #52 passed.
-- Agenstry validator #33 passed.
-- Passport commercial readiness #1 passed its read-only policy/economics probe.
-- The readiness probe intentionally treats `commercial_ready: false` as `activation_pending`; its success must not be interpreted as checkout being live.
-- Checkout remains intentionally fail-closed until the three secrets above are configured.
+The read-only Cloudflare preflight confirmed that `NOTARY_PRIVATE_JWK` is absent,
+while `PROOF_SIGNING_PRIVATE_JWK` and `PROOF_SIGNING_PUBLIC_JWK` are encrypted
+bindings. There were no Certificate orders or issued Certificates at that check.
+The optional compatibility binding is enabled, but `PASSPORT_CHECKOUT_ENABLED`
+remains `false`. A usable signer is a prerequisite, NOT evidence of a completed
+Stripe payment. The separate activation hold must not be bypassed by a UI change.
+
+## Required sandbox isolation
+
+Use a separate Worker, D1 database, issuer key and Stripe sandbox credentials.
+Never point a sandbox destination at the production webhook or send a simulated
+paid event to production. `sk_test_`/`rk_test_` credentials and `event.livemode=false`
+are required for sandbox traffic. Production uses matching live credentials and
+`event.livemode=true`. The handler rejects mismatched event modes before ledger writes.
+
+The isolated SQLite tests in `test/passport-commerce-runtime.test.js` use generated
+keys and stub all Stripe requests. They exercise signed Checkout creation, raw-body
+HMAC, certificate signatures, duplicate deliveries, incorrect sessions/metadata,
+price/currency rejection, asynchronous payments, refunds, disputes and out-of-order
+reversals. They are NOT a substitute for an actual hosted Checkout sandbox run.
+Do not use real card details or a real charge for testing.
+
+After the actual sandbox run passes, enable `PASSPORT_CHECKOUT_ENABLED=true` through
+a reviewed configuration deployment. Keep cash affiliate payouts disabled.
 
 ## Read-only activation probe
 
