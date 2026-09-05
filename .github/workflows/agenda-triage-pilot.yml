@@ -1,20 +1,27 @@
-name: One-time Agenda Intelligence A2A triage pilot
+name: Manual Agenda Intelligence A2A triage pilot
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/agenda-triage-pilot.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_pilot:
+        description: 'Type PILOT to run the synthetic external A2A pilot and create proof records'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-agenda-triage-pilot
+  cancel-in-progress: false
+
 jobs:
   pilot:
+    if: ${{ inputs.confirm_pilot == 'PILOT' }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Run bounded external A2A pilot
         shell: bash
@@ -25,7 +32,10 @@ jobs:
           set -euo pipefail
           mkdir -p agenda-pilot
 
-          card_status="$(curl --silent --show-error --location             --output agenda-pilot/agent-card.json             --write-out '%{http_code}'             "$AGENDA_BASE/.well-known/agent-card.json")"
+          card_status="$(curl --silent --show-error --location \
+            --output agenda-pilot/agent-card.json \
+            --write-out '%{http_code}' \
+            "$AGENDA_BASE/.well-known/agent-card.json")"
           test "$card_status" = "200"
           jq -e '
             (.name | type == "string" and length > 0) and
@@ -41,7 +51,13 @@ jobs:
               partnership_acceptance: false
             }
           }' partners/offers/agenda-claims-audit.json > agenda-pilot/offer-proof-request.json
-          offer_status="$(curl --silent --show-error             --output agenda-pilot/offer-proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-pilot/offer-proof-request.json             "$ACCORDTRACE_BASE/api/v1/proofs")"
+          offer_status="$(curl --silent --show-error \
+            --output agenda-pilot/offer-proof.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data-binary @agenda-pilot/offer-proof-request.json \
+            "$ACCORDTRACE_BASE/api/v1/proofs")"
           test "$offer_status" = "201"
           jq -e '.proof_id | startswith("atp_")' agenda-pilot/offer-proof.json >/dev/null
 
@@ -60,7 +76,14 @@ jobs:
             }
           }' > agenda-pilot/request.json
 
-          response_status="$(curl --silent --show-error             --output agenda-pilot/response.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --header 'A2A-Version: 1.0'             --data-binary @agenda-pilot/request.json             "$AGENDA_BASE/message/send")"
+          response_status="$(curl --silent --show-error \
+            --output agenda-pilot/response.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --header 'A2A-Version: 1.0' \
+            --data-binary @agenda-pilot/request.json \
+            "$AGENDA_BASE/message/send")"
           printf '%s\n' "$response_status" > agenda-pilot/response-http-status.txt
           if [[ "$response_status" -lt 200 || "$response_status" -ge 300 ]]; then
             jq . agenda-pilot/response.json || true
@@ -79,7 +102,18 @@ jobs:
           response_hash="sha256:$(sha256sum agenda-pilot/response.json | cut -d' ' -f1)"
           offer_proof_id="$(jq -r '.proof_id' agenda-pilot/offer-proof.json)"
 
-          jq -n             --arg observed_at "$observed_at"             --arg state "$state"             --arg intent "$intent"             --arg recommended "$recommended"             --arg human_review "$human_review"             --arg offer_proof_id "$offer_proof_id"             --arg run_url "$run_url"             --arg card_hash "$card_hash"             --arg request_hash "$request_hash"             --arg response_hash "$response_hash"             '{
+          jq -n \
+            --arg observed_at "$observed_at" \
+            --arg state "$state" \
+            --arg intent "$intent" \
+            --arg recommended "$recommended" \
+            --arg human_review "$human_review" \
+            --arg offer_proof_id "$offer_proof_id" \
+            --arg run_url "$run_url" \
+            --arg card_hash "$card_hash" \
+            --arg request_hash "$request_hash" \
+            --arg response_hash "$response_hash" \
+            '{
               receipt_version: "accordtrace-partner-receipt/0.1",
               receipt_id: "partner_rcpt_agenda_20260826_01",
               deduplication_key: ("a2a-response:" + ($response_hash | sub("^sha256:"; ""))),
@@ -136,7 +170,13 @@ jobs:
               partnership_acceptance: false
             }
           }' agenda-pilot/receipt.json > agenda-pilot/receipt-proof-request.json
-          receipt_status="$(curl --silent --show-error             --output agenda-pilot/receipt-proof.json             --write-out '%{http_code}'             --request POST             --header 'content-type: application/json'             --data-binary @agenda-pilot/receipt-proof-request.json             "$ACCORDTRACE_BASE/api/v1/proofs")"
+          receipt_status="$(curl --silent --show-error \
+            --output agenda-pilot/receipt-proof.json \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'content-type: application/json' \
+            --data-binary @agenda-pilot/receipt-proof-request.json \
+            "$ACCORDTRACE_BASE/api/v1/proofs")"
           test "$receipt_status" = "201"
           jq -e '.proof_id | startswith("atp_")' agenda-pilot/receipt-proof.json >/dev/null
 
@@ -151,3 +191,8 @@ jobs:
           path: agenda-pilot/
           if-no-files-found: error
           retention-days: 30
+
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'Running the external A2A pilot and creating synthetic proofs requires workflow_dispatch plus the exact PILOT confirmation.'

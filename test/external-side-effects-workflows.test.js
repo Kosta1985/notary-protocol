@@ -6,7 +6,9 @@ const workflows = {
   secondaryA2A: fs.readFileSync(new URL('../.github/workflows/secondary-a2a-submit.yml', import.meta.url), 'utf8'),
   moltbookRegister: fs.readFileSync(new URL('../.github/workflows/register-moltbook.yml', import.meta.url), 'utf8'),
   moltbookIntroduction: fs.readFileSync(new URL('../.github/workflows/moltbook-introduction.yml', import.meta.url), 'utf8'),
-  cloudflareAudit: fs.readFileSync(new URL('../.github/workflows/cloudflare-audit.yml', import.meta.url), 'utf8')
+  cloudflareAudit: fs.readFileSync(new URL('../.github/workflows/cloudflare-audit.yml', import.meta.url), 'utf8'),
+  agendaReceiptAttest: fs.readFileSync(new URL('../.github/workflows/agenda-receipt-attest.yml', import.meta.url), 'utf8'),
+  agendaTriagePilot: fs.readFileSync(new URL('../.github/workflows/agenda-triage-pilot.yml', import.meta.url), 'utf8')
 };
 
 function assertManualOnly(source) {
@@ -47,4 +49,19 @@ test('secondary A2A submission remains manual and exact-card verified', () => {
   assert.match(workflows.secondaryA2A, /search=Accord%20Trace/);
   assert.match(workflows.secondaryA2A, /Verified exact Accord Trace listing with canonical Agent Card URI/);
   assert.match(workflows.secondaryA2A, /Repeated unsolicited submissions are intentionally not automated/);
+});
+
+test('Agenda receipt attestation requires explicit confirmation and modern checkout', () => {
+  assert.match(workflows.agendaReceiptAttest, /confirm_attest/);
+  assert.match(workflows.agendaReceiptAttest, /inputs\.confirm_attest == 'ATTEST'/);
+  assert.match(workflows.agendaReceiptAttest, /actions\/checkout@v7/);
+  assert.match(workflows.agendaReceiptAttest, /synthetic proof requires workflow_dispatch plus the exact ATTEST confirmation/);
+});
+
+test('Agenda external A2A pilot requires explicit confirmation and remains synthetic', () => {
+  assert.match(workflows.agendaTriagePilot, /confirm_pilot/);
+  assert.match(workflows.agendaTriagePilot, /inputs\.confirm_pilot == 'PILOT'/);
+  assert.match(workflows.agendaTriagePilot, /actions\/checkout@v7/);
+  assert.match(workflows.agendaTriagePilot, /synthetic: true/);
+  assert.match(workflows.agendaTriagePilot, /external A2A pilot and creating synthetic proofs requires workflow_dispatch plus the exact PILOT confirmation/);
 });
