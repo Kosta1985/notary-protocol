@@ -2,6 +2,7 @@ const box=document.getElementById('referral-box');
 const codeEl=document.getElementById('referral-code');
 const statusEl=document.getElementById('referral-status');
 const copyBtn=document.getElementById('copy-referral');
+const buyBtn=document.getElementById('buy-with-ref');
 const ref=new URLSearchParams(location.search).get('ref');
 
 if(ref){
@@ -20,14 +21,20 @@ async function resolveReferral(code){
     const response=await fetch(`/api/v1/network/referrals/${encodeURIComponent(code)}`,{headers:{accept:'application/json'}});
     const body=await response.json().catch(()=>({}));
     if(!response.ok)throw new Error(body.error||`HTTP ${response.status}`);
-    codeEl.textContent=body.referral?.code||code;
+    const activeCode=body.referral?.code||code;
+    codeEl.textContent=activeCode;
     statusEl.className='status ok';
-    statusEl.textContent='Direct referral recognized. Keep this code for the Passport attribution flow.';
+    statusEl.textContent='Direct referral recognized. A qualifying US$2 Agent Passport Certificate purchase can create the direct referrer’s US$1 commission after verified settlement and review.';
     copyBtn.hidden=false;
-    copyBtn.dataset.code=body.referral?.code||code;
+    copyBtn.dataset.code=activeCode;
+    if(buyBtn){
+      buyBtn.hidden=false;
+      buyBtn.href=`/passport.html?ref=${encodeURIComponent(activeCode)}`;
+    }
   }catch(error){
     statusEl.className='status bad';
     statusEl.textContent=`Referral is not currently active (${error.message}). Do not infer an affiliate relationship from this URL.`;
+    if(buyBtn)buyBtn.hidden=true;
   }
 }
 
