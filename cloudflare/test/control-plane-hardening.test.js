@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../src/control-plane-hardening.js", import.meta.url), "utf8");
+const adapters = await readFile(new URL("../src/alert-adapters.js", import.meta.url), "utf8");
 const migration = await readFile(new URL("../migrations/0012_control_plane_hardening.sql", import.meta.url), "utf8");
 const worker = await readFile(new URL("../src/worker.js", import.meta.url), "utf8");
 
@@ -35,12 +36,14 @@ test("alert outbox is deduplicated and bounded", () => {
   assert.match(source,/RETRY_SECONDS=\[60,300,1800,7200,21600\]/);
 });
 
-test("webhook delivery is HTTPS only and signed without exposing secret", () => {
-  assert.match(source,/u\.protocol==='https:'/);
+test("webhook and customer adapters are HTTPS only and signed without exposing secret", () => {
+  assert.match(adapters,/u\.protocol==='https:'/);
+  assert.match(adapters,/slack_webhook/);
+  assert.match(adapters,/email_relay/);
   assert.match(source,/x-accordtrace-signature/);
   assert.match(source,/HMAC/);
-  assert.match(source,/contains_secrets:false/);
-  assert.doesNotMatch(source,/signing_secret[^\n]*JSON\.stringify/);
+  assert.match(adapters,/contains_secrets:false/);
+  assert.doesNotMatch(adapters,/signing_secret[^\n]*JSON\.stringify/);
 });
 
 test("automated retention never deletes append-only audit receipts", () => {
