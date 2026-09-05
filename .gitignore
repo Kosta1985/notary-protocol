@@ -10,3 +10,6 @@ __pycache__/
 .DS_Store
 cloudflare/public/
 .wrangler/
+
+# Generated audit evidence is kept in CI artifacts, not source control.
+.audit/

@@ -1,3 +1,4 @@
+import { publicRouteResponse, metadataRequest, publicNotFound } from './public-routing.js';
 import { secureResponse, unexpectedErrorResponse } from './response-security.js';
 import coreWorker from "./worker.js";
 import { handleInteroperability } from "./interoperability.js";
@@ -53,7 +54,7 @@ function errorResponse(error) {
 function cors(response) {
   const headers = new Headers(response.headers);
   headers.set("access-control-allow-origin", "*");
-  headers.set("access-control-allow-methods", "GET, POST, OPTIONS");
+  headers.set("access-control-allow-methods", "GET, HEAD, POST, OPTIONS");
   headers.set("access-control-allow-headers", "content-type, authorization, a2a-version, mcp-protocol-version, mcp-method, mcp-name, x-notary-monitor");
   headers.set("x-content-type-options", "nosniff");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
@@ -62,7 +63,11 @@ function cors(response) {
 // Keep headers and unexpected-error redaction on every runtime response.
 export default {
   async fetch(request, env, ctx) {
-    try { return await secureResponse(await application.fetch(request, env, ctx), { method: request.method }); }
+    try {
+      const direct = publicRouteResponse(request);
+      const response = direct || await application.fetch(metadataRequest(request), env, ctx);
+      return await secureResponse(await publicNotFound(response, request, env), { method: request.method });
+    }
     catch { return await secureResponse(unexpectedErrorResponse(), { method: request.method }); }
   },
   async scheduled(controller, env, ctx) { return application.scheduled(controller, env, ctx); }

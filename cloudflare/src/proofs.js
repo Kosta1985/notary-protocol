@@ -1,4 +1,4 @@
-import { readJsonBody, InputError } from './http-request.js';
+import { readJsonBody, assertJsonComplexity, InputError } from './http-request.js';
 import { recordUsage } from "./usage-analytics.js";
 
 const encoder = new TextEncoder();
@@ -89,6 +89,8 @@ export async function verifyProof(env, input, request = null) {
 }
 
 export async function hashData(data) {
+  try { assertJsonComplexity(data); }
+  catch (error) { if (error instanceof InputError) throw new ProofError(error.message, error.status); throw error; }
   const canonical = canonicalize(data);
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(canonical));
   return `sha256:${[...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("")}`;

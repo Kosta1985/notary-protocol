@@ -13,7 +13,7 @@
     "organization": "Accord Trace"
   },
   "version": "0.2.1",
-  "documentationUrl": "https://accordtrace.notary-labs.workers.dev/docs.html",
+  "documentationUrl": "https://accordtrace.notary-labs.workers.dev/developers.html",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,

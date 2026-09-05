@@ -100,7 +100,7 @@ try{
   },async(page,calls)=>{
     await page.locator('#interest-email').fill('fixture@example.invalid');
     await page.locator('#interest-form').evaluate(form=>{form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}));form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))});
-    await page.waitForFunction(()=>document.querySelector('#interest-status').textContent.includes('early-access list'));
+    await page.waitForFunction(()=>document.querySelector('#interest-status').textContent.includes('request has been received'));
     assert.equal(calls.filter(c=>c.path.endsWith('/waitlist')).length,1);
   });
   await scenario('incomplete referral JSON does not show an active referral','/network.html?ref=atr_0123456789abcdef',()=>response({}),async page=>{
@@ -110,6 +110,23 @@ try{
     await page.locator('#agent-id').fill('sk_live_fixture_not_real');await page.locator('#agent-form button').click();
     await page.waitForFunction(()=>document.querySelector('#agent-state').getAttribute('aria-busy')==='false');
     assert.equal(calls.length,0);assert.equal(new URL(page.url()).search,'');assert.match(await page.locator('#agent-state').innerText(),/not a URL or private key/);
+  });
+  await scenario('404 recovery page offers keyboard-accessible navigation','/404.html',absent,async(page,calls)=>{
+    assert.match(await page.title(),/Page not found/);
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator('.skip-link').evaluate(el=>el===document.activeElement),true);
+    assert.equal(await page.locator('a[href="/developers.html"]').count(),2);
+    assert.equal(await page.locator('a[href="/verify.html"]').count(),2);
+    assert.equal(calls.length,0);
+    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+    assert.equal(overflow,false);
+  });
+  await scenario('waitlist confirms receipt without claiming renewed enrollment','/',p=>p.endsWith('/waitlist')?response({accepted:true,status:'received'},201):response({}),async page=>{
+    await page.locator('#interest-email').fill('opted-out-fixture@example.invalid');
+    await page.locator('#interest-form button[type="submit"]').click();
+    await page.waitForFunction(()=>document.querySelector('#interest-form').getAttribute('aria-busy')==='false');
+    const text=await page.locator('#interest-status').innerText();
+    assert.match(text,/request has been received/);assert.match(text,/unsubscribe preferences/);assert.doesNotMatch(text,/You are on/);
   });
   await scenario('known credential prefixes are rejected without requests','/verify.html',()=>{throw Error('must not fetch')},async(page,calls)=>{
     assert.match(await verify(page,'sk_live_fixture_not_real'),/Not verified/);assert.equal(calls.length,0);
