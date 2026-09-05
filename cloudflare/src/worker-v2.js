@@ -34,6 +34,7 @@ const application = {
         const guardianResponse = await handleWalletGuardian(request, env, url);
         if (guardianResponse) return cors(guardianResponse);
       } catch (error) {
+        if (e2eDiagnosticsEnabled(env) && (!Number.isInteger(Number(error?.status)) || Number(error.status) >= 500)) return cors(e2eDiagnosticResponse(error, 'guardian'));
         return cors(walletGuardianErrorResponse(error));
       }
     }
@@ -43,6 +44,7 @@ const application = {
         const walletResponse = await handleAgentWallet(request, env, url);
         if (walletResponse) return cors(walletResponse);
       } catch (error) {
+        if (e2eDiagnosticsEnabled(env) && (!Number.isInteger(Number(error?.status)) || Number(error.status) >= 500)) return cors(e2eDiagnosticResponse(error, 'wallet'));
         return cors(agentWalletErrorResponse(error));
       }
     }
@@ -78,6 +80,23 @@ function errorResponse(error) {
     error: error instanceof ProofError ? error.code : "interoperability_error",
     message: error instanceof Error ? error.message : "Unknown error"
   }), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
+// Test-branch-only diagnostic path. The workflow sets this flag only on an
+// ephemeral Worker with generated keys and simulated funds. Production never
+// receives the flag, and normal 500 redaction remains unchanged.
+function e2eDiagnosticsEnabled(env) { return String(env?.WALLET_E2E_DIAGNOSTICS || '').toLowerCase() === 'true'; }
+function e2eDiagnosticResponse(error, area) {
+  const raw = error instanceof Error ? error.message : String(error || 'unknown');
+  const safe = raw
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/Bearer\s+\S+/gi, 'Bearer [redacted]')
+    .replace(/\b(?:sk|rk|whsec)_(?:live|test)?_[A-Za-z0-9_-]+\b/g, '[redacted]')
+    .slice(0, 500);
+  return new Response(JSON.stringify({ error: { code: 'E2E_DIAGNOSTIC', area, name: String(error?.name || 'Error').slice(0, 80), message: safe } }), {
+    status: 502,
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }
+  });
 }
 
 function cors(response) {
