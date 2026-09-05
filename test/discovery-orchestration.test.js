@@ -38,16 +38,22 @@ test('live contract runs after deployment with current action versions', () => {
   assert.match(liveWorkflow, /github\.event\.workflow_run\.head_sha/);
 });
 
-test('live contract performs a real read-only A2A network action', () => {
+test('live contract performs canonical and compatibility read-only A2A network actions', () => {
   for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','resolve_referral']) {
     assert.ok(liveContract.includes(`'${skill}'`), `live contract missing ${skill}`);
   }
+  assert.match(liveContract, /A2A_METHODS = \['message\/send', 'SendMessage'\]/);
+  assert.match(liveContract, /headers: \{ 'A2A-Version': '1\.0' \}/);
   assert.match(liveContract, /action: 'network_capabilities'/);
+  assert.match(liveContract, /validateA2AProbe/);
+  assert.match(liveContract, /canonicalMethod: 'message\/send'/);
+  assert.match(liveContract, /compatibilityMethod: 'SendMessage'/);
   assert.match(liveContract, /single_level_direct_product_referral/);
   assert.match(liveContract, /amount_atomic === 200/);
   assert.match(liveContract, /amount_atomic === 100/);
   assert.match(liveContract, /cash_payouts_enabled === false/);
   assert.match(liveContract, /no_multilevel_downline_commission/);
   assert.match(liveContract, /no_self_referral/);
-  assert.match(liveContract, /A2A network capability returned JSON-RPC error/);
+  assert.match(liveContract, /network capability returned JSON-RPC error/);
+  assert.match(liveContract, /A2A message\/send and SendMessage returned different network policy semantics/);
 });
