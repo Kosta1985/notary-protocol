@@ -36,10 +36,50 @@ jobs:
             echo 'Agenstry returned a JSON-RPC error.' >&2
             exit 1
           fi
-          if ! printf '%s' "$response" | jq -e '.. | objects | select(.name? == "Accord Trace")' >/dev/null; then
+
+          # Agenstry returns the validator document as JSON text inside an A2A part.
+          # Decode that text before asserting the indexed Agent Card contract.
+          validation="$(printf '%s' "$response" | jq -cer '
+            [
+              .result.message.parts[]?.text?
+              | select(type == "string")
+              | try fromjson catch empty
+              | select(
+                  (.raw_json?.name? == "Accord Trace")
+                  or (.card?.name? == "Accord Trace")
+                  or (.name? == "Accord Trace")
+                )
+            ][0] // empty
+          ')"
+          if [[ -z "$validation" ]]; then
             echo 'Agenstry validation response did not contain the deployed Accord Trace card.' >&2
             exit 1
           fi
+          if ! printf '%s' "$validation" | jq -e '
+            (.ok == true)
+            and (.live_responds == true)
+            and (.card_format == "current")
+          ' >/dev/null; then
+            echo 'Agenstry did not confirm a live current-format Accord Trace card.' >&2
+            exit 1
+          fi
+
+          for skill in \
+            notarize_evidence \
+            verify_proof \
+            get_proof \
+            hash_content \
+            network_capabilities \
+            network_stats \
+            passport_product_capabilities \
+            resolve_referral
+          do
+            if ! printf '%s' "$validation" | jq -e --arg skill "$skill" \
+              '[(.raw_json.skills // .card.skills // [])[].id] | index($skill) != null' >/dev/null; then
+              echo "Agenstry indexed card is missing required skill: $skill" >&2
+              exit 1
+            fi
+          done
 
       - name: Check semantic discovery queries
         shell: bash
