@@ -1,84 +1,115 @@
-# AccordTrace framework-ready integration examples
+# AccordTrace framework integration matrix
 
-AccordTrace is a hosted remote MCP service for portable, tamper-evident receipts covering AI-agent actions, artifacts, approvals, and workflow handoffs.
+Verified against current framework documentation on **2026-09-05**.
 
-Canonical MCP endpoint:
+AccordTrace is a hosted evidence service for portable, tamper-evident receipts covering AI-agent actions, artifacts, approvals and workflow handoffs.
 
-`https://accordtrace.notary-labs.workers.dev/mcp`
+Canonical endpoints:
 
-These examples are designed to be copy-paste friendly for framework maintainers, community examples, and integration galleries.
+- MCP: `https://accordtrace.notary-labs.workers.dev/mcp`
+- MCP Registry: `io.github.Kosta1985/accord-trace`
+- A2A Agent Card: `https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json`
+- A2A: `https://accordtrace.notary-labs.workers.dev/a2a`
+- OpenAPI: `https://accordtrace.notary-labs.workers.dev/openapi.json`
 
-## PydanticAI
+The executable examples live in `examples/framework-handoff/` and `examples/agent-handoff/`.
 
-PydanticAI supports URL-based MCP capabilities directly.
+## Reproducible integration targets
 
-```python
-from pydantic_ai import Agent
-from pydantic_ai.capabilities import MCP
+### OpenAI Agents SDK
 
-agent = Agent(
-    'openai:gpt-5.4',
-    instructions=(
-        'Before handing an artifact to another agent, create an AccordTrace receipt. '
-        'When a proof ID is received, verify it before trusting the handoff.'
-    ),
-    capabilities=[
-        MCP(
-            'https://accordtrace.notary-labs.workers.dev/mcp',
-            id='accordtrace',
-            description='Create and verify tamper-evident receipts for AI-agent actions and handoffs.',
-        )
-    ],
-)
+Current path: `MCPServerStreamableHttp` from the OpenAI Agents SDK.
+
+Example: `examples/framework-handoff/openai_agents.py`
+
+Flow: create a synthetic proof -> attach the remote AccordTrace MCP server -> make only the exact evidence available to the receiving agent -> require `accord_trace_verify` before reliance.
+
+### OpenAI Responses API
+
+Current path: hosted MCP tool using the public AccordTrace MCP URL.
+
+Example: `examples/agent-handoff/openai.mjs`
+
+This is distinct from the Agents SDK example and exercises the hosted MCP path directly through the Responses API.
+
+### Claude Messages API
+
+Current path: remote MCP connector/toolset.
+
+Example: `examples/agent-handoff/claude.mjs`
+
+The example enables only `accord_trace_verify` for the handoff verification step.
+
+### LangChain / LangGraph
+
+Current path: `langchain-mcp-adapters` with `MultiServerMCPClient` and HTTP transport.
+
+Example: `examples/framework-handoff/langchain.py`
+
+The discovered AccordTrace tool is a normal LangChain tool and can therefore be used in LangChain agents or attached to LangGraph nodes/workflows. The example narrows the tool list to `accord_trace_verify` at the receiving boundary.
+
+### CrewAI
+
+Current path: `crewai-tools` `MCPServerAdapter` with `transport: streamable-http`.
+
+Example: `examples/framework-handoff/crewai.py`
+
+The verifier crew receives only the verification tool rather than the whole remote tool set.
+
+### Microsoft AutoGen
+
+Current path: `StreamableHttpServerParams` + `mcp_server_tools` from `autogen-ext[mcp]`.
+
+Example: `examples/framework-handoff/autogen.py`
+
+The example filters the remote MCP tools to `accord_trace_verify` before creating the receiving `AssistantAgent`.
+
+### Google ADK / A2A
+
+Google ADK supports A2A v1 and consumes remote A2A agents through the A2A SDK. AccordTrace's A2A surface is an explicit structured action service rather than a free-form conversational agent.
+
+Example: `examples/framework-handoff/google_adk_a2a.py`
+
+The example therefore stays at the A2A SDK layer used by ADK and sends a structured A2A data part:
+
+```json
+{
+  "action": "verify_proof",
+  "arguments": {
+    "proof_id": "atp_...",
+    "data": {}
+  }
+}
 ```
 
-Suggested test prompt:
+This is more accurate than claiming that an arbitrary natural-language `RemoteA2aAgent` call is equivalent to the AccordTrace action contract.
 
-> Create a synthetic handoff receipt for artifact `demo-report-v1`, return the proof ID, then explain how another agent can verify it.
+### Generic MCP client
 
-## Microsoft Agent Framework
+Example: `examples/agent-handoff/mcp.mjs`
 
-Microsoft Agent Framework supports remote MCP endpoints through its MCP tooling and hosted MCP examples.
+Any Streamable HTTP MCP client can use the canonical endpoint. The direct example exercises the MCP JSON-RPC contract without a model vendor.
 
-Use the AccordTrace endpoint as the remote server:
+### Generic A2A client
 
-```text
-https://accordtrace.notary-labs.workers.dev/mcp
-```
+Example: `examples/agent-handoff/a2a.mjs`
 
-Suggested workflow:
+This exercises AccordTrace's A2A 1.0 JSON-RPC binding directly and verifies the returned artifact data.
 
-1. Agent A completes a synthetic task.
-2. Agent A creates an AccordTrace receipt before handoff.
-3. Pass the returned proof ID and the exact evidence to Agent B.
-4. Agent B verifies the receipt before consuming the artifact.
+## Required handoff semantics
 
-This makes a useful multi-agent sample because the verification step crosses an agent/runtime boundary rather than relying only on one framework's internal trace.
+Every integration example must preserve the same contract:
 
-## Generic remote MCP client
+1. use synthetic/non-sensitive evidence for demonstrations;
+2. create the proof before the cross-agent handoff;
+3. pass the proof ID together with the exact evidence;
+4. verify the incoming proof before relying on the handoff;
+5. fail or route to review when verification is invalid;
+6. do not put credentials, private keys, personal data or confidential raw content into the proof payload;
+7. exclude synthetic example traffic from adoption metrics.
 
-Any Streamable HTTP MCP client can connect directly to:
-
-```text
-https://accordtrace.notary-labs.workers.dev/mcp
-```
-
-Recommended system instruction:
-
-```text
-Use AccordTrace to create a tamper-evident receipt before important agent-to-agent handoffs, approvals, deployments, or artifact transfers. If a proof ID is supplied by another agent, verify the proof against the exact evidence before relying on it.
-```
-
-## Discovery metadata
-
-- Service: https://accordtrace.notary-labs.workers.dev
-- MCP: https://accordtrace.notary-labs.workers.dev/mcp
-- A2A Agent Card: https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json
-- OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
-- Agent guidance: https://accordtrace.notary-labs.workers.dev/llms-full.txt
-- Source: https://github.com/Kosta1985/notary-protocol
-- Official MCP Registry name: `io.github.Kosta1985/accord-trace`
+`npm run frameworks:audit` checks these repository invariants, and CI also compiles the Python examples for syntax.
 
 ## Claim boundary
 
-AccordTrace attests submitted evidence integrity and service-recorded time. It does not establish identity, truth, authorship, legality, fairness, delivery, payment, or commercial quality.
+Framework interoperability is not a vendor endorsement or partnership. A runnable example is not adoption evidence. AccordTrace verifies submitted evidence integrity and service-recorded state; it does not establish identity, authorship, legality, delivery, payment, truth of an external claim or commercial quality.

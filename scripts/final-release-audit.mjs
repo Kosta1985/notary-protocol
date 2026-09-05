@@ -36,8 +36,16 @@ const required = [
   'web/llms.txt',
   'web/llms-full.txt',
   '.github/workflows/deploy-accordtrace.yml',
+  '.github/workflows/ci.yml',
   'docs/PASSPORT_LAUNCH_CAMPAIGN.md',
-  'docs/STRIPE_PASSPORT_ACTIVATION.md'
+  'docs/STRIPE_PASSPORT_ACTIVATION.md',
+  'scripts/framework-integration-audit.mjs',
+  'examples/framework-handoff/README.md',
+  'examples/framework-handoff/openai_agents.py',
+  'examples/framework-handoff/langchain.py',
+  'examples/framework-handoff/crewai.py',
+  'examples/framework-handoff/autogen.py',
+  'examples/framework-handoff/google_adk_a2a.py'
 ];
 for (const rel of required) ok(`required:${rel}`, fs.existsSync(path.join(root, rel)));
 
@@ -53,7 +61,9 @@ if (!failures.length) {
   const controlPlane = read('cloudflare/src/control-plane.js');
   const controlPlaneHardening = read('cloudflare/src/control-plane-hardening.js');
   const deploy = read('.github/workflows/deploy-accordtrace.yml');
+  const ci = read('.github/workflows/ci.yml');
   const campaign = read('docs/PASSPORT_LAUNCH_CAMPAIGN.md');
+  const frameworkReadme = read('examples/framework-handoff/README.md');
 
   ok('a2a:cards-synchronized', JSON.stringify(agent) === JSON.stringify(adapter));
   ok('a2a:version-1.0', agent.supportedInterfaces?.[0]?.protocolVersion === '1.0');
@@ -96,6 +106,12 @@ if (!failures.length) {
   ok('control-plane:shared-adapter-layer', controlPlane.includes('prepareAlertDelivery') && controlPlaneHardening.includes('prepareAlertDelivery'));
   ok('control-plane:hardened-alert-hmac', controlPlaneHardening.includes('x-accordtrace-signature') && controlPlaneHardening.includes('hmacSha256Hex'));
   ok('control-plane:bounded-alert-retry', controlPlaneHardening.includes('MAX_ATTEMPTS=5') && controlPlaneHardening.includes('RETRY_SECONDS=[60,300,1800,7200,21600]') && controlPlaneHardening.includes('dead_letter'));
+
+  ok('frameworks:ci-gated', ci.includes('npm run frameworks:audit') && ci.includes('examples/framework-handoff'));
+  ok('frameworks:canonical-discovery', frameworkReadme.includes(MCP_ID) && frameworkReadme.includes(`${HOST}/.well-known/agent-card.json`));
+  for (const name of ['OpenAI Agents SDK', 'LangChain', 'CrewAI', 'AutoGen', 'Google ADK']) {
+    ok(`frameworks:${name.toLowerCase().replaceAll(' ', '-')}`, frameworkReadme.includes(name));
+  }
 
   ok('deploy:migrations-before-worker', deploy.includes('d1 migrations apply') && deploy.includes('wrangler@latest deploy') && deploy.indexOf('d1 migrations apply') < deploy.indexOf('wrangler@latest deploy'));
   ok('deploy:exact-sha-verification', deploy.includes('EXPECTED_RELEASE_SHA') && deploy.includes('smoke:production'));
