@@ -1,0 +1,236 @@
+name: Passport Stripe isolated sandbox e2e
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: passport-stripe-isolated-e2e
+  cancel-in-progress: false
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Validate source before external sandbox
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .audit
+          npm test | tee .audit/unit-tests.log
+          npm run production:check | tee .audit/source-readiness.log
+          npm run cf:prepare
+
+      - name: Validate sandbox secrets
+        shell: bash
+        env:
+          STRIPE_TEST_SECRET_KEY: ${{ secrets.STRIPE_TEST_SECRET_KEY }}
+          STRIPE_TEST_WEBHOOK_SECRET: ${{ secrets.STRIPE_TEST_WEBHOOK_SECRET }}
+          STRIPE_TEST_PRICE_AGENT_PASSPORT: ${{ secrets.STRIPE_TEST_PRICE_AGENT_PASSPORT }}
+        run: |
+          set -euo pipefail
+          [[ "$STRIPE_TEST_SECRET_KEY" =~ ^(sk|rk)_test_ ]] || { echo 'A Stripe test secret key is required.' >&2; exit 2; }
+          [[ "$STRIPE_TEST_WEBHOOK_SECRET" =~ ^whsec_ ]] || { echo 'A Stripe sandbox webhook signing secret is required.' >&2; exit 3; }
+          [[ "$STRIPE_TEST_PRICE_AGENT_PASSPORT" =~ ^price_ ]] || { echo 'A Stripe sandbox Price id is required.' >&2; exit 4; }
+          echo '::add-mask::'"$STRIPE_TEST_SECRET_KEY"
+          echo '::add-mask::'"$STRIPE_TEST_WEBHOOK_SECRET"
+          echo "STRIPE_TEST_SECRET_KEY=$STRIPE_TEST_SECRET_KEY" >> "$GITHUB_ENV"
+          echo "STRIPE_TEST_WEBHOOK_SECRET=$STRIPE_TEST_WEBHOOK_SECRET" >> "$GITHUB_ENV"
+          echo "STRIPE_TEST_PRICE_AGENT_PASSPORT=$STRIPE_TEST_PRICE_AGENT_PASSPORT" >> "$GITHUB_ENV"
+
+      - name: Resolve Cloudflare credentials
+        shell: bash
+        env:
+          CF_TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_TOKEN_2: ${{ secrets.CLOUDFLARE_TOKEN }}
+          CF_TOKEN_3: ${{ secrets.CF_API_TOKEN }}
+          CF_TOKEN_4: ${{ secrets.CF_TOKEN }}
+          CF_ACCOUNT_1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ACCOUNT_2: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ACCOUNT_3: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ACCOUNT_4: ${{ vars.CF_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          token=''
+          for candidate in "${CF_TOKEN_1:-}" "${CF_TOKEN_2:-}" "${CF_TOKEN_3:-}" "${CF_TOKEN_4:-}"; do
+            if [[ -n "$candidate" ]]; then token="$candidate"; break; fi
+          done
+          [[ -n "$token" ]] || { echo 'Cloudflare token is required.' >&2; exit 5; }
+          echo "::add-mask::$token"
+          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
+          account=''
+          for candidate in "${CF_ACCOUNT_1:-}" "${CF_ACCOUNT_2:-}" "${CF_ACCOUNT_3:-}" "${CF_ACCOUNT_4:-}"; do
+            if [[ -n "$candidate" ]]; then account="$candidate"; break; fi
+          done
+          if [[ -z "$account" ]]; then
+            account="$(curl --fail --silent --show-error --max-time 20 -H "Authorization: Bearer $token" https://api.cloudflare.com/client/v4/accounts | jq -r 'if (.result | length) == 1 then .result[0].id else empty end')"
+          fi
+          [[ "$account" =~ ^[a-f0-9]{32}$ ]] || { echo 'An unambiguous Cloudflare account is required.' >&2; exit 6; }
+          echo "CLOUDFLARE_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
+
+      - name: Create isolated Worker and D1
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.cloudflare.com/client/v4'
+          worker="at-passport-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "E2E_WORKER=$worker" >> "$GITHUB_ENV"
+          response="$(curl --fail-with-body --silent --show-error --max-time 20 -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'content-type: application/json' --data "$(jq -nc --arg name "$worker" '{name:$name}')" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+          db_id="$(printf '%s' "$response" | jq -r '.result.uuid // empty')"
+          [[ "$db_id" =~ ^[a-f0-9-]{36}$ ]] || { echo 'Isolated D1 was not created.' >&2; exit 7; }
+          echo "E2E_DB_ID=$db_id" >> "$GITHUB_ENV"
+          subdomain="$(curl --fail --silent --show-error --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty')"
+          [[ "$subdomain" =~ ^[a-z0-9-]+$ ]] || { echo 'Worker subdomain unavailable.' >&2; exit 8; }
+          echo "E2E_BASE_URL=https://${worker}.${subdomain}.workers.dev" >> "$GITHUB_ENV"
+          jq -nc --arg worker "$worker" '{sandbox_created:true,worker:$worker,real_funds:false,cash_payouts:false}' > .audit/passport-sandbox-resources.json
+
+      - name: Build isolated config
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const source=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
+          const config={
+            name:process.env.E2E_WORKER,
+            main:source.main,
+            compatibility_date:source.compatibility_date,
+            workers_dev:true,
+            preview_urls:false,
+            assets:source.assets,
+            d1_databases:[{binding:'DB',database_name:process.env.E2E_WORKER,database_id:process.env.E2E_DB_ID,migrations_dir:'cloudflare/migrations'}],
+            vars:{
+              PUBLIC_BASE_URL:process.env.E2E_BASE_URL,
+              PASSPORT_CHECKOUT_ENABLED:'true',
+              PASSPORT_PRODUCT_PRICE_ATOMIC:'200',
+              PASSPORT_PRODUCT_CURRENCY:'usd',
+              AFFILIATE_PASSPORT_PRICE_ATOMIC:'200',
+              AFFILIATE_DIRECT_COMMISSION_ATOMIC:'100',
+              AFFILIATE_CURRENCY:'usd',
+              STRIPE_PRICE_AGENT_PASSPORT:process.env.STRIPE_TEST_PRICE_AGENT_PASSPORT
+            },
+            observability:{enabled:false}
+          };
+          fs.writeFileSync('wrangler.passport-e2e.json',JSON.stringify(config,null,2));
+          NODE
+
+      - name: Apply schema and generate ephemeral keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler@4.129.0 d1 migrations apply DB --remote --config wrangler.passport-e2e.json
+          echo "E2E_STATE_FILE=$RUNNER_TEMP/passport-stripe-e2e-state.json" >> "$GITHUB_ENV"
+          echo "E2E_SEED_FILE=$RUNNER_TEMP/passport-stripe-e2e-seed.sql" >> "$GITHUB_ENV"
+          echo "E2E_ISSUER_FILE=$RUNNER_TEMP/passport-stripe-e2e-issuer.json" >> "$GITHUB_ENV"
+          node scripts/passport-stripe-sandbox-e2e.mjs prepare "$RUNNER_TEMP/passport-stripe-e2e-state.json" "$RUNNER_TEMP/passport-stripe-e2e-seed.sql" "$RUNNER_TEMP/passport-stripe-e2e-issuer.json" | tee .audit/passport-sandbox-prepare.json
+          npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.passport-e2e.json --file "$RUNNER_TEMP/passport-stripe-e2e-seed.sql"
+
+      - name: Deploy isolated Worker and secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler@4.129.0 deploy --config wrangler.passport-e2e.json
+          printf '%s' "$STRIPE_TEST_SECRET_KEY" | npx wrangler@4.129.0 secret put STRIPE_SECRET_KEY --config wrangler.passport-e2e.json >/dev/null
+          printf '%s' "$STRIPE_TEST_WEBHOOK_SECRET" | npx wrangler@4.129.0 secret put STRIPE_WEBHOOK_SECRET --config wrangler.passport-e2e.json >/dev/null
+          cat "$E2E_ISSUER_FILE" | npx wrangler@4.129.0 secret put NOTARY_PRIVATE_JWK --config wrangler.passport-e2e.json >/dev/null
+          npx wrangler@4.129.0 deploy --config wrangler.passport-e2e.json
+
+      - name: Verify isolated capabilities
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(curl --fail --silent --show-error --max-time 20 "$E2E_BASE_URL/api/v1/passport-product/capabilities")"
+          printf '%s\n' "$body" | tee .audit/passport-sandbox-capabilities.json
+          printf '%s' "$body" | jq -e '.commercial_ready == true and .checkout_enabled == true and .webhook_enabled == true and .certificate_signing_enabled == true and .product.price.amount_atomic == 200 and .product.price.currency == "usd" and .cash_affiliate_payouts_enabled == false' >/dev/null
+
+      - name: Create Stripe sandbox webhook endpoint
+        shell: bash
+        run: |
+          set -euo pipefail
+          api='https://api.stripe.com/v1/webhook_endpoints'
+          response="$(curl --fail-with-body --silent --show-error --max-time 20 -u "$STRIPE_TEST_SECRET_KEY:" -X POST "$api" \
+            --data-urlencode "url=$E2E_BASE_URL/api/v1/passport-product/stripe/webhook" \
+            --data-urlencode 'enabled_events[]=checkout.session.completed' \
+            --data-urlencode 'enabled_events[]=checkout.session.async_payment_succeeded' \
+            --data-urlencode 'enabled_events[]=checkout.session.async_payment_failed' \
+            --data-urlencode 'enabled_events[]=checkout.session.expired' \
+            --data-urlencode 'enabled_events[]=charge.refunded' \
+            --data-urlencode 'enabled_events[]=charge.dispute.created')"
+          endpoint="$(printf '%s' "$response" | jq -r '.id // empty')"
+          secret="$(printf '%s' "$response" | jq -r '.secret // empty')"
+          [[ "$endpoint" =~ ^we_ ]] || { echo 'Stripe test webhook endpoint was not created.' >&2; exit 9; }
+          [[ "$secret" =~ ^whsec_ ]] || { echo 'Stripe did not return a test webhook signing secret.' >&2; exit 10; }
+          echo "STRIPE_E2E_WEBHOOK_ENDPOINT=$endpoint" >> "$GITHUB_ENV"
+          echo "::add-mask::$secret"
+          printf '%s' "$secret" | npx wrangler@4.129.0 secret put STRIPE_WEBHOOK_SECRET --config wrangler.passport-e2e.json >/dev/null
+          npx wrangler@4.129.0 deploy --config wrangler.passport-e2e.json >/dev/null
+
+      - name: Create referred and unattributed hosted Checkout sessions
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/passport-stripe-sandbox-e2e.mjs checkout "$E2E_BASE_URL" "$E2E_STATE_FILE" referred | tee .audit/passport-sandbox-checkout-referred.json
+          node scripts/passport-stripe-sandbox-e2e.mjs checkout "$E2E_BASE_URL" "$E2E_STATE_FILE" unattributed | tee .audit/passport-sandbox-checkout-unattributed.json
+
+      - name: Install browser and complete Stripe-hosted test checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+          node scripts/passport-stripe-sandbox-e2e.mjs browser "$E2E_STATE_FILE" | tee .audit/passport-sandbox-hosted-checkout.json
+
+      - name: Verify webhook fulfillment and certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/passport-stripe-sandbox-e2e.mjs verify "$E2E_BASE_URL" "$E2E_STATE_FILE" referred | tee .audit/passport-sandbox-verify-referred.json
+          node scripts/passport-stripe-sandbox-e2e.mjs verify "$E2E_BASE_URL" "$E2E_STATE_FILE" unattributed | tee .audit/passport-sandbox-verify-unattributed.json
+
+      - name: Verify referral ledger boundaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.passport-e2e.json --command "SELECT a.state AS attribution_state,c.amount_atomic,c.currency,c.state AS commission_state FROM affiliate_attributions a LEFT JOIN affiliate_commissions c ON c.attribution_id=a.id;" --json > .audit/passport-sandbox-referral-ledger.json
+          jq -e '.[0].results | length == 1 and .[0].attribution_state == "qualified" and .[0].amount_atomic == 100 and .[0].currency == "usd" and (. [0].commission_state == "pending" or .[0].commission_state == "held" or .[0].commission_state == "earned")' .audit/passport-sandbox-referral-ledger.json >/dev/null
+          npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.passport-e2e.json --command "SELECT COUNT(*) AS n FROM affiliate_commissions;" --json > .audit/passport-sandbox-commission-count.json
+          jq -e '.[0].results[0].n == 1' .audit/passport-sandbox-commission-count.json >/dev/null
+
+      - name: Cleanup Stripe and Cloudflare sandbox resources
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          status=0
+          if [[ -n "${STRIPE_E2E_WEBHOOK_ENDPOINT:-}" && "$STRIPE_E2E_WEBHOOK_ENDPOINT" =~ ^we_ && "${STRIPE_TEST_SECRET_KEY:-}" =~ ^(sk|rk)_test_ ]]; then
+            code="$(curl --silent --show-error --max-time 20 -o /tmp/stripe-delete.json -w '%{http_code}' -u "$STRIPE_TEST_SECRET_KEY:" -X DELETE "https://api.stripe.com/v1/webhook_endpoints/$STRIPE_E2E_WEBHOOK_ENDPOINT")" || code=000
+            [[ "$code" == 200 || "$code" == 404 ]] || status=1
+          fi
+          api='https://api.cloudflare.com/client/v4'
+          expected="at-passport-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [[ -n "${E2E_WORKER:-}" && "$E2E_WORKER" == "$expected" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            curl --silent --show-error --max-time 20 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$E2E_WORKER" >/tmp/passport-worker-delete.json || status=1
+          fi
+          if [[ -n "${E2E_DB_ID:-}" && "$E2E_WORKER" == "$expected" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then
+            curl --silent --show-error --max-time 20 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_DB_ID" >/tmp/passport-db-delete.json || status=1
+          fi
+          rm -f "${E2E_STATE_FILE:-}" "${E2E_SEED_FILE:-}" "${E2E_ISSUER_FILE:-}" wrangler.passport-e2e.json /tmp/stripe-delete.json /tmp/passport-worker-delete.json /tmp/passport-db-delete.json
+          jq -nc --argjson ok "$([[ $status -eq 0 ]] && echo true || echo false)" '{cleanup_attempted:true,status:(if $ok then "passed" else "failed" end),production_resources_touched:false,real_funds:false}' > .audit/passport-sandbox-cleanup.json
+          exit $status
+
+      - name: Archive sanitized evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: passport-stripe-isolated-e2e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .audit/
+          include-hidden-files: true
+          retention-days: 7
