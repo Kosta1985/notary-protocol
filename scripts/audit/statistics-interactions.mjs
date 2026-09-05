@@ -108,6 +108,17 @@ try{
     assert.equal(await page.locator('#metric-views').innerText(),'4');assert.equal(await page.locator('#activity-chart time').count(),1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false);
   });
+  await scenario('modern proof and protocol activity is not replaced by legacy counters','/activity.html',()=>{
+    const data=serviceStats();const counters={proof_created:7,proof_verified:3,mcp_request:11,a2a_request:5,verification_valid:777};
+    Object.assign(data.totals,counters);Object.assign(data.daily[0],counters);return response(data);
+  },async page=>{
+    assert.equal(await page.locator('#metric-proofs-created').innerText(),'7');
+    assert.equal(await page.locator('#metric-proofs-verified').innerText(),'3');
+    assert.equal(await page.locator('#metric-mcp-requests').innerText(),'11');
+    assert.equal(await page.locator('#metric-a2a-requests').innerText(),'5');
+    assert.equal(await page.locator('#metric-verifications').innerText(),'2');
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2),false);
+  });
   await scenario('statistics errors never echo upstream private diagnostics','/stats.html',()=>response({error:'sensitive upstream diagnostic'},503),async page=>{
     assert.doesNotMatch(await page.locator('body').innerText(),/sensitive upstream/);
     assert.match(await page.locator('#stats-status').innerText(),/temporarily unavailable/);

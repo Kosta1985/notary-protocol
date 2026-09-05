@@ -1,6 +1,6 @@
 import { formatCount, formatRatio, loadServiceStats, statisticsError } from './stats-data.js';
 const el = id => document.getElementById(id);
-const metrics = ['metric-views', 'metric-demos', 'metric-verifications', 'metric-agents', 'metric-retrievals', 'metric-pilot-views', 'metric-pilot-requests', 'rate-demo', 'rate-verify', 'rate-valid', 'rate-agents'];
+const metrics = ['metric-proofs-created', 'metric-proofs-verified', 'metric-mcp-requests', 'metric-a2a-requests', 'metric-views', 'metric-demos', 'metric-verifications', 'metric-agents', 'metric-retrievals', 'metric-pilot-views', 'metric-pilot-requests', 'rate-demo', 'rate-verify', 'rate-valid', 'rate-agents'];
 let controller = null, generation = 0;
 function render(stats) {
   const value = name => stats.totals[name] ?? 0;
@@ -9,6 +9,8 @@ function render(stats) {
   // Independently valid counters must still have a safely representable sum.
   if (!Number.isSafeInteger(completed)) throw new Error('counter_sum_invalid');
   const values = {
+    'metric-proofs-created': formatCount(value('proof_created')), 'metric-proofs-verified': formatCount(value('proof_verified')),
+    'metric-mcp-requests': formatCount(value('mcp_request')), 'metric-a2a-requests': formatCount(value('a2a_request')),
     'metric-views': formatCount(views), 'metric-demos': formatCount(demos),
     'metric-verifications': formatCount(attempts), 'metric-agents': formatCount(agentAttempts),
     'metric-retrievals': formatCount(value('receipt_retrieved')),
@@ -19,7 +21,7 @@ function render(stats) {
   for (const [id, text] of Object.entries(values)) el(id).textContent = text;
   el('activity-window').textContent = `Public telemetry \u00b7 ${stats.windowDays} days`;
   const ratios = [[demos, views], [completed, attempts], [valid, completed], [agentAttempts, attempts]];
-  el('activity-ratio-note').textContent = 'These are ratios of recorded events, not customer conversion rates or unique-agent counts. A dash means the denominator is zero or the counts are not comparable within this window.'
+  el('activity-ratio-note').textContent = 'These are ratios of legacy demo/receipt events, not customer conversion rates or unique-agent counts. Modern proof and protocol events are shown separately. A dash means the denominator is zero or the counts are not comparable within this window.'
     + (ratios.some(([a, b]) => a > b) ? ' Some completions or repeats may relate to events outside the returned window; those ratios are not shown.' : '');
   const maximum = Math.max(1, ...stats.daily.map(row => row.verification_started ?? 0));
   if (!stats.daily.length) el('activity-chart').textContent = 'No activity was recorded in this returned window.';

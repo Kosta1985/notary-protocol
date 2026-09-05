@@ -22,3 +22,4 @@
 .activity-page .activity-totals strong{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 .activity-page .activity-section-title{gap:20px;flex-wrap:wrap}
 @media(max-width:480px){.stats-page .shell{padding:18px 18px 48px}.stats-page .hero{padding:24px}.activity-page .activity-heading h1{overflow-wrap:anywhere}}
+.activity-page .activity-subheading{font-size:clamp(26px,3vw,36px);line-height:1.2;margin:36px 0 18px}

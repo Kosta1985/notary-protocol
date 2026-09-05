@@ -24,14 +24,23 @@
       </div>
       <button type="button" id="activity-refresh">Refresh activity</button>
       <noscript><p>JavaScript is required to load recorded activity. No totals are inferred while it is disabled.</p></noscript>
-      <section class="activity-totals" aria-label="Activity totals">
+      <h2 class="activity-subheading">Agent protocol activity</h2>
+      <p>Modern proof and protocol events, counted separately from the legacy demo below. Requests are not unique agents.</p>
+      <section class="activity-totals" aria-label="Agent protocol event totals">
+        <div><span>Proof records created</span><strong id="metric-proofs-created">—</strong></div>
+        <div><span>Successful proof checks</span><strong id="metric-proofs-verified">—</strong></div>
+        <div><span>MCP requests</span><strong id="metric-mcp-requests">—</strong></div>
+        <div><span>A2A requests</span><strong id="metric-a2a-requests">—</strong></div>
+      </section>
+      <h2 class="activity-subheading">Website and legacy demo activity</h2>
+      <section class="activity-totals" aria-label="Website and legacy demo event totals">
         <div><span>Page views</span><strong id="metric-views">—</strong></div>
         <div><span>Demo loads</span><strong id="metric-demos">—</strong></div>
-        <div><span>Verifications</span><strong id="metric-verifications">—</strong></div>
-        <div><span>A2A verifications</span><strong id="metric-agents">—</strong></div>
+        <div><span>Legacy verifications</span><strong id="metric-verifications">—</strong></div>
+        <div><span>Legacy A2A verifications</span><strong id="metric-agents">—</strong></div>
       </section>
       <section class="activity-funnel" aria-labelledby="funnel-title">
-        <div><p class="eyebrow">Recorded event ratios</p><h2 id="funnel-title">Activity, without inflated claims.</h2>
+        <div><p class="eyebrow">Legacy event ratios</p><h2 id="funnel-title">Activity, without inflated claims.</h2>
         <p id="activity-ratio-note">Ratios compare event counters, not distinct customer journeys.</p></div>
         <dl>
           <div><dt>Demo engagement</dt><dd id="rate-demo">—</dd></div>
@@ -44,7 +53,7 @@
         </dl>
       </section>
       <section class="activity-history" aria-labelledby="history-title">
-        <div class="activity-section-title"><h2 id="history-title">Daily verification attempts</h2><span id="activity-updated" role="status">Loading…</span></div>
+        <div class="activity-section-title"><h2 id="history-title">Daily legacy verification attempts</h2><span id="activity-updated" role="status">Loading…</span></div>
         <div id="activity-chart" class="activity-chart" aria-live="polite"></div>
       </section>
       </div>
