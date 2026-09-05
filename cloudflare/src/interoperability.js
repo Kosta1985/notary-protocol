@@ -1,3 +1,4 @@
+import { readJsonBody, InputError } from './http-request.js';
 import { createProof, getProof, hashData, verifyProof, ProofError } from "./proofs.js";
 import { handleAffiliate } from "./affiliate.js";
 import { handleAffiliateGrowth } from "./affiliate-growth.js";
@@ -195,9 +196,8 @@ function extractAction(message) {
 }
 
 async function readJson(request) {
-  const text = await request.text();
-  if (new TextEncoder().encode(text).byteLength > 1_048_576) throw new ProofError("Request body exceeds 1 MiB", 413);
-  try { return JSON.parse(text); } catch { throw new ProofError("Request body must be valid JSON"); }
+  try { return await readJsonBody(request); }
+  catch (error) { if (error instanceof InputError) throw new ProofError(error.message, error.status); throw error; }
 }
 
 function actionError(id, error) {

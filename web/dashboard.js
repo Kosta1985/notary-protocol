@@ -1,1 +1,37 @@
-const form=document.querySelector('#passport-form'),input=document.querySelector('#passport-id'),result=document.querySelector('#passport-result'),status=document.querySelector('#service-status');form?.addEventListener('submit',async e=>{e.preventDefault();const id=input.value.trim();result.className='verify-result show';result.textContent='Loading…';try{const [p,v,r]=await Promise.all([get(`/api/v1/security/passports/${encodeURIComponent(id)}`),get(`/api/v1/validation/passports/${encodeURIComponent(id)}/evidence`,true),get(`/api/v1/reputation/passports/${encodeURIComponent(id)}/graph-signals`,true)]);result.innerHTML=`<strong>${esc(id)}</strong><pre style="white-space:pre-wrap;word-break:break-word;color:#dce4dc">${esc(JSON.stringify({passport:p,validation:v,reputation:r},null,2))}</pre>`;}catch(err){result.innerHTML=`<strong>Unable to load Passport</strong><p class="muted">${esc(err.message)}</p>`;}});Promise.all([probe('/api/v1/security/capabilities','Passport & Security'),probe('/api/v1/validation/capabilities','Validation Marketplace'),probe('/api/v1/payments/capabilities','Payments'),probe('/api/v1/launch/capabilities','Commercial launch')]).then(rows=>{status.innerHTML=rows.map(x=>`<article class="card"><span class="tag">${x.ok?'Ready':'Pending'}</span><h3>${esc(x.name)}</h3><p>${esc(x.detail)}</p></article>`).join('')});async function probe(path,name){try{const r=await fetch(path);const b=await r.json();return{ok:r.ok,name,detail:r.ok?(b.payments_mode||b.version||'API available'):`HTTP ${r.status}`}}catch{return{ok:false,name,detail:'Awaiting production deploy'}}}async function get(path,optional=false){const r=await fetch(path);if(optional&&r.status===404)return null;let b={};try{b=await r.json()}catch{}if(!r.ok)throw new Error(b.message||b.error||`HTTP ${r.status}`);return b}function esc(s){return String(s).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
+import { loadPassportEvidence, requestJson, publicErrorMessage } from './public-evidence.js';
+const form=document.querySelector('#passport-form');
+const input=document.querySelector('#passport-id');
+const result=document.querySelector('#passport-result');
+const status=document.querySelector('#service-status');
+let controller=null,sequence=0;
+form?.addEventListener('submit',async event=>{
+  event.preventDefault();controller?.abort();controller=new AbortController();
+  const ticket=++sequence,id=input.value.trim();
+  result.className='verify-result show';result.textContent='Loading public evidence...';result.setAttribute('aria-busy','true');
+  try{
+    const data=await loadPassportEvidence(id,{signal:controller.signal});if(ticket!==sequence)return;
+    const heading=document.createElement('strong');heading.textContent=id;
+    const note=document.createElement('p');note.className='muted';note.textContent=data.warnings.length?'Passport loaded. Some supplementary evidence is unavailable; see warnings below.':'Current public evidence loaded. This is not a new proof of key possession.';
+    const pre=document.createElement('pre');pre.className='evidence-json';pre.textContent=JSON.stringify(data,null,2);
+    result.replaceChildren(heading,note,pre);
+  }catch(error){if(ticket===sequence&&error.code!=='cancelled')result.textContent=publicErrorMessage(error)}
+  finally{if(ticket===sequence)result.setAttribute('aria-busy','false')}
+});
+input?.addEventListener('input',()=>{if(controller){controller.abort();controller=null;sequence++;result.textContent='Reference changed. Load the new Passport to view its evidence.';result.setAttribute('aria-busy','false')}});
+const probes=[['/api/v1/security/capabilities','Passport & Security'],['/api/v1/validation/capabilities','Validation Marketplace'],['/api/v1/payments/capabilities','Payments'],['/api/v1/passport-product/capabilities','Passport Certificate']];
+Promise.all(probes.map(async([path,name])=>{
+  try{
+    const body=await requestJson(path);
+    return {name,ok:true,detail:path.includes('passport-product')?(body.commercial_ready===true?'Checkout prerequisites configured; this does not confirm a completed payment.':'Certificate purchases are not currently enabled.'):'Public capabilities API responded. This does not imply every operation is enabled.'};
+  }catch(error){return{name,ok:false,detail:publicErrorMessage(error)}}
+})).then(rows=>{
+  if(!status)return;
+  status.replaceChildren(...rows.map(row=>{
+    const article=document.createElement('article');article.className='card';
+    const tag=document.createElement('span');tag.className='tag';tag.textContent=row.ok?'API responding':'Unavailable';
+    const heading=document.createElement('h3');heading.textContent=row.name;
+    const note=document.createElement('p');note.textContent=row.detail;
+    article.append(tag,heading,note);return article;
+  }));
+});
+window.addEventListener('pagehide',()=>controller?.abort());

@@ -1,1 +1,23 @@
-const form=document.querySelector('#interest-form');const status=document.querySelector('#interest-status');if(form){form.addEventListener('submit',async e=>{e.preventDefault();status.className='status';status.textContent='Joining…';const payload={email:document.querySelector('#interest-email').value,interest:document.querySelector('#interest-type').value,website:document.querySelector('#website').value,source:'homepage'};try{const r=await fetch('/api/v1/launch/waitlist',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});const b=await r.json();if(!r.ok)throw new Error(b.error||'Unable to join');status.className='status ok';status.textContent='You are on the early-access list.';form.reset();}catch(err){status.className='status bad';status.textContent=err.message==='Failed to fetch'?'Early access will activate with the next production deploy.':err.message;}})}
+import { requestJson, publicErrorMessage } from './public-evidence.js';
+const form=document.querySelector('#interest-form');
+const status=document.querySelector('#interest-status');
+let submitting=false,controller=null;
+form?.addEventListener('submit',async event=>{
+  event.preventDefault();if(submitting)return;
+  submitting=true;controller=new AbortController();
+  const button=form.querySelector('button[type="submit"]');
+  if(button)button.disabled=true;form.setAttribute('aria-busy','true');
+  status.className='status';status.textContent='Joining...';
+  const payload={email:document.querySelector('#interest-email').value,interest:document.querySelector('#interest-type').value,website:document.querySelector('#website').value,source:'homepage'};
+  try{
+    const result=await requestJson('/api/v1/launch/waitlist',{body:payload,signal:controller.signal});
+    if(result.accepted!==true)throw new Error('Unexpected waitlist response');
+    status.className='status ok';status.textContent='You are on the early-access list.';form.reset();
+  }catch(error){
+    status.className='status bad';
+    status.textContent=error.status===400?'Enter a valid email address and try again.':error.code==='timeout'||error.code==='network'?'We could not confirm receipt of your request. Please retry; duplicate email submissions do not create another entry.':publicErrorMessage(error);
+  }finally{
+    submitting=false;controller=null;if(button)button.disabled=false;form.setAttribute('aria-busy','false');
+  }
+});
+window.addEventListener('pagehide',()=>controller?.abort());

@@ -96,7 +96,8 @@ async function loadReferral(){
   }
   try{
     const data=await get(`/api/v1/network/referrals/${encodeURIComponent(ref)}`);
-    const code=data.referral?.code||ref;
+    if(data.referral?.status!=='active'||data.referral?.code!==ref)throw new Error('Incomplete referral response');
+    const code=data.referral.code;
     referralValue.textContent=code;
     referralDetail.textContent='Active direct referral. A qualifying $2 Certificate purchase can create the referrer\'s $1 direct commission after verified settlement and review.';
     referralBox.classList.add('ok');
