@@ -13,16 +13,16 @@
       }
     },
     "/api/v1/agent/wallet/balance": {
-      "get": { "operationId": "getOwnAgentWalletBalance", "responses": { "200": { "description": "Authoritative settlement-asset balance" } } }
+      "get": { "operationId": "getOwnAgentWalletBalance", "responses": { "200": { "description": "Authoritative funded settlement-asset balance" } } }
     },
     "/api/v1/agent/wallet/policy": {
-      "get": { "operationId": "getOwnAgentWalletPolicy", "responses": { "200": { "description": "Versioned wallet policy and spending limits" } } }
+      "get": { "operationId": "getOwnAgentWalletPolicy", "responses": { "200": { "description": "Versioned funded-balance wallet policy and spending limits" } } }
     },
     "/api/v1/agent/payments": {
       "post": {
         "operationId": "createAgentPayment",
-        "summary": "Create a policy-controlled agent-to-agent payment",
-        "description": "Requires a signed agent request and Idempotency-Key. The current MVP executes only the explicit simulated test provider; production/on-chain execution remains fail-closed.",
+        "summary": "Create a policy-controlled funded agent-to-agent payment",
+        "description": "Requires a signed agent request and Idempotency-Key. Settlement is allowed only from funds already available in the sender wallet. Credit, loans, borrowing, overdrafts, leverage and debt creation are outside this API. Guardian approval cannot bypass insufficient funds. The current MVP executes only the explicit simulated test provider; production/on-chain execution remains fail-closed.",
         "parameters": [
           { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "minLength": 8, "maxLength": 128 } }
         ],
@@ -31,10 +31,10 @@
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AgentPaymentRequest" } } }
         },
         "responses": {
-          "201": { "description": "Simulated test settlement confirmed and financial receipt generated" },
-          "202": { "description": "Guardian approval required" },
+          "201": { "description": "Simulated funded test settlement confirmed and financial receipt generated" },
+          "202": { "description": "Guardian approval required; no settlement or credit is created" },
           "409": { "description": "Replay or idempotency conflict" },
-          "422": { "description": "Policy denied, insufficient balance, or wallet unavailable" }
+          "422": { "description": "Policy denied, insufficient funded balance, or wallet unavailable" }
         }
       }
     },
@@ -62,7 +62,7 @@
       }
     },
     "/api/v1/agent/economic-trust": {
-      "get": { "operationId": "getOwnEconomicTrust", "responses": { "200": { "description": "Operational economic-trust band; not a credit score" } } }
+      "get": { "operationId": "getOwnEconomicTrust", "responses": { "200": { "description": "Operational economic-trust band; not a credit score and not a lending decision" } } }
     },
     "/api/v1/wallet-admin/wallets/{id}/freeze": {
       "post": {
@@ -87,7 +87,7 @@
         "required": ["recipientAgentId", "amount", "asset"],
         "properties": {
           "recipientAgentId": { "type": "string" },
-          "amount": { "type": "string", "description": "Decimal string; never IEEE-754 money" },
+          "amount": { "type": "string", "pattern": "^(0|[1-9]\\d*)(?:\\.\\d+)?$", "description": "Positive funded-balance decimal string; negative/credit values are not accepted and application validation requires amount > 0" },
           "asset": { "type": "string", "enum": ["USDC"] },
           "purpose": { "type": "string" },
           "taskId": { "type": ["string", "null"] }
