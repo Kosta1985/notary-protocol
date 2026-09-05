@@ -50,5 +50,8 @@
       "migrations_dir": "cloudflare/migrations"
     }
   ],
+  "vars": {
+    "STRIPE_PRICE_AGENT_PASSPORT": "price_1UC8x6L1V4ptaCD2i8kiwoPF"
+  },
   "observability": {"enabled": true}
 }
