@@ -1,3 +1,4 @@
+import { recordUsage } from './usage-analytics.js';
 const encoder = new TextEncoder();
 const SPKI_ED25519_PREFIX = hex("302a300506032b6570032100");
 const PILOT_ISSUE_URL = "https://github.com/Kosta1985/notary-protocol/issues/new?template=pilot.yml";
@@ -130,12 +131,7 @@ function capabilities(origin) {
 }
 
 async function recordAnalytics(env, event, request) {
-  if (request?.headers.get("x-notary-monitor") === "live-smoke") return;
-  try {
-    await env.DB.prepare("INSERT INTO analytics_daily (day, event, count) VALUES (date('now'), ?1, 1) ON CONFLICT(day, event) DO UPDATE SET count = count + 1").bind(event).run();
-  } catch {
-    // Telemetry must never interrupt verification or static delivery.
-  }
+  return recordUsage(env, event, { request });
 }
 
 class RequestError extends Error {

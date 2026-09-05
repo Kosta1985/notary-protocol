@@ -1,0 +1,36 @@
+name: AccordTrace isolated browser regressions
+on:
+  pull_request:
+    paths: ['web/**', 'cloudflare/**', 'scripts/audit/**', '.github/workflows/site-browser-regression.yml']
+  push:
+    branches: [main]
+    paths: ['web/**', 'cloudflare/**', 'scripts/audit/**', '.github/workflows/site-browser-regression.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: npm run cf:prepare
+      - name: Install isolated browser tooling
+        run: |
+          npm install --prefix "$RUNNER_TEMP/ui-browser" --no-package-lock --no-audit --no-fund playwright@1.55.0
+          "$RUNNER_TEMP/ui-browser/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/ui-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+      - name: Exercise mocked interaction and error scenarios
+        run: node scripts/audit/website-interactions.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-regressions-${{ github.sha }}
+          path: .audit/
+          include-hidden-files: true
+          retention-days: 7

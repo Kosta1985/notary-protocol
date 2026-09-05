@@ -1,3 +1,4 @@
+import { readJsonBody, InputError } from './http-request.js';
 import { recordUsage } from "./usage-analytics.js";
 
 const encoder = new TextEncoder();
@@ -12,8 +13,8 @@ export class ProofError extends Error {
 
 export async function handleProofs(request, env, url = new URL(request.url)) {
   if (request.method === "POST" && url.pathname === "/api/v1/hash") {
-    const body = await readJson(request);
-    const data = Object.prototype.hasOwnProperty.call(body, "data") ? body.data : body;
+    const body = await readJson(request, false);
+    const data = body !== null && typeof body === "object" && Object.prototype.hasOwnProperty.call(body, "data") ? body.data : body;
     return json({ hash: await hashData(data), algorithm: "SHA-256", canonicalization: "accordtrace-json-v1" });
   }
   if (request.method === "POST" && url.pathname === "/api/v1/proofs") {
@@ -22,7 +23,9 @@ export async function handleProofs(request, env, url = new URL(request.url)) {
     return json(await createProof(env, body.data, body.metadata ?? null, request), 201);
   }
   if (request.method === "GET" && url.pathname.startsWith("/api/v1/proofs/")) {
-    return json(await getProof(env, decodeURIComponent(url.pathname.slice("/api/v1/proofs/".length))));
+    let id;
+    try { id = decodeURIComponent(url.pathname.slice("/api/v1/proofs/".length)); } catch { throw new ProofError("Invalid proof_id"); }
+    return json(await getProof(env, id));
   }
   if (request.method === "POST" && url.pathname === "/api/v1/verify") return json(await verifyProof(env, await readJson(request), request));
   return null;
@@ -127,10 +130,9 @@ function canonicalize(value) {
   if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalize(value[key])}`).join(",")}}`;
   throw new ProofError("data must be JSON-compatible");
 }
-async function readJson(request) {
-  const text = await request.text();
-  if (encoder.encode(text).byteLength > 1_048_576) throw new ProofError("Request body exceeds 1 MiB", 413);
-  try { return JSON.parse(text); } catch { throw new ProofError("Request body must be valid JSON"); }
+async function readJson(request, requireObject = true) {
+  try { return await readJsonBody(request, { requireObject }); }
+  catch (error) { if (error instanceof InputError) throw new ProofError(error.message, error.status); throw error; }
 }
 function json(body, status = 200) { return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } }); }
 function base64url(bytes) { let binary = ""; for (const byte of bytes) binary += String.fromCharCode(byte); return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/g, ""); }

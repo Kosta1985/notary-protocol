@@ -8,10 +8,10 @@
   <link rel="icon" href="/favicon.svg">
   <link rel="stylesheet" href="/commercial.css">
   <script src="/passport-checkout-success.js" defer></script>
-</head>
-<body>
-<header class="sitebar"><div class="shell nav"><a class="brand" href="/">AccordTrace</a><nav class="navlinks"><a href="/agents.html">Agent Passport</a><a href="/network.html">Network</a><a href="/developers.html">Developers</a></nav></div></header>
-<main>
+<link rel="stylesheet" href="/site-resilience.css"></head>
+<body><a class="skip-link" href="#main-content">Skip to main content</a>
+<header class="sitebar"><div class="shell nav"><a class="brand" href="/">AccordTrace</a><nav aria-label="Main navigation" class="navlinks"><a href="/agents.html">Agent Passport</a><a href="/network.html">Network</a><a href="/developers.html">Developers</a></nav></div></header>
+<main id="main-content">
   <section class="hero"><div class="shell"><p class="eyebrow">Agent Passport Certificate</p><h1>Checking verified order state</h1><p class="lede">Returning from Stripe is not proof of payment. This page reads only the server-side order state written by a verified Stripe webhook.</p></div></section>
   <section class="section"><div class="shell prelaunch">
     <p id="order-status" class="muted">Loading order…</p>

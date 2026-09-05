@@ -1,9 +1,10 @@
+import { secureResponse, unexpectedErrorResponse } from './response-security.js';
 import coreWorker from "./worker.js";
 import { handleInteroperability } from "./interoperability.js";
 import { handleProofs, ProofError } from "./proofs.js";
 import { passportSafeEnv } from "./passport-signer-readiness.js";
 
-export default {
+const application = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === "OPTIONS" && (url.pathname === "/mcp" || url.pathname === "/a2a" || url.pathname.startsWith("/api/v1/proofs") || url.pathname === "/api/v1/hash" || url.pathname === "/api/v1/verify" || url.pathname === "/api/v1/stats")) {
@@ -57,3 +58,12 @@ function cors(response) {
   headers.set("x-content-type-options", "nosniff");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
+
+// Keep headers and unexpected-error redaction on every runtime response.
+export default {
+  async fetch(request, env, ctx) {
+    try { return await secureResponse(await application.fetch(request, env, ctx), { method: request.method }); }
+    catch { return await secureResponse(unexpectedErrorResponse(), { method: request.method }); }
+  },
+  async scheduled(controller, env, ctx) { return application.scheduled(controller, env, ctx); }
+};

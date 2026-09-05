@@ -1,0 +1,37 @@
+/* Shared accessibility and narrow-screen fixes; no branding or color changes. */
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+.input-field{min-width:0;display:grid;gap:8px}
+.input-field label{font-size:14px;font-weight:600}
+.input-field input,.verify-box input{min-width:0;width:100%}
+.verify-box{align-items:end}
+.evidence-json{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;overflow:auto;font:12px/1.65 ui-monospace,Consolas,monospace}
+.card,.flow>div,.price,.section-head>div,.section-head>p,.footer-row>div{min-width:0;overflow-wrap:anywhere}
+.honeypot{position:absolute!important;left:-9999px!important}
+.interest-form input{min-width:min(280px,100%);max-width:100%}
+:where(a,button,input,select,textarea,summary):focus-visible{outline:3px solid currentColor;outline-offset:4px}
+.skip-link{position:fixed;left:12px;top:12px;z-index:1000;transform:translateY(-200%);padding:12px;background:var(--bg,#111);color:inherit;border:2px solid currentColor}
+.skip-link:focus{transform:none}
+.console-page header{flex-wrap:wrap;align-items:flex-start}
+.console-page .row{min-width:0;max-width:100%}
+.console-page input,.console-page select{min-width:0;max-width:100%}
+.console-page h1,.legal-content h1{overflow-wrap:anywhere}
+@media(max-width:900px){
+  .site-header:has(nav){height:auto;min-height:78px;flex-wrap:wrap;gap:10px;padding-block:14px}
+  .site-header nav{display:flex;flex-wrap:wrap;gap:12px;max-width:100%}
+  .nav{height:auto;min-height:68px;flex-wrap:wrap;gap:14px;padding-block:14px}
+  .navlinks{display:flex;flex-basis:100%;order:3;flex-wrap:wrap;gap:8px 18px}
+  .navlinks a{padding-block:5px}
+  .navcta{margin-left:auto}
+}
+@media(max-width:480px){
+  .hero h1{overflow-wrap:anywhere}
+  .legal-page .site-header{flex-wrap:wrap;gap:12px;padding:16px 6vw}
+  .legal-page .brand,.legal-page .header-action{min-width:0;max-width:100%;overflow-wrap:anywhere}
+  .console-page main{padding:20px}
+  .console-page h1{font-size:28px}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
