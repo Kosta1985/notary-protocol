@@ -1,14 +1,12 @@
 name: AccordTrace statistics
 
 on:
+  workflow_run:
+    workflows: ["Deploy AccordTrace production"]
+    types: [completed]
   workflow_dispatch:
   schedule:
     - cron: "37 */6 * * *"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/accordtrace-stats.yml"
-      - "scripts/accordtrace-stats.js"
 
 permissions:
   contents: read
@@ -19,12 +17,15 @@ concurrency:
 
 jobs:
   report:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v7
         with:
           node-version: 24
-      - name: Read aggregate AccordTrace activity
+      - name: Read and verify aggregate Accord Trace activity
         run: node scripts/accordtrace-stats.js
