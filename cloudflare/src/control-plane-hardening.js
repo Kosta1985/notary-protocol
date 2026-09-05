@@ -1,3 +1,5 @@
+import {prepareAlertDelivery} from './alert-adapters.js';
+
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8"};
 const ROLES={viewer:1,responder:2,admin:3};
 const MAX_SESSION_HOURS=12;
@@ -11,7 +13,7 @@ export async function handleControlPlaneHardening(request,env,url=new URL(reques
 
   if(request.method==='GET'&&url.pathname==='/api/v1/control-plane/maintenance/capabilities'){
     requireRole(auth,'viewer');
-    return reply({service:'AccordTrace Control Plane Hardening',version:'0.1.0',role:auth.role,features:['ephemeral_sessions','operator_rate_limits','signed_webhook_outbox','deduplicated_alerts','bounded_retries','dead_letter_state','retention_jobs','audit_chain_retention_exemption'],audit_policy:'control_plane_audit is never deleted by automated retention'});
+    return reply({service:'AccordTrace Control Plane Hardening',version:'0.1.0',role:auth.role,features:['ephemeral_sessions','operator_rate_limits','signed_webhook_outbox','deduplicated_alerts','bounded_retries','dead_letter_state','retention_jobs','audit_chain_retention_exemption','customer_alert_adapters'],supported_alert_adapters:['webhook','slack_webhook','email_relay'],audit_policy:'control_plane_audit is never deleted by automated retention'});
   }
 
   if(request.method==='POST'&&url.pathname==='/api/v1/control-plane/sessions/create'){
@@ -58,13 +60,12 @@ export async function handleControlPlaneHardening(request,env,url=new URL(reques
 
 async function deliverOutbox(env,row){
   const cfg=alertConfigs(env).find(x=>x&&String(x.id)===String(row.integration_id)&&x.enabled!==false); if(!cfg)return markOutbox(env,row,'dead_letter','integration_not_configured');
-  if(String(cfg.type||'webhook')!=='webhook')return markOutbox(env,row,'dead_letter','unsupported_adapter');
-  if(!isHttpsUrl(cfg.url))return markOutbox(env,row,'dead_letter','url_must_be_https');
-  const payload=String(row.payload_json); const timestamp=Math.floor(Date.now()/1000).toString(); const headers={'content-type':'application/json','x-accordtrace-event-digest':row.event_digest,'x-accordtrace-timestamp':timestamp};
+  let event;try{event=JSON.parse(String(row.payload_json));}catch{return markOutbox(env,row,'dead_letter','invalid_event_payload');}
+  const delivery=prepareAlertDelivery(cfg,event);if(delivery.error)return markOutbox(env,row,'dead_letter',delivery.error);
+  const payload=delivery.body; const timestamp=Math.floor(Date.now()/1000).toString(); const headers={...delivery.headers,'x-accordtrace-event-digest':row.event_digest,'x-accordtrace-timestamp':timestamp};
   if(cfg.signing_secret){headers['x-accordtrace-signature']=`v1=${await hmacSha256Hex(String(cfg.signing_secret),`${timestamp}.${payload}`)}`;}
-  if(cfg.bearer_token)headers.authorization=`Bearer ${cfg.bearer_token}`;
-  let status='failed',error='network_error'; try{const res=await fetch(cfg.url,{method:'POST',headers,body:payload,redirect:'error'});status=res.ok?'sent':'failed';error=res.ok?null:`http_${res.status}`;}catch{}
-  const deliveryId=`cpd_${crypto.randomUUID()}`; await env.DB.prepare(`INSERT INTO control_plane_alert_deliveries (id,integration_id,integration_type,event_digest,status,error_code,created_at) VALUES (?1,?2,'webhook',?3,?4,?5,?6)`).bind(deliveryId,row.integration_id,row.event_digest,status,error,new Date().toISOString()).run();
+  let status='failed',error='network_error'; try{const res=await fetch(delivery.url,{method:'POST',headers,body:payload,redirect:'error'});status=res.ok?'sent':'failed';error=res.ok?null:`http_${res.status}`;}catch{}
+  const deliveryId=`cpd_${crypto.randomUUID()}`; await env.DB.prepare(`INSERT INTO control_plane_alert_deliveries (id,integration_id,integration_type,event_digest,status,error_code,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7)`).bind(deliveryId,row.integration_id,delivery.type,row.event_digest,status,error,new Date().toISOString()).run();
   if(status==='sent')return markOutbox(env,row,'sent',null);
   const attempts=Number(row.attempts||0)+1; if(attempts>=MAX_ATTEMPTS)return markOutbox(env,{...row,attempts},'dead_letter',error);
   const next=new Date(Date.now()+RETRY_SECONDS[Math.min(attempts-1,RETRY_SECONDS.length-1)]*1000).toISOString(); await env.DB.prepare(`UPDATE control_plane_alert_outbox SET attempts=?1,next_attempt_at=?2,last_error_code=?3,updated_at=?4 WHERE id=?5`).bind(attempts,next,error,new Date().toISOString(),row.id).run();
@@ -85,7 +86,6 @@ function normalizeAlertEvent(input){const e=input&&typeof input==='object'?input
 function randomToken(){const b=crypto.getRandomValues(new Uint8Array(32));return[...b].map(x=>x.toString(16).padStart(2,'0')).join('');}
 async function hmacSha256Hex(secret,message){const key=await crypto.subtle.importKey('raw',new TextEncoder().encode(secret),{name:'HMAC',hash:'SHA-256'},false,['sign']);const sig=await crypto.subtle.sign('HMAC',key,new TextEncoder().encode(message));return[...new Uint8Array(sig)].map(x=>x.toString(16).padStart(2,'0')).join('');}
 async function sha256Hex(v){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(String(v)));return[...new Uint8Array(bytes)].map(b=>b.toString(16).padStart(2,'0')).join('');}
-function isHttpsUrl(v){try{const u=new URL(String(v||''));return u.protocol==='https:'&&!u.username&&!u.password;}catch{return false;}}
 function cleanId(v,name){const s=String(v||'').trim();if(!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,199}$/.test(s))throw new HardeningError(`${name}_invalid`,400);return s;}
 function clampInt(v,min,max){const n=Math.floor(Number(v));return Number.isFinite(n)?Math.max(min,Math.min(max,n)):min;}
 function enumValue(v,a){const s=String(v||'');return a.includes(s)?s:null;} function text(v,n){return String(v??'').trim().slice(0,n);} function validIso(v){return Number.isFinite(Date.parse(v));}
