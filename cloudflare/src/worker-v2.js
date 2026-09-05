@@ -1,6 +1,7 @@
 import coreWorker from "./worker.js";
 import { handleInteroperability } from "./interoperability.js";
 import { handleProofs, ProofError } from "./proofs.js";
+import { passportSafeEnv } from "./passport-signer-readiness.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -25,7 +26,8 @@ export default {
       }
     }
 
-    return coreWorker.fetch(request, env, ctx);
+    const coreEnv = url.pathname.startsWith("/api/v1/passport-product/") ? passportSafeEnv(env) : env;
+    return coreWorker.fetch(request, coreEnv, ctx);
   },
 
   async scheduled(controller, env, ctx) {
