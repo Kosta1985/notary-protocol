@@ -17,6 +17,8 @@ const requiredFiles = [
   'cloudflare/src/passport-product.js',
   'adapters/a2a/agent-card.json',
   'web/index.html',
+  'web/passport.html',
+  'web/passport.js',
   'web/verify.html',
   'web/dashboard.html',
   'web/validation.html',
@@ -133,30 +135,43 @@ for (const marker of ['agent_passport_certificate','STRIPE_PRICE_AGENT_PASSPORT'
 }
 
 const home = read('web/index.html');
-if (!/Know which agent you are dealing with/i.test(home)) problems.push('commercial_home_marker_missing');
+for (const marker of ['Know which agent you are dealing with','Agent Passport Certificate','US$2','US$1','/passport.html','/network.html','checkout remains fail-closed']) {
+  if (!home.toLowerCase().includes(marker.toLowerCase())) problems.push(`commercial_home_marker_missing:${marker}`);
+}
 if (/TaskBay's portable evidence layer/.test(home)) problems.push('stale_taskbay_positioning');
 
+const passportPage = read('web/passport.html');
+for (const marker of ['Sample Agent Passport Certificate','SAMPLE','agent_passport_certificate','Ed25519','US$2.00','US$1','not legal identity, KYC','/api/v1/passport-product/capabilities']) {
+  if (!passportPage.toLowerCase().includes(marker.toLowerCase())) problems.push(`passport_page_missing:${marker}`);
+}
+const passportUi = read('web/passport.js');
+for (const marker of ['product.commercial_ready','Stripe activation in progress','aria-disabled','/api/v1/network/referrals/']) {
+  if (!passportUi.includes(marker)) problems.push(`passport_ui_missing:${marker}`);
+}
+
 const network = read('web/network.html');
-for (const marker of ['one-level affiliate network','No downline commissions','cash payouts remain disabled']) {
+for (const marker of ['US$2 Agent Passport Certificate','US$1 qualifying commission','One level only','No downline','Cash payout rail is not yet enabled','Invitation generation is not a sale']) {
   if (!network.toLowerCase().includes(marker.toLowerCase())) problems.push(`network_page_missing:${marker}`);
 }
 
 const ai = read('web/ai.html');
-for (const marker of ['application/ld+json','SoftwareApplication','FAQPage','Agent Continuity Monitor']) {
-  if (!ai.includes(marker)) problems.push(`ai_discovery_missing:${marker}`);
+for (const marker of ['application/ld+json','SoftwareApplication','FAQPage','US$2','US$1','key control, not legal identity','no downline commissions','MCP endpoint']) {
+  if (!ai.toLowerCase().includes(marker.toLowerCase())) problems.push(`ai_discovery_missing:${marker}`);
 }
 
 const llms = read('web/llms.txt');
-for (const marker of ['/ai.html','/api/v1/continuity/capabilities','/api/v1/network/capabilities','/mcp','/api/v1/passport-product/capabilities']) {
+for (const marker of ['/passport.html','/ai.html','/api/v1/continuity/capabilities','/api/v1/network/capabilities','/mcp','/api/v1/passport-product/capabilities','US$2.00 one time','US$1.00','No multilevel/downline commissions']) {
   if (!llms.includes(marker)) problems.push(`llms_discovery_missing:${marker}`);
 }
 const full = read('web/llms-full.txt');
-if (!full.includes('Missing heartbeat alone never triggers containment')) problems.push('llms_full_safety_boundary_missing');
+for (const marker of ['Missing heartbeat alone never triggers containment','US$2.00 one-time launch price','US$1 direct commission','no multilevel/downline commissions']) {
+  if (!full.includes(marker)) problems.push(`llms_full_boundary_missing:${marker}`);
+}
 
 const robots = read('web/robots.txt');
 if (!robots.includes('Disallow: /api/v1/control-plane/')) problems.push('robots_private_surface_boundary_missing');
 const sitemap = read('web/sitemap.xml');
-for (const marker of ['/ai.html','/network.html','/llms.txt','/llms-full.txt']) {
+for (const marker of ['/passport.html','/ai.html','/network.html','/llms.txt','/llms-full.txt']) {
   if (!sitemap.includes(marker)) problems.push(`sitemap_missing:${marker}`);
 }
 
@@ -209,6 +224,7 @@ const result = {
     a2a_protocol: agentCard?.supportedInterfaces?.[0]?.protocolVersion || null,
     mcp_transport: mcpManifest?.transport || null,
     agent_growth_tools: ['network_capabilities','network_stats','passport_product_capabilities','resolve_referral'],
+    commercial_launch: { product: 'agent_passport_certificate', price_atomic: 200, currency: 'usd', direct_commission_atomic: 100, referral_levels: 1 },
     proof_modes: ['service_recorded_hash','issuer_signed_hash']
   },
   migrations: migrations.length,
