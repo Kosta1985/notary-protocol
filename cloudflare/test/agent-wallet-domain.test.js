@@ -24,6 +24,12 @@ test('USDC arithmetic stays integer/BigInt based', () => {
   assert.throws(() => parseAssetAmount('0.0000001', 'USDC'), /at most 6/);
 });
 
+test('funded-balance model rejects negative and credit-like money values', () => {
+  assert.throws(() => parseAssetAmount('-1', 'USDC'), /non-negative decimal string/);
+  assert.throws(() => parseAssetAmount('-0.000001', 'USDC'), /non-negative decimal string/);
+  assert.throws(() => toDbInteger(-1n), /Negative monetary values/);
+});
+
 test('policy permits bounded autonomous payment', () => {
   const result = evaluateTransactionPolicy({ wallet: sender, policy, transaction: { amountAtomic: 1000000n, asset: 'USDC' }, recipientWallet: recipient });
   assert.equal(result.decision, POLICY_DECISIONS.ALLOW);
