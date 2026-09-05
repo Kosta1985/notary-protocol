@@ -31,13 +31,14 @@ export function walletCapabilities(env={}){
       signature_scope:['passport_id','timestamp','nonce','method','path','canonical_query','sha256_raw_body']
     },
     control_model:{
-      name:'agent_owned_actions_with_limited_guardian_control',
+      name:'agent_signed_actions_with_limited_guardian_control',
       agent_signs_ordinary_actions:true,
       agent_can_initiate_payments:true,
+      agent_can_choose_initial_predefined_active_policy:true,
+      agent_can_change_policy_after_creation:false,
       agent_can_self_approve_guardian_payments:false,
-      agent_can_override_guardian_policy:false,
       accordtrace_holds_agent_passport_private_key:false,
-      guardian_can:['freeze_wallet','unfreeze_wallet','assign_predefined_active_policy','approve_guardian_required_payment','deny_guardian_required_payment'],
+      guardian_can:['freeze_wallet','unfreeze_wallet','approve_guardian_required_payment','deny_guardian_required_payment'],
       guardian_cannot:['initiate_agent_payment','withdraw_to_guardian','seize_or_redirect_balance','mint_or_create_balance','bypass_insufficient_balance','create_credit_or_debt','sign_as_agent','export_agent_private_key'],
       unrestricted_operator_withdrawal:false,
       hidden_seizure_path:false,
