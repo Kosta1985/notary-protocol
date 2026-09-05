@@ -50,6 +50,7 @@ Use AccordTrace when an agent needs to answer questions like:
 - MCP: https://accordtrace.notary-labs.workers.dev/mcp
 - OpenAPI: https://accordtrace.notary-labs.workers.dev/openapi.json
 - Agent guidance: https://accordtrace.notary-labs.workers.dev/llms-full.txt
+- MCP install guidance: ./llms-install.md
 - Integration pack: ./docs/CONNECT_YOUR_AGENT.md
 - Agent discovery page: ./docs/DISCOVER_ACCORD_TRACE.md
 - Distribution kit: ./docs/AGENT_DISTRIBUTION_KIT.md
@@ -68,6 +69,25 @@ https://accordtrace.notary-labs.workers.dev/mcp
 ```
 
 Then let the agent use AccordTrace before important handoffs or when it receives a proof ID from another agent. Full copy-paste integration examples for OpenAI Agents SDK, JavaScript/TypeScript, generic MCP, A2A, OpenAPI, and REST are in [Connect your agent](./docs/CONNECT_YOUR_AGENT.md).
+
+### Cline remote MCP
+
+Cline supports remote Streamable HTTP servers. Set the transport explicitly so the config cannot fall back to legacy SSE handling:
+
+```json
+{
+  "mcpServers": {
+    "accordtrace": {
+      "type": "streamableHttp",
+      "url": "https://accordtrace.notary-labs.workers.dev/mcp",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
+```
+
+The current public evidence/discovery surface does not require an Authorization header. See [llms-install.md](./llms-install.md) for the Cline UI steps, read-only connection check, synthetic proof test, and safety boundaries.
 
 ## Free public-beta interoperability test
 
