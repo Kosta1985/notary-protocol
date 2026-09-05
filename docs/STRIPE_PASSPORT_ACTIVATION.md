@@ -26,7 +26,7 @@ The production Worker remains fail-closed until all three secrets below are conf
 
 3. `NOTARY_PRIVATE_JWK`
    - Dedicated Ed25519 private JWK for AccordTrace Certificate issuance.
-   - Generate and store it outside source control.
+   - Generate it outside source control and keep a secure recovery copy before activation.
    - The public key may be published; the private JWK must remain a Worker secret.
 
 ## Activation verification
