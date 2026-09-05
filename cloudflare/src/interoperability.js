@@ -2,6 +2,7 @@ import { createProof, getProof, hashData, verifyProof, ProofError } from "./proo
 import { handleAffiliate } from "./affiliate.js";
 import { handleAffiliateGrowth } from "./affiliate-growth.js";
 import { handlePassportProduct } from "./passport-product.js";
+import { passportSafeEnv } from "./passport-signer-readiness.js";
 
 const MCP_VERSION = "2026-07-28";
 const MCP_VERSIONS = [MCP_VERSION, "2025-11-25", "2025-06-18"];
@@ -156,7 +157,7 @@ async function executeAction(env, action, args = {}) {
     case "network_stats":
       return readExistingPublicApi(env, "/api/v1/network/stats");
     case "passport_product_capabilities":
-      return readExistingPublicApi(env, "/api/v1/passport-product/capabilities");
+      return readExistingPublicApi(passportSafeEnv(env), "/api/v1/passport-product/capabilities");
     case "resolve_referral": {
       const referralCode = String(args?.referral_code ?? "").trim();
       if (!referralCode) throw new ProofError("referral_code is required");
