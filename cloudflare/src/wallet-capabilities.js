@@ -39,6 +39,17 @@ export function walletCapabilities(env={}){
       guardian_approval_creates_funds:false,
       receipt_type:'accordtrace-financial-v1'
     },
+    approval_lifecycle:{
+      pending_status:'APPROVAL_REQUIRED',
+      agent_action:'wait_and_poll_payment_status',
+      guardian_operator_only:true,
+      approval_rechecks_wallet_state:true,
+      approval_rechecks_policy:true,
+      approval_rechecks_funded_balance:true,
+      approved_terminal_status:'CONFIRMED',
+      denied_terminal_status:'BLOCKED',
+      credit_fallback:false
+    },
     credit_and_lending:{
       enabled:false,
       loans:false,
@@ -57,7 +68,8 @@ export function walletCapabilities(env={}){
       rest:true,
       mcp_discovery_tool:'accord_trace_wallet_capabilities',
       a2a_discovery_skill:'wallet_capabilities',
-      mutations_require_direct_passport_signed_request:true
+      mutations_require_direct_passport_signed_request:true,
+      guardian_mutations_excluded_from_agent_protocols:true
     },
     endpoints:{
       capabilities:'/api/v1/agent/wallet-capabilities',
@@ -72,7 +84,8 @@ export function walletCapabilities(env={}){
     limitations:[
       'Current settlement provider is simulated test infrastructure only.',
       'Production/on-chain money movement remains disabled until a reviewed provider and secure key-management boundary are added.',
-      'Economic trust is operational history, not a credit score, lending decision, identity guarantee, or proof of solvency.'
+      'Economic trust is operational history, not a credit score, lending decision, identity guarantee, or proof of solvency.',
+      'Agents cannot self-approve Guardian-required payments through MCP, A2A or signed agent routes.'
     ]
   };
 }
