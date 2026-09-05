@@ -5,6 +5,7 @@ on:
     branches: [test/agent-wallet-isolated-e2e-20260905]
     paths:
       - scripts/agent-wallet-isolated-e2e.mjs
+      - cloudflare/src/worker-v2.js
       - .github/workflows/agent-wallet-isolated-e2e.yml
   workflow_dispatch:
 
@@ -109,7 +110,8 @@ jobs:
             FEATURE_AGENT_TREASURY:'true',
             FEATURE_ECONOMIC_TRUST:'true',
             FEATURE_GUARDIAN_CONTROLS:'true',
-            PASSPORT_CHECKOUT_ENABLED:'false'
+            PASSPORT_CHECKOUT_ENABLED:'false',
+            WALLET_E2E_DIAGNOSTICS:'true'
           };
           config.observability={enabled:false};
           fs.writeFileSync('wrangler.wallet-e2e.json',JSON.stringify(config,null,2));
