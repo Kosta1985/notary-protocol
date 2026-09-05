@@ -10,9 +10,9 @@ const secondarySmoke = fs.readFileSync(new URL('../.github/workflows/accord-trac
 const launch = fs.readFileSync(new URL('../cloudflare/src/launch.js', import.meta.url), 'utf8');
 const wrangler = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
 
-test('readiness validator requires contiguous migrations and current commercial assets', () => {
+test('readiness validator requires contiguous migrations and current commercial/wallet assets', () => {
   assert.match(ready, /migration_sequence/);
-  assert.match(ready, /expected_at_least_21/);
+  assert.match(ready, /expected_at_least_24/);
   for (const marker of [
     'web/passport.html',
     'web/passport.js',
@@ -21,6 +21,11 @@ test('readiness validator requires contiguous migrations and current commercial 
     'web/checkout-success.html',
     'web/passport-checkout-success.html',
     'web/network.html',
+    'cloudflare/src/agent-wallet.js',
+    'cloudflare/src/wallet-capabilities.js',
+    'wallet_capabilities',
+    'funded_balance_only',
+    'credit_and_lending',
     'handleAgentContinuity',
     'runContinuityScheduled',
     'handleAffiliate',
@@ -57,16 +62,17 @@ test('readiness v2 locks production runtime topology and protocol discovery toge
     "service_recorded_hash",
     "issuer_signed_hash"
   ]) assert.ok(ready.includes(marker));
-  for (const route of ['/mcp', '/a2a', '/api/v1/proofs*', '/api/v1/hash', '/api/v1/verify', '/.well-known/*']) assert.ok(ready.includes(route));
+  for (const route of ['/mcp', '/a2a', '/api/v1/agent/*', '/api/v1/wallet-admin/*', '/api/v1/proofs*', '/api/v1/hash', '/api/v1/verify', '/.well-known/*']) assert.ok(ready.includes(route));
 });
 
-test('readiness keeps commercial activation fail-closed and observable', () => {
+test('readiness keeps commercial and wallet production activation fail-closed and observable', () => {
   for (const marker of [
     'STRIPE_PRICE_AGENT_PASSPORT',
     'STRIPE_WEBHOOK_SECRET',
     'NOTARY_PRIVATE_JWK',
     'Affiliate cash payouts remain intentionally disabled',
     'Agent Passport Certificate checkout remains disabled',
+    'Agent Wallet production money movement remains intentionally disabled',
     'service_recorded_hash'
   ]) assert.ok(ready.includes(marker));
 });
@@ -92,11 +98,13 @@ test('llms smoke preserves semantic contract without brittle capitalization', ()
   assert.match(smoke, /includesCI\(x\.text, 'No multilevel\/downline commissions'\)/);
 });
 
-test('continuity, affiliate, proof, A2A and MCP routes are Worker-first', () => {
+test('continuity, affiliate, wallet, proof, A2A and MCP routes are Worker-first', () => {
   for (const marker of [
     '/api/v1/continuity/*',
     '/api/v1/network/*',
     '/api/v1/passport-product/*',
+    '/api/v1/agent/*',
+    '/api/v1/wallet-admin/*',
     '/api/v1/proofs*',
     '/api/v1/hash',
     '/api/v1/verify',
