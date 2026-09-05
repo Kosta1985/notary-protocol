@@ -1,0 +1,96 @@
+name: AccordTrace functional website audit
+
+on:
+  push:
+    branches: [fix/site-verification-resilience-20260905]
+    paths: [.github/workflows/site-functional-audit.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Archive tracked source and run tests without credentials
+        run: |
+          mkdir -p .audit
+          git archive --format=zip --output=.audit/source.zip HEAD
+          npm test > .audit/tests.log 2>&1
+      - name: Install isolated browser tools
+        run: |
+          npm install --prefix "$RUNNER_TEMP/site-browser" --no-package-lock --no-audit --no-fund playwright@1.55.0
+          "$RUNNER_TEMP/site-browser/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/site-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+      - name: Inspect public pages and reject false verification
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import {pathToFileURL} from 'node:url';
+          const {chromium}=await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
+          const base='https://accordtrace.notary-labs.workers.dev';
+          const browser=await chromium.launch();
+          const report={checked_at:new Date().toISOString(),source_sha:process.env.GITHUB_SHA,scope:'Read-only navigation and missing-evidence GET form probes. All browser writes are blocked. No payment, enrollment, key or domain operation.',pages:[],verification:[],headers:[]};
+          const pages=['/',...(await fs.readdir('web')).filter(p=>p.endsWith('.html')&&p!=='index.html').map(p=>'/'+p)];
+          try{
+            for(const width of [320,1440]){
+              const context=await browser.newContext({viewport:{width,height:900},extraHTTPHeaders:{'x-notary-monitor':'functional-site-audit','x-accordtrace-telemetry':'exclude'}});
+              await context.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())?route.continue():route.abort('blockedbyclient'));
+              for(const route of pages){
+                const page=await context.newPage();const errors=[];const failed=[];
+                page.on('pageerror',e=>errors.push(e.message));
+                page.on('response',r=>{if(r.status()>=400&&r.url().startsWith(base+'/'))failed.push({path:new URL(r.url()).pathname,status:r.status()})});
+                const row={width,path:route,errors,failed};
+                try{
+                  const response=await page.goto(base+route,{waitUntil:'networkidle',timeout:20000});
+                  await page.waitForTimeout(350);
+                  row.status=response.status();
+                  Object.assign(row,await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth+2,document_width:document.documentElement.scrollWidth,unlabelled:[...document.querySelectorAll('input:not([type=hidden]),textarea,select')].filter(e=>!e.labels?.length&&!e.getAttribute('aria-label')&&!e.getAttribute('aria-labelledby')&&!e.title).map(e=>e.id||e.name||e.tagName),visible_nav_links:[...document.querySelectorAll('header nav a')].filter(e=>e.getClientRects().length>0).length})));
+                  if(['/', '/verify.html','/passport.html'].includes(route))await page.screenshot({path:`.audit/${width}-${route==='/'?'home':route.slice(1)}.png`,fullPage:true});
+                  row.ok=response.ok()&&!row.overflow&&!errors.length&&!failed.length;
+                }catch(e){row.ok=false;row.error=e.message}
+                report.pages.push(row);await page.close();
+              }
+              await context.close();
+            }
+            const context=await browser.newContext({extraHTTPHeaders:{'x-notary-monitor':'functional-site-audit','x-accordtrace-telemetry':'exclude'}});
+            await context.route('**/*',route=>['GET','HEAD','OPTIONS'].includes(route.request().method())?route.continue():route.abort('blockedbyclient'));
+            for(const prefix of ['atp','ntr','atpc']){
+              const page=await context.newPage();const requests=[];page.on('request',r=>{if(r.url().includes('/api/'))requests.push(new URL(r.url()).pathname)});
+              const id=prefix+'_'+'0'.repeat(32);
+              try{
+                await page.goto(base+'/verify.html',{waitUntil:'networkidle'});
+                await page.locator('#verify-id').fill(id);await page.locator('#verify-form button').click();
+                await page.waitForFunction(()=>{const t=document.querySelector('#verify-result')?.textContent||'';return t.length>0&&!/Checking/.test(t)},{},{timeout:15000});
+                const text=await page.locator('#verify-result').innerText();
+                report.verification.push({id,requests,result:text.slice(0,700),ok:!text.includes('Public evidence returned successfully')&&!/^Verified\b/.test(text)});
+              }catch(e){report.verification.push({id,requests,ok:false,error:e.message})}
+              await page.close();
+            }
+            await context.close();
+            for(const path of ['/','/verify.html','/api/v1/security/capabilities','/api/v1/passport-product/capabilities']){
+              const response=await fetch(base+path,{headers:{'x-notary-monitor':'functional-site-audit','x-accordtrace-telemetry':'exclude'},signal:AbortSignal.timeout(15000)});
+              report.headers.push({path,status:response.status,content_security_policy:response.headers.get('content-security-policy'),nosniff:response.headers.get('x-content-type-options'),referrer_policy:response.headers.get('referrer-policy')});
+              if(path.includes('passport-product')){const p=await response.json();report.payment_hold={checkout_activation_enabled:p.checkout_activation_enabled,commercial_ready:p.commercial_ready,certificate_signing_enabled:p.certificate_signing_enabled};}
+            }
+          }finally{await browser.close()}
+          report.ok=report.pages.every(p=>p.ok)&&report.verification.every(p=>p.ok);
+          await fs.writeFile('.audit/functional-site.json',JSON.stringify(report,null,2));
+          console.log(JSON.stringify(report,null,2));
+          if(!report.ok)process.exitCode=1;
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: functional-site-audit-${{ github.sha }}
+          path: .audit/
+          include-hidden-files: true
+          retention-days: 7
