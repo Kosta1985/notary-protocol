@@ -11,6 +11,7 @@ This runbook covers the final secure activation of the US$2 Agent Passport Certi
 - `STRIPE_PRICE_AGENT_PASSPORT` is deployed as a non-secret Worker variable
 - Referral economics are fixed at US$1 direct qualifying commission, one level only
 - Cash payouts remain disabled
+- Read-only commercial readiness probe is deployed in `.github/workflows/passport-commercial-readiness.yml`
 
 ## Secrets that must never enter source control
 
@@ -31,10 +32,35 @@ The production Worker remains fail-closed until all three secrets below are conf
 
 ## Current production baseline
 
-- Production release SHA: `0c46528d26ef1cee2a03994decdb818474e191f7`
-- Production readiness reports `stripe_price_configured: true`.
-- Full production smoke passes, including exact release SHA verification.
-- Checkout remains intentionally disabled while the three secrets above are absent.
+- Production release SHA: `95064c63571ed5598cc6d2e22a26844d3a966ad0`
+- Main CI #894 passed.
+- Deploy #61 passed, including exact production SHA verification.
+- Production smoke #92 passed.
+- Live contract #52 passed.
+- Agenstry validator #33 passed.
+- Passport commercial readiness #1 passed its read-only policy/economics probe.
+- The readiness probe intentionally treats `commercial_ready: false` as `activation_pending`; its success must not be interpreted as checkout being live.
+- Checkout remains intentionally fail-closed until the three secrets above are configured.
+
+## Read-only activation probe
+
+Run:
+
+```bash
+node scripts/passport-commercial-readiness.mjs https://accordtrace.notary-labs.workers.dev
+```
+
+The probe never creates a Checkout Session and never charges a payment method. It verifies:
+- product id `agent_passport_certificate`
+- exact price: 200 atomic cents / USD
+- referral pricing consistency
+- `checkout_enabled`
+- `webhook_enabled`
+- `certificate_signing_enabled`
+- `commercial_ready`
+- `cash_affiliate_payouts_enabled: false`
+
+It fails only on policy/economics drift. Missing activation gates are reported as `activation_pending` so the integration remains safely fail-closed while secrets are being installed.
 
 ## Activation verification
 
