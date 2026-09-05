@@ -1,6 +1,6 @@
 {
   "name": "Accord Trace",
-  "description": "Independent tamper-evident cryptographic evidence, receipt, verification, identity and agent-economic discovery infrastructure for AI-agent actions, artifacts, approvals and workflow handoffs.",
+  "description": "Independent tamper-evident cryptographic evidence, receipt, verification, identity, wallet/treasury and agent-economic discovery infrastructure for AI-agent actions, artifacts, approvals and workflow handoffs.",
   "supportedInterfaces": [
     {
       "url": "https://accordtrace.notary-labs.workers.dev/a2a",
@@ -84,6 +84,15 @@
       "description": "Read the standalone Agent Passport Certificate product price and live commercial readiness gates without starting checkout.",
       "tags": ["agent-passport", "certificate", "commerce", "readiness", "read-only"],
       "examples": ["Is the Accord Trace Agent Passport Certificate commercially ready, and what is its current price?"],
+      "inputModes": ["application/json", "text/plain"],
+      "outputModes": ["application/json"]
+    },
+    {
+      "id": "wallet_capabilities",
+      "name": "Inspect Agent Wallet capabilities",
+      "description": "Read the machine-facing Agent Wallet feature gates, Ed25519 signing contract, USDC representation, policy decisions and explicit funded-balance/no-credit boundary. Read-only; wallet creation and money movement still require direct Passport-signed requests.",
+      "tags": ["agent-wallet", "agent-treasury", "usdc", "policy", "ed25519", "machine-to-machine", "read-only", "no-credit"],
+      "examples": ["Show the Agent Wallet signing contract and tell me whether agent payments are currently enabled."],
       "inputModes": ["application/json", "text/plain"],
       "outputModes": ["application/json"]
     },

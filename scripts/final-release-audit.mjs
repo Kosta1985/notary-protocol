@@ -23,6 +23,12 @@ const required = [
   'cloudflare/src/interoperability.js',
   'cloudflare/src/passport-product.js',
   'cloudflare/src/affiliate.js',
+  'cloudflare/src/agent-wallet.js',
+  'cloudflare/src/wallet-auth.js',
+  'cloudflare/src/wallet-capabilities.js',
+  'cloudflare/src/wallet/money.js',
+  'cloudflare/src/wallet/policy.js',
+  'cloudflare/src/wallet/providers/accord-test.js',
   'cloudflare/src/alert-adapters.js',
   'cloudflare/src/control-plane.js',
   'cloudflare/src/control-plane-hardening.js',
@@ -42,8 +48,12 @@ const required = [
   '.github/workflows/accordtrace-live-contract.yml',
   'docs/PASSPORT_LAUNCH_CAMPAIGN.md',
   'docs/STRIPE_PASSPORT_ACTIVATION.md',
+  'docs/AGENT_WALLET_ARCHITECTURE.md',
+  'docs/AGENT_WALLET_FOR_AGENTS.md',
+  'docs/openapi-fragments/agent-wallet.json',
   'scripts/accordtrace-live-contract.mjs',
   'scripts/framework-integration-audit.mjs',
+  'examples/agent-wallet/signed-client.mjs',
   'examples/framework-handoff/README.md',
   'examples/framework-handoff/openai_agents.py',
   'examples/framework-handoff/langchain.py',
@@ -61,6 +71,11 @@ if (!failures.length) {
   const interoperability = read('cloudflare/src/interoperability.js');
   const affiliate = read('cloudflare/src/affiliate.js');
   const passport = read('cloudflare/src/passport-product.js');
+  const wallet = read('cloudflare/src/agent-wallet.js');
+  const walletCapabilities = read('cloudflare/src/wallet-capabilities.js');
+  const walletMoney = read('cloudflare/src/wallet/money.js');
+  const walletPolicy = read('cloudflare/src/wallet/policy.js');
+  const walletProvider = read('cloudflare/src/wallet/providers/accord-test.js');
   const alertAdapters = read('cloudflare/src/alert-adapters.js');
   const controlPlane = read('cloudflare/src/control-plane.js');
   const controlPlaneHardening = read('cloudflare/src/control-plane-hardening.js');
@@ -89,14 +104,18 @@ if (!failures.length) {
 
   const expectedSkills = [
     'notarize_evidence', 'verify_proof', 'get_proof', 'hash_content',
-    'network_capabilities', 'network_stats', 'passport_product_capabilities', 'resolve_referral'
+    'network_capabilities', 'network_stats', 'passport_product_capabilities',
+    'wallet_capabilities', 'resolve_referral'
   ];
   const actualSkills = (agent.skills || []).map((skill) => skill.id).sort();
-  ok('a2a:eight-current-skills', actualSkills.length === 8 && expectedSkills.every((id) => actualSkills.includes(id)), actualSkills.join(','));
+  ok('a2a:nine-current-skills', actualSkills.length === 9 && expectedSkills.every((id) => actualSkills.includes(id)), actualSkills.join(','));
+  ok('a2a:wallet-discovery-read-only', agent.skills?.some((skill) => skill.id === 'wallet_capabilities' && /read-only/i.test(skill.description || '')));
 
   ok('mcp:registry-id', mcp.registry?.server === MCP_ID);
   ok('mcp:streamable-http', mcp.transport === 'streamable-http');
   ok('mcp:canonical-url', mcp.url === `${HOST}/mcp`);
+  ok('mcp:wallet-capabilities-tool', interoperability.includes('accord_trace_wallet_capabilities') && interoperability.includes('walletCapabilities(env)'));
+  ok('mcp:wallet-discovery-no-mutation', !interoperability.includes('handleAgentWallet') && !interoperability.includes('createPayment'));
   ok('mcp:cline-install-explicit-streamable-http',
     readme.includes('"type": "streamableHttp"') &&
     llmsInstall.includes('"type": "streamableHttp"') &&
@@ -110,7 +129,10 @@ if (!failures.length) {
 
   ok('runtime:worker-v2', wrangler.main === 'cloudflare/src/worker-v2.js');
   ok('runtime:passport-price-bound', wrangler.vars?.STRIPE_PRICE_AGENT_PASSPORT === PASSPORT_PRICE);
-  for (const secret of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NOTARY_PRIVATE_JWK']) {
+  const workerFirst = new Set(wrangler.assets?.run_worker_first || []);
+  ok('runtime:agent-wallet-worker-first', workerFirst.has('/api/v1/agent/*'));
+  ok('runtime:wallet-admin-worker-first', workerFirst.has('/api/v1/wallet-admin/*'));
+  for (const secret of ['STRIPE_SECRET_KEY', 'STRIPE_WEBHOOK_SECRET', 'NOTARY_PRIVATE_JWK', 'WALLET_OPERATOR_TOKEN']) {
     ok(`secrets:${secret}-not-plaintext-var`, !Object.prototype.hasOwnProperty.call(wrangler.vars || {}, secret));
   }
 
@@ -123,6 +145,14 @@ if (!failures.length) {
   ok('economics:us2-passport', campaign.includes('US$2'));
   ok('economics:us1-direct-referral', campaign.includes('US$1'));
   ok('economics:one-level-only', /one[ -]level/i.test(campaign) && /no (multilevel|downline)/i.test(campaign));
+
+  ok('wallet:machine-capability-contract', walletCapabilities.includes("audience:'autonomous_agents'") && walletCapabilities.includes('machine_first:true'));
+  ok('wallet:passport-signed-mutations', wallet.includes('authenticateAgentRequest') && walletCapabilities.includes('mutations_require_direct_passport_signed_request:true'));
+  ok('wallet:funded-balance-only', walletCapabilities.includes('funded_balance_only:true') && walletCapabilities.includes('negative_balances:false'));
+  ok('wallet:no-credit-or-lending', ['loans:false','borrowing:false','credit_lines:false','overdrafts:false','debt_balances:false','interest:false','collateral:false','leverage:false','margin:false','liquidation:false'].every((marker) => walletCapabilities.includes(marker)));
+  ok('wallet:bigint-money', walletMoney.includes('BigInt') && walletMoney.includes('Number.MAX_SAFE_INTEGER'));
+  ok('wallet:policy-decisions', ['ALLOW','DENY','REQUIRE_APPROVAL','QUARANTINE'].every((marker) => walletPolicy.includes(marker)));
+  ok('wallet:test-provider-refuses-production', walletProvider.includes("mode==='production'&&provider==='accord_test'") || walletProvider.includes('accord_test_provider_requires_testnet_mode'));
 
   for (const type of ['webhook', 'slack_webhook', 'email_relay']) {
     ok(`control-plane:alert-adapter:${type}`, alertAdapters.includes(`'${type}'`) && controlPlane.includes(`'${type}'`) && controlPlaneHardening.includes(`'${type}'`));

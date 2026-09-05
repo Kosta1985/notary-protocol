@@ -18,15 +18,16 @@ test('Agenstry refresh cannot race production deployment', () => {
   assert.match(agenstry, /A2A-Version: 1\.0/);
   assert.match(agenstry, /Agent Affiliate Network|affiliate referral network/i);
   assert.match(agenstry, /agent passport certificate readiness/i);
+  assert.match(agenstry, /AI agent USDC wallet treasury policy no credit/i);
   assert.match(agenstry, /did not contain the deployed Accord Trace card/);
 });
 
-test('Agenstry validator decodes the embedded A2A JSON document and requires the current 8-skill card', () => {
+test('Agenstry validator decodes the embedded A2A JSON document and requires the current 9-skill card', () => {
   assert.match(agenstry, /try fromjson catch empty/);
   assert.match(agenstry, /raw_json\?\.name\?/);
   assert.match(agenstry, /live_responds == true/);
   assert.match(agenstry, /card_format == \"current\"/);
-  for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','resolve_referral']) {
+  for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','wallet_capabilities','resolve_referral']) {
     assert.ok(agenstry.includes(skill), `Agenstry discovery contract missing ${skill}`);
   }
 });
@@ -38,8 +39,8 @@ test('live contract runs after deployment with current action versions', () => {
   assert.match(liveWorkflow, /github\.event\.workflow_run\.head_sha/);
 });
 
-test('live contract performs canonical and compatibility read-only A2A network actions', () => {
-  for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','resolve_referral']) {
+test('live contract requires current A2A skills and compatibility read-only network actions', () => {
+  for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','wallet_capabilities','resolve_referral']) {
     assert.ok(liveContract.includes(`'${skill}'`), `live contract missing ${skill}`);
   }
   assert.match(liveContract, /A2A_METHODS = \['message\/send', 'SendMessage'\]/);

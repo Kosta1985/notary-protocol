@@ -60,11 +60,29 @@ async function mcp(method, params, id) {
   return requestJson("/mcp", { method: "POST", headers, body: JSON.stringify(body) });
 }
 
+function validateWalletCapabilities(wallet) {
+  assert.equal(wallet.service, "AccordTrace Agent Wallet");
+  assert.equal(wallet.audience, "autonomous_agents");
+  assert.equal(wallet.machine_first, true);
+  assert.equal(wallet.authentication?.algorithm, "Ed25519");
+  assert.equal(wallet.authentication?.nonce_replay_protection, true);
+  assert.equal(wallet.payment_contract?.idempotency_key_required, true);
+  assert.equal(wallet.payment_contract?.funded_balance_only, true);
+  assert.equal(wallet.payment_contract?.negative_balances, false);
+  assert.equal(wallet.payment_contract?.guardian_approval_creates_funds, false);
+  assert.equal(wallet.credit_and_lending?.enabled, false);
+  for (const boundary of ["loans","borrowing","credit_lines","overdrafts","debt_balances","interest","yield_lending","collateral","leverage","margin","liquidation"]) {
+    assert.equal(wallet.credit_and_lending?.[boundary], false, `wallet credit boundary drift: ${boundary}`);
+  }
+  assert.equal(wallet.machine_protocols?.mutations_require_direct_passport_signed_request, true);
+  assert.equal(wallet.endpoints?.payments, "/api/v1/agent/payments");
+}
+
 await runner.run("agent-card", async () => {
   const card = await requestJson("/.well-known/agent-card.json");
   assert.equal(card.name, "Accord Trace");
   assert.equal(card.supportedInterfaces?.[0]?.protocolVersion, "1.0");
-  for (const skill of ["notarize_evidence", "verify_proof", "network_capabilities", "network_stats", "passport_product_capabilities", "resolve_referral"]) {
+  for (const skill of ["notarize_evidence", "verify_proof", "network_capabilities", "network_stats", "passport_product_capabilities", "wallet_capabilities", "resolve_referral"]) {
     assert.ok(card.skills?.some((candidate) => candidate.id === skill), `Agent Card missing ${skill}`);
   }
   context.card = card;
@@ -78,6 +96,7 @@ await runner.run("legacy-agent-card", async () => {
     assert.equal(legacyCard.name, context.card.name);
     assert.equal(legacyCard.supportedInterfaces?.[0]?.url, context.card.supportedInterfaces?.[0]?.url);
     assert.ok(legacyCard.skills?.some((skill) => skill.id === "verify_proof"));
+    assert.ok(legacyCard.skills?.some((skill) => skill.id === "wallet_capabilities"));
   } else {
     assert.equal(legacyResponse.status, 404, `legacy agent.json returned unexpected HTTP ${legacyResponse.status}`);
   }
@@ -87,9 +106,17 @@ await runner.run("discovery-docs", async () => {
   const openapi = await requestJson("/openapi.json");
   assert.ok(openapi.paths?.["/api/v1/proofs"]);
   assert.ok(openapi.paths?.["/mcp"]);
+  assert.ok(openapi.paths?.["/api/v1/agent/wallet-capabilities"]);
+  assert.ok(openapi.paths?.["/api/v1/agent/payments"]);
   const llmsResponse = await fetch(`${base}/llms.txt`);
   assert.equal(llmsResponse.status, 200);
   assert.match(await llmsResponse.text(), /independently integrity-checked later/i);
+});
+
+await runner.run("agent-wallet-rest-discovery", async () => {
+  const wallet = await requestJson("/api/v1/agent/wallet-capabilities");
+  validateWalletCapabilities(wallet);
+  context.walletCapabilities = wallet;
 });
 
 const evidence = { event: "external-agent-production-check", source: "github-actions", run: process.env.GITHUB_RUN_ID || `manual-${Date.now()}` };
@@ -126,6 +153,13 @@ await runner.run("a2a-growth", async () => {
   assert.equal(a2aNetworkData?.cash_payouts_enabled, false);
 });
 
+await runner.run("a2a-wallet-discovery", async () => {
+  const response = await a2aAction("wallet_capabilities", {}, "external-a2a-wallet");
+  const wallet = response.result?.task?.artifacts?.[0]?.parts?.[0]?.data;
+  validateWalletCapabilities(wallet);
+  assert.deepEqual(wallet.credit_and_lending, context.walletCapabilities.credit_and_lending);
+}, ["agent-wallet-rest-discovery"]);
+
 await runner.run("mcp-discovery", async () => {
   const discovered = await mcp("server/discover", {}, "external-mcp-discover");
   assert.ok(discovered.result?.supportedVersions?.includes("2026-07-28"));
@@ -135,6 +169,7 @@ await runner.run("mcp-discovery", async () => {
     "accord_trace_network_capabilities",
     "accord_trace_network_stats",
     "accord_trace_passport_product_capabilities",
+    "accord_trace_wallet_capabilities",
     "accord_trace_resolve_referral"
   ]) assert.ok(listed.result?.tools?.some((candidate) => candidate.name === tool), `MCP missing ${tool}`);
 });
@@ -159,6 +194,13 @@ await runner.run("mcp-growth", async () => {
   assert.equal(mcpProduct.result?.structuredContent?.product?.price?.amount_atomic, 200);
   assert.equal(mcpProduct.result?.structuredContent?.cash_affiliate_payouts_enabled, false);
 });
+
+await runner.run("mcp-wallet-discovery", async () => {
+  const response = await mcp("tools/call", { name: "accord_trace_wallet_capabilities", arguments: {} }, "external-mcp-wallet");
+  const wallet = response.result?.structuredContent;
+  validateWalletCapabilities(wallet);
+  assert.deepEqual(wallet.payment_contract, context.walletCapabilities.payment_contract);
+}, ["agent-wallet-rest-discovery"]);
 
 await runner.run("affiliate-rest", async () => {
   const network = await requestJson("/api/v1/network/capabilities");
@@ -213,9 +255,13 @@ if (!runner.ok) {
     a2a: "passed",
     mcp: "passed",
     agent_growth_discovery: "passed",
+    agent_wallet_discovery: "passed",
     affiliate_network: "passed",
     passport_product_safety: "passed",
     passport_product_commercial_ready: Boolean(context.passportProduct.commercial_ready),
+    wallet_enabled: Boolean(context.walletCapabilities.wallet_enabled),
+    wallet_payments_enabled: Boolean(context.walletCapabilities.payments_enabled),
+    wallet_credit_and_lending_enabled: Boolean(context.walletCapabilities.credit_and_lending?.enabled),
     legacy_a2a_alias: context.legacyStatus === 200 ? "present" : "absent"
   }, null, 2)}\n`);
 }
