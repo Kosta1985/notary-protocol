@@ -34,7 +34,8 @@ async function checkout(base,statePath,kind){
   const requestedAt=new Date().toISOString();
   const referralCode=kind==='referred'?state.referral_code:null;
   const payload={domain:'accordtrace.passport-product.checkout.v1',request_id:requestId,passport_id:who.id,product_id:'agent_passport_certificate',product_version:'1',referral_code:referralCode,requested_at:requestedAt};
-  const signature=crypto.sign(null,Buffer.from(canonicalize(payload)),crypto.createPrivateKey({key:Buffer.from(who.private_key_pkcs8,'base64url'),format:'der',type:'pkcs8'})).toString('base64url');
+  const privateKey=crypto.createPrivateKey({key:Buffer.from(who.private_key_pkcs8,'base64url'),format:'der',type:'pkcs8'});
+  const signature=crypto.sign(null,Buffer.from(canonicalize(payload)),privateKey).toString('base64url');
   const response=await fetch(new URL('/api/v1/passport-product/checkout',baseUrl),{method:'POST',headers:{'content-type':'application/json','accept':'application/json','x-accordtrace-telemetry':'exclude'},body:JSON.stringify({...payload,signature})});
   const body=await response.json().catch(()=>({}));
   if(response.status!==201)fail(`checkout failed (${response.status}): ${JSON.stringify(body)}`);
@@ -42,9 +43,9 @@ async function checkout(base,statePath,kind){
   if(!session.startsWith('cs_test_'))fail(`refusing non-test Checkout session: ${session||'missing'}`);
   const checkoutUrl=new URL(url);if(checkoutUrl.protocol!=='https:'||checkoutUrl.hostname!=='checkout.stripe.com')fail('unexpected Stripe Checkout URL');
   if(body?.order?.payment_status!=='pending')fail(`unexpected initial order state: ${body?.order?.payment_status}`);
-  state.orders[kind]={order_id:body.order.id,checkout_session_id:session,checkout_url:url,request_id:requestId,created_at:new Date().toISOString()};
+  state.orders[kind]={order_id:body.order.id,checkout_session_id:session,checkout_url:url,expected_return_origin:baseUrl.origin,request_id:requestId,created_at:new Date().toISOString()};
   writeState(statePath,state);
-  console.log(JSON.stringify({status:'checkout_created',kind,order_id:body.order.id,checkout_session_id:session,checkout_url:url,real_funds:false},null,2));
+  console.log(JSON.stringify({status:'checkout_created',kind,order_id:body.order.id,checkout_session_id:session,checkout_url:url,expected_return_origin:baseUrl.origin,real_funds:false},null,2));
 }
 
 async function browser(statePath){
@@ -55,6 +56,7 @@ async function browser(statePath){
   try{
     for(const [kind,entry] of pending){
       if(!String(entry.checkout_session_id).startsWith('cs_test_'))fail('refusing browser automation for non-test Checkout session');
+      const returnOrigin=new URL(required(entry.expected_return_origin,'expected return origin')).origin;
       const page=await browser.newPage();
       await page.goto(entry.checkout_url,{waitUntil:'domcontentloaded',timeout:60000});
       await fillFirst(page,["input[type='email']","input[name='email']"],'accordtrace-e2e@example.com',false);
@@ -62,11 +64,13 @@ async function browser(statePath){
       await fillFirst(page,["input[name='cardExpiry']","input#cardExpiry","input[autocomplete='cc-exp']"],'1234');
       await fillFirst(page,["input[name='cardCvc']","input#cardCvc","input[autocomplete='cc-csc']"],'123');
       await fillFirst(page,["input[name='billingName']","input#billingName","input[autocomplete='cc-name']"],'AccordTrace Sandbox E2E',false);
+      await fillFirst(page,["input[name='billingPostalCode']","input[name='postalCode']","input[autocomplete='postal-code']"],'4000',false);
       const button=page.locator("button[type='submit']").last();
       await button.waitFor({state:'visible',timeout:30000});
       await button.click();
-      await page.waitForURL(url=>url.origin!==new URL(entry.checkout_url).origin,{timeout:60000,waitUntil:'domcontentloaded'});
+      await page.waitForURL(url=>url.origin===returnOrigin,{timeout:60000,waitUntil:'domcontentloaded'});
       entry.completed_at=new Date().toISOString();
+      entry.return_url=page.url();
       await page.close();
     }
     writeState(statePath,state);
