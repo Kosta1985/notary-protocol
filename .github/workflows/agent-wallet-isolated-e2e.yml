@@ -148,15 +148,57 @@ jobs:
         run: |
           set +e
           status=0
+          api='https://api.cloudflare.com/client/v4'
           expected="at-wallet-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          if [[ -n "${E2E_WORKER:-}" && "$E2E_WORKER" == "$expected" ]]; then
-            curl --silent --show-error --max-time 20 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$E2E_WORKER" >/dev/null || status=1
+          worker_deleted=false
+          database_deleted=false
+          safe_target=false
+
+          if [[ -n "${E2E_WORKER:-}" && "$E2E_WORKER" == "$expected" && "${CLOUDFLARE_ACCOUNT_ID:-}" =~ ^[a-f0-9]{32}$ ]]; then
+            safe_target=true
+            worker_url="$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$E2E_WORKER"
+            delete_code="$(curl --silent --show-error --max-time 20 -o /tmp/wallet-worker-delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$worker_url")" || delete_code=000
+            if [[ "$delete_code" == 200 || "$delete_code" == 404 ]]; then
+              for attempt in 1 2 3 4 5; do
+                probe_code="$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$worker_url/settings")" || probe_code=000
+                if [[ "$probe_code" == 404 ]]; then worker_deleted=true; break; fi
+                sleep 1
+              done
+            fi
+            [[ "$worker_deleted" == true ]] || status=1
+          elif [[ -n "${E2E_WORKER:-}" ]]; then
+            status=1
           fi
-          if [[ -n "${E2E_DB_ID:-}" && "$E2E_DB_ID" =~ ^[a-f0-9-]{36}$ ]]; then
-            curl --silent --show-error --max-time 20 -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_DB_ID" >/dev/null || status=1
+
+          if [[ -n "${E2E_DB_ID:-}" && "$safe_target" == true && "$E2E_DB_ID" =~ ^[a-f0-9-]{36}$ ]]; then
+            db_url="$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_DB_ID"
+            before_code="$(curl --silent --show-error --max-time 20 -o /tmp/wallet-db-before.json -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$db_url")" || before_code=000
+            if [[ "$before_code" == 404 ]]; then
+              database_deleted=true
+            elif [[ "$before_code" == 200 && "$(jq -r '.result.name // empty' /tmp/wallet-db-before.json 2>/dev/null)" == "$expected" ]]; then
+              delete_code="$(curl --silent --show-error --max-time 20 -o /tmp/wallet-db-delete.json -w '%{http_code}' -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$db_url")" || delete_code=000
+              if [[ "$delete_code" == 200 || "$delete_code" == 404 ]]; then
+                for attempt in 1 2 3 4 5; do
+                  probe_code="$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$db_url")" || probe_code=000
+                  if [[ "$probe_code" == 404 ]]; then database_deleted=true; break; fi
+                  sleep 1
+                done
+              fi
+            fi
+            [[ "$database_deleted" == true ]] || status=1
+          elif [[ -n "${E2E_DB_ID:-}" ]]; then
+            status=1
           fi
+
+          rm -f /tmp/wallet-worker-delete.json /tmp/wallet-db-before.json /tmp/wallet-db-delete.json
           rm -f "${E2E_KEYS_FILE:-}" "${E2E_SEED_FILE:-}" "${E2E_RACE_KEYS_FILE:-}" "${E2E_RACE_SEED_FILE:-}" wrangler.wallet-e2e.json
-          jq -nc --argjson ok "$([[ $status -eq 0 ]] && echo true || echo false)" '{cleanup_attempted:true,cleanup_commands_succeeded:$ok}' > .audit/wallet-sandbox-cleanup.json
+          jq -nc \
+            --argjson worker_deleted "$worker_deleted" \
+            --argjson database_deleted "$database_deleted" \
+            --argjson safe_target "$safe_target" \
+            --argjson ok "$([[ $status -eq 0 ]] && echo true || echo false)" \
+            '{cleanup_attempted:true,safe_target:$safe_target,worker_deleted:$worker_deleted,database_deleted:$database_deleted,status:(if $ok then "passed" else "failed" end)}' \
+            > .audit/wallet-sandbox-cleanup.json
           exit $status
 
       - name: Archive sanitized evidence and tracked source only
