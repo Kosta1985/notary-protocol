@@ -6,7 +6,13 @@ const runner = createCheckRunner();
 const context = {};
 
 async function requestJson(path, init = {}, expected = [200]) {
-  const response = await fetch(`${base}${path}`, init);
+  const response = await fetch(`${base}${path}`, {
+    ...init,
+    headers: {
+      "x-notary-monitor": "live-smoke",
+      ...(init.headers ?? {})
+    }
+  });
   const text = await response.text();
   assert.ok(expected.includes(response.status), `${path}: HTTP ${response.status}: ${text.slice(0, 300)}`);
   try {
