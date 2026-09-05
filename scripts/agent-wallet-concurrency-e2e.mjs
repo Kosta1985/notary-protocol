@@ -3,12 +3,11 @@ import fs from 'node:fs';
 import { createSignedAgentRequest, importAgentPrivateJwk } from '../examples/agent-wallet/signed-client.mjs';
 import { isolatedBaseUrl, sandboxJson, SandboxHttpError } from './lib/wallet-e2e-http.mjs';
 
+const IDS = ['ACCORD-AGENT-RACE-A', 'ACCORD-AGENT-RACE-B', 'ACCORD-AGENT-GUARD-A', 'ACCORD-AGENT-GUARD-B'];
 const command = process.argv[2];
 if (command === 'prepare') await prepare(process.argv[3], process.argv[4]);
 else if (command === 'run') await run(process.argv[3], process.argv[4]);
 else throw new Error('Usage: node scripts/agent-wallet-concurrency-e2e.mjs prepare <keys.json> <seed.sql> | run <baseUrl> <keys.json>');
-
-const IDS = ['ACCORD-AGENT-RACE-A', 'ACCORD-AGENT-RACE-B', 'ACCORD-AGENT-GUARD-A', 'ACCORD-AGENT-GUARD-B'];
 
 async function prepare(keysPath, seedPath) {
   if (!keysPath || !seedPath) throw new Error('prepare requires key and seed paths');
