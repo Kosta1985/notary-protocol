@@ -1,3 +1,5 @@
+import {prepareAlertDelivery} from './alert-adapters.js';
+
 const JSON_HEADERS={"content-type":"application/json; charset=utf-8"};
 const ROLES={viewer:1,responder:2,admin:3};
 const MAX_SKEW_MS=10*60*1000;
@@ -7,7 +9,7 @@ export async function handleControlPlane(request,env,url=new URL(request.url)){
   const auth=await authenticate(request,env);
   if(request.method==='GET'&&url.pathname==='/api/v1/control-plane/capabilities'){
     requireRole(auth,'viewer');
-    return reply({service:'AccordTrace Incident Control Plane',version:'0.1.0',role:auth.role,features:['incident_summary','incident_timeline','rbac','append_only_audit','lease_revocation','customer_hook_dispatch','safe_alert_dispatch','usage_metering'],product_boundary:'Defensive coordination for customer-owned or customer-authorized infrastructure only.'});
+    return reply({service:'AccordTrace Incident Control Plane',version:'0.1.0',role:auth.role,features:['incident_summary','incident_timeline','rbac','append_only_audit','lease_revocation','customer_hook_dispatch','safe_alert_dispatch','usage_metering','customer_alert_adapters'],supported_alert_adapters:['webhook','slack_webhook','email_relay'],product_boundary:'Defensive coordination for customer-owned or customer-authorized infrastructure only.'});
   }
   if(request.method==='GET'&&url.pathname==='/api/v1/control-plane/summary'){
     requireRole(auth,'viewer');
@@ -115,15 +117,16 @@ async function recordHook(env,id,type,target,eventDigest,status,errorCode){const
 
 async function dispatchAlerts(env,event){
   const cfg=safeJson(env.CONTROL_PLANE_ALERTS_JSON)||[]; const out=[];
-  for(const item of Array.isArray(cfg)?cfg:[]){if(!item||item.enabled===false)continue; const id=String(item.id||'integration'); const type=String(item.type||'webhook'); let status='skipped',errorCode=null;
-    if(type!=='webhook'){status='skipped';errorCode='adapter_not_implemented';}
-    else if(!/^https:\/\//i.test(String(item.url||''))){status='failed';errorCode='url_must_be_https';}
-    else{try{const headers={'content-type':'application/json'};if(item.bearer_token)headers.authorization=`Bearer ${item.bearer_token}`;const r=await fetch(item.url,{method:'POST',headers,body:JSON.stringify(redactedAlert(event))});status=r.ok?'sent':'failed';if(!r.ok)errorCode=`http_${r.status}`;}catch{status='failed';errorCode='network_error';}}
+  for(const item of Array.isArray(cfg)?cfg:[]){
+    if(!item||item.enabled===false)continue;
+    const id=String(item.id||'integration'); const type=String(item.type||'webhook'); let status='failed',errorCode=null;
+    const delivery=prepareAlertDelivery(item,event);
+    if(delivery.error){status=delivery.error==='unsupported_adapter'?'skipped':'failed';errorCode=delivery.error;}
+    else{try{const r=await fetch(delivery.url,{method:'POST',headers:delivery.headers,body:delivery.body,redirect:'error'});status=r.ok?'sent':'failed';if(!r.ok)errorCode=`http_${r.status}`;}catch{status='failed';errorCode='network_error';}}
     const deliveryId=`cpa_${crypto.randomUUID()}`;await env.DB.prepare(`INSERT INTO control_plane_alert_deliveries (id,integration_id,integration_type,event_digest,status,error_code,created_at) VALUES (?1,?2,?3,?4,?5,?6,?7)`).bind(deliveryId,id,type,event.event_digest,status,errorCode,new Date().toISOString()).run();out.push({integration_id:id,type,status,error_code:errorCode});
   }
   return out;
 }
-function redactedAlert(e){return{kind:e.kind,severity:e.severity,target_type:e.target_type||null,target_ref:e.target_ref||null,event_digest:e.event_digest,occurred_at:e.occurred_at,message:e.message||null,source:'AccordTrace Control Plane',contains_secrets:false}}
 
 async function meter(env,metric,plan){const date=new Date().toISOString().slice(0,10),now=new Date().toISOString();await env.DB.prepare(`INSERT INTO control_plane_usage_daily (usage_date,plan,metric,quantity,updated_at) VALUES (?1,?2,?3,1,?4) ON CONFLICT(usage_date,plan,metric) DO UPDATE SET quantity=quantity+1,updated_at=excluded.updated_at`).bind(date,String(plan),metric,now).run();}
 async function first(env,sql){return env.DB.prepare(sql).first()} function num(r){return Number(r?.count??0)}
