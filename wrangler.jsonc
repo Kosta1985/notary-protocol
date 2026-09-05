@@ -51,7 +51,12 @@
     }
   ],
   "vars": {
-    "STRIPE_PRICE_AGENT_PASSPORT": "price_1UC8x6L1V4ptaCD2i8kiwoPF"
+    "STRIPE_PRICE_AGENT_PASSPORT": "price_1UC8x6L1V4ptaCD2i8kiwoPF",
+    "PUBLIC_BASE_URL": "https://accordtrace.notary-labs.workers.dev",
+    "PASSPORT_PRODUCT_PRICE_ATOMIC": "200",
+    "PASSPORT_PRODUCT_CURRENCY": "usd",
+    "AFFILIATE_PASSPORT_PRICE_ATOMIC": "200",
+    "AFFILIATE_CURRENCY": "usd"
   },
   "observability": {"enabled": true}
 }
