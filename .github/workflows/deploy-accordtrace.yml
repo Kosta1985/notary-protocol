@@ -9,6 +9,7 @@ on:
       - "cloudflare/**"
       - "scripts/**"
       - "docs/openapi-fragments/**"
+      - "wrangler.jsonc"
       - ".github/workflows/deploy-accordtrace.yml"
 
 permissions:
