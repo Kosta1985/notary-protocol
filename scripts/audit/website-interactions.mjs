@@ -2,7 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { pathToFileURL } from 'node:url';
-const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
+const browsers = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).href);
+const engine = process.env.BROWSER_ENGINE || 'chromium';
+assert.ok(['chromium', 'firefox', 'webkit'].includes(engine), 'Unsupported browser engine');
 const origin='https://website-fixture.accordtrace.test';
 const assets=path.resolve('cloudflare/public');
 const agent='agtp_'+'a'.repeat(64),proof='atp_'+'b'.repeat(32),receipt='ntr_'+'c'.repeat(24),cert='atpc_'+'d'.repeat(32);
@@ -10,7 +12,8 @@ const response=(body,status=200)=>({status,contentType:'application/json',body:J
 const absent=()=>response({error:'not_found'},404);
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.txt':'text/plain'};
-const browser=await chromium.launch({headless:true});
+const browser=await browsers[engine].launch({headless:true});
+const browserVersion=browser.version();
 const results=[];
 async function scenario(name,route,api,run){
   const context=await browser.newContext({viewport:{width:390,height:844}});
@@ -113,5 +116,5 @@ try{
   });
 }finally{await browser.close()}
 await fs.mkdir('.audit',{recursive:true});
-await fs.writeFile('.audit/website-interactions.json',JSON.stringify({checked_at:new Date().toISOString(),scope:'Isolated Chromium UI fixtures. Every network request is intercepted; no Stripe, Cloudflare or production API request occurs.',passed:results.filter(x=>x.ok).length,total:results.length,results},null,2));
+await fs.writeFile('.audit/website-interactions.json',JSON.stringify({checked_at:new Date().toISOString(),browser:engine,browser_version:browserVersion,scope:`Isolated ${engine} UI fixtures. Every network request is intercepted; no Stripe, Cloudflare or production API request occurs.`,passed:results.filter(x=>x.ok).length,total:results.length,results},null,2));
 if(results.some(x=>!x.ok))process.exitCode=1;

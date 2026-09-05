@@ -10,8 +10,15 @@ permissions:
   contents: read
 jobs:
   browser:
+    name: UI fixtures (${{ matrix.browser }})
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    env:
+      BROWSER_ENGINE: ${{ matrix.browser }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -23,14 +30,14 @@ jobs:
       - name: Install isolated browser tooling
         run: |
           npm install --prefix "$RUNNER_TEMP/ui-browser" --no-package-lock --no-audit --no-fund playwright@1.55.0
-          "$RUNNER_TEMP/ui-browser/node_modules/.bin/playwright" install --with-deps chromium
+          "$RUNNER_TEMP/ui-browser/node_modules/.bin/playwright" install --with-deps "$BROWSER_ENGINE"
           echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/ui-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
       - name: Exercise mocked interaction and error scenarios
         run: node scripts/audit/website-interactions.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: browser-regressions-${{ github.sha }}
+          name: browser-regressions-${{ matrix.browser }}-${{ github.sha }}
           path: .audit/
           include-hidden-files: true
           retention-days: 7
