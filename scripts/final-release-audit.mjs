@@ -23,6 +23,9 @@ const required = [
   'cloudflare/src/interoperability.js',
   'cloudflare/src/passport-product.js',
   'cloudflare/src/affiliate.js',
+  'cloudflare/src/alert-adapters.js',
+  'cloudflare/src/control-plane.js',
+  'cloudflare/src/control-plane-hardening.js',
   'web/.well-known/agent.json',
   'web/.well-known/mcp.json',
   'adapters/a2a/agent-card.json',
@@ -46,6 +49,9 @@ if (!failures.length) {
   const interoperability = read('cloudflare/src/interoperability.js');
   const affiliate = read('cloudflare/src/affiliate.js');
   const passport = read('cloudflare/src/passport-product.js');
+  const alertAdapters = read('cloudflare/src/alert-adapters.js');
+  const controlPlane = read('cloudflare/src/control-plane.js');
+  const controlPlaneHardening = read('cloudflare/src/control-plane-hardening.js');
   const deploy = read('.github/workflows/deploy-accordtrace.yml');
   const campaign = read('docs/PASSPORT_LAUNCH_CAMPAIGN.md');
 
@@ -82,6 +88,14 @@ if (!failures.length) {
   ok('economics:us2-passport', campaign.includes('US$2'));
   ok('economics:us1-direct-referral', campaign.includes('US$1'));
   ok('economics:one-level-only', /one[ -]level/i.test(campaign) && /no (multilevel|downline)/i.test(campaign));
+
+  for (const type of ['webhook', 'slack_webhook', 'email_relay']) {
+    ok(`control-plane:alert-adapter:${type}`, alertAdapters.includes(`'${type}'`) && controlPlane.includes(`'${type}'`) && controlPlaneHardening.includes(`'${type}'`));
+  }
+  ok('control-plane:alert-payload-redacted', alertAdapters.includes('contains_secrets:false') && !alertAdapters.includes('payment_payload') && !alertAdapters.includes('private_key'));
+  ok('control-plane:shared-adapter-layer', controlPlane.includes('prepareAlertDelivery') && controlPlaneHardening.includes('prepareAlertDelivery'));
+  ok('control-plane:hardened-alert-hmac', controlPlaneHardening.includes('x-accordtrace-signature') && controlPlaneHardening.includes('hmacSha256Hex'));
+  ok('control-plane:bounded-alert-retry', controlPlaneHardening.includes('MAX_ATTEMPTS=5') && controlPlaneHardening.includes('RETRY_SECONDS=[60,300,1800,7200,21600]') && controlPlaneHardening.includes('dead_letter'));
 
   ok('deploy:migrations-before-worker', deploy.includes('d1 migrations apply') && deploy.includes('wrangler@latest deploy') && deploy.indexOf('d1 migrations apply') < deploy.indexOf('wrangler@latest deploy'));
   ok('deploy:exact-sha-verification', deploy.includes('EXPECTED_RELEASE_SHA') && deploy.includes('smoke:production'));
