@@ -1,53 +1,52 @@
-const value = (totals, name) => Number(totals[name] ?? 0);
-const percentage = (numerator, denominator) => denominator ? `${Math.round((numerator / denominator) * 100)}%` : "—";
-
-try {
-  const response = await fetch("/v1/stats", { cache: "no-store" });
-  if (!response.ok) throw new Error(`Stats unavailable (${response.status})`);
-  const stats = await response.json();
-  const views = value(stats.totals, "page_view");
-  const demos = value(stats.totals, "demo_loaded");
-  const attempts = value(stats.totals, "verification_started");
-  const valid = value(stats.totals, "verification_valid");
-  const invalid = value(stats.totals, "verification_invalid");
-  const agentAttempts = value(stats.totals, "a2a_started");
+import { formatCount, formatRatio, loadServiceStats, statisticsError } from './stats-data.js';
+const el = id => document.getElementById(id);
+const metrics = ['metric-proofs-created', 'metric-proofs-verified', 'metric-mcp-requests', 'metric-a2a-requests', 'metric-views', 'metric-demos', 'metric-verifications', 'metric-agents', 'metric-retrievals', 'metric-pilot-views', 'metric-pilot-requests', 'rate-demo', 'rate-verify', 'rate-valid', 'rate-agents'];
+let controller = null, generation = 0;
+function render(stats) {
+  const value = name => stats.totals[name] ?? 0;
+  const views = value('page_view'), demos = value('demo_loaded'), attempts = value('verification_started'), valid = value('verification_valid'), invalid = value('verification_invalid'), agentAttempts = value('a2a_started');
   const completed = valid + invalid;
-
-  document.querySelector("#metric-views").textContent = views.toLocaleString();
-  document.querySelector("#metric-demos").textContent = demos.toLocaleString();
-  document.querySelector("#metric-verifications").textContent = attempts.toLocaleString();
-  document.querySelector("#metric-agents").textContent = agentAttempts.toLocaleString();
-  document.querySelector("#metric-retrievals").textContent = value(stats.totals, "receipt_retrieved").toLocaleString();
-  document.querySelector("#rate-demo").textContent = percentage(demos, views);
-  document.querySelector("#rate-verify").textContent = percentage(completed, attempts);
-  document.querySelector("#rate-valid").textContent = percentage(valid, completed);
-  document.querySelector("#rate-agents").textContent = percentage(agentAttempts, attempts);
-  document.querySelector("#metric-pilot-views").textContent = value(stats.totals, "pilot_page_view").toLocaleString();
-  document.querySelector("#metric-pilot-requests").textContent = value(stats.totals, "pilot_apply").toLocaleString();
-  document.querySelector("#activity-updated").textContent = `Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
-
-  const maximum = Math.max(1, ...stats.daily.map((row) => value(row, "verification_started")));
-  const chart = document.querySelector("#activity-chart");
-  if (!stats.daily.length) {
-    chart.textContent = "No activity recorded yet.";
-  } else {
-    chart.replaceChildren(...stats.daily.map((row) => {
-      const count = value(row, "verification_started");
-      const item = document.createElement("div");
-      const date = document.createElement("time");
-      const track = document.createElement("span");
-      const bar = document.createElement("i");
-      const total = document.createElement("strong");
-      date.dateTime = row.day;
-      date.textContent = new Date(`${row.day}T00:00:00Z`).toLocaleDateString([], { month: "short", day: "numeric", timeZone: "UTC" });
-      bar.style.width = `${Math.max(2, (count / maximum) * 100)}%`;
-      track.append(bar);
-      total.textContent = count.toLocaleString();
-      item.append(date, track, total);
-      return item;
-    }));
-  }
-} catch (error) {
-  document.querySelector("#activity-chart").textContent = error.message;
-  document.querySelector("#activity-updated").textContent = "Unavailable";
+  // Independently valid counters must still have a safely representable sum.
+  if (!Number.isSafeInteger(completed)) throw new Error('counter_sum_invalid');
+  const values = {
+    'metric-proofs-created': formatCount(value('proof_created')), 'metric-proofs-verified': formatCount(value('proof_verified')),
+    'metric-mcp-requests': formatCount(value('mcp_request')), 'metric-a2a-requests': formatCount(value('a2a_request')),
+    'metric-views': formatCount(views), 'metric-demos': formatCount(demos),
+    'metric-verifications': formatCount(attempts), 'metric-agents': formatCount(agentAttempts),
+    'metric-retrievals': formatCount(value('receipt_retrieved')),
+    'metric-pilot-views': formatCount(value('pilot_page_view')), 'metric-pilot-requests': formatCount(value('pilot_apply')),
+    'rate-demo': formatRatio(demos, views), 'rate-verify': formatRatio(completed, attempts),
+    'rate-valid': formatRatio(valid, completed), 'rate-agents': formatRatio(agentAttempts, attempts)
+  };
+  for (const [id, text] of Object.entries(values)) el(id).textContent = text;
+  el('activity-window').textContent = `Public telemetry \u00b7 ${stats.windowDays} days`;
+  const ratios = [[demos, views], [completed, attempts], [valid, completed], [agentAttempts, attempts]];
+  el('activity-ratio-note').textContent = 'These are ratios of legacy demo/receipt events, not customer conversion rates or unique-agent counts. Modern proof and protocol events are shown separately. A dash means the denominator is zero or the counts are not comparable within this window.'
+    + (ratios.some(([a, b]) => a > b) ? ' Some completions or repeats may relate to events outside the returned window; those ratios are not shown.' : '');
+  const maximum = Math.max(1, ...stats.daily.map(row => row.verification_started ?? 0));
+  if (!stats.daily.length) el('activity-chart').textContent = 'No activity was recorded in this returned window.';
+  else el('activity-chart').replaceChildren(...stats.daily.map(row => {
+    const count = row.verification_started ?? 0;
+    const item = document.createElement('div'), date = document.createElement('time'), track = document.createElement('span'), bar = document.createElement('i'), total = document.createElement('strong');
+    date.dateTime = row.day;
+    date.textContent = new Date(`${row.day}T00:00:00Z`).toLocaleDateString([], { month: 'short', day: 'numeric', timeZone: 'UTC' });
+    bar.style.width = `${count / maximum * 100}%`; bar.setAttribute('aria-hidden', 'true');
+    track.append(bar); total.textContent = formatCount(count); item.append(date, track, total); return item;
+  }));
+  el('activity-updated').textContent = `Retrieved ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 }
+async function refresh() {
+  controller?.abort(); controller = new AbortController(); const current = ++generation;
+  el('activity-refresh').disabled = true; el('activity-data').setAttribute('aria-busy', 'true');
+  metrics.forEach(id => { el(id).textContent = '\u2014'; });
+  el('activity-updated').textContent = 'Loading...'; el('activity-chart').textContent = 'Loading recorded events...';
+  el('activity-window').textContent = 'Public telemetry'; el('activity-ratio-note').textContent = 'Event ratios will appear only after a valid statistics snapshot is returned.';
+  try { const stats = await loadServiceStats({ signal: controller.signal }); if (current === generation) render(stats); }
+  catch (error) {
+    if (current === generation) { metrics.forEach(id => { el(id).textContent = '\u2014'; }); el('activity-chart').textContent = statisticsError(error); el('activity-updated').textContent = 'Unavailable'; }
+  } finally { if (current === generation) { el('activity-refresh').disabled = false; el('activity-data').setAttribute('aria-busy', 'false'); } }
+}
+el('activity-refresh').addEventListener('click', refresh);
+window.addEventListener('pagehide', () => { generation++; controller?.abort(); });
+window.addEventListener('pageshow', event => { if (event.persisted) void refresh(); });
+void refresh();

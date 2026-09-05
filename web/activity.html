@@ -10,29 +10,42 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/styles.css">
     <script type="module" src="/activity.js"></script>
-  <link rel="stylesheet" href="/site-resilience.css"></head>
+  <link rel="stylesheet" href="/site-resilience.css"><link rel="stylesheet" href="/statistics.css"></head>
   <body class="activity-page"><a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="site-header scrolled">
       <a class="brand" href="/"><span>ACCORDTRACE</span></a>
       <a class="header-action" href="/">Return to AccordTrace</a>
     </header>
     <main id="main-content" class="activity-content">
+      <div id="activity-data">
       <div class="activity-heading">
-        <div><p class="eyebrow">Public telemetry · 30 days</p><h1>AccordTrace activity</h1></div>
-        <p>Aggregate event counts only. No user identifiers, IP addresses, fingerprints, or evidence contents are stored in the analytics database.</p>
+        <div><p class="eyebrow" id="activity-window">Public telemetry · 30 days</p><h1>AccordTrace activity</h1></div>
+        <p>This view contains aggregate event counters, not unique people or agents. Recorded events are not customer conversion rates.</p>
       </div>
-      <section class="activity-totals" aria-label="Activity totals">
+      <button type="button" id="activity-refresh">Refresh activity</button>
+      <noscript><p>JavaScript is required to load recorded activity. No totals are inferred while it is disabled.</p></noscript>
+      <h2 class="activity-subheading">Agent protocol activity</h2>
+      <p>Modern proof and protocol events, counted separately from the legacy demo below. Requests are not unique agents.</p>
+      <section class="activity-totals" aria-label="Agent protocol event totals">
+        <div><span>Proof records created</span><strong id="metric-proofs-created">—</strong></div>
+        <div><span>Successful proof checks</span><strong id="metric-proofs-verified">—</strong></div>
+        <div><span>MCP requests</span><strong id="metric-mcp-requests">—</strong></div>
+        <div><span>A2A requests</span><strong id="metric-a2a-requests">—</strong></div>
+      </section>
+      <h2 class="activity-subheading">Website and legacy demo activity</h2>
+      <section class="activity-totals" aria-label="Website and legacy demo event totals">
         <div><span>Page views</span><strong id="metric-views">—</strong></div>
         <div><span>Demo loads</span><strong id="metric-demos">—</strong></div>
-        <div><span>Verifications</span><strong id="metric-verifications">—</strong></div>
-        <div><span>A2A verifications</span><strong id="metric-agents">—</strong></div>
+        <div><span>Legacy verifications</span><strong id="metric-verifications">—</strong></div>
+        <div><span>Legacy A2A verifications</span><strong id="metric-agents">—</strong></div>
       </section>
       <section class="activity-funnel" aria-labelledby="funnel-title">
-        <div><p class="eyebrow">Usage funnel</p><h2 id="funnel-title">From visit to receipt.</h2></div>
+        <div><p class="eyebrow">Legacy event ratios</p><h2 id="funnel-title">Activity, without inflated claims.</h2>
+        <p id="activity-ratio-note">Ratios compare event counters, not distinct customer journeys.</p></div>
         <dl>
           <div><dt>Demo engagement</dt><dd id="rate-demo">—</dd></div>
           <div><dt>Verification completion</dt><dd id="rate-verify">—</dd></div>
-          <div><dt>Valid evidence</dt><dd id="rate-valid">—</dd></div>
+          <div><dt>Valid recorded results</dt><dd id="rate-valid">—</dd></div>
           <div><dt>A2A share</dt><dd id="rate-agents">—</dd></div>
           <div><dt>Pilot page views</dt><dd id="metric-pilot-views">—</dd></div>
           <div><dt>Pilot requests</dt><dd id="metric-pilot-requests">—</dd></div>
@@ -40,9 +53,10 @@
         </dl>
       </section>
       <section class="activity-history" aria-labelledby="history-title">
-        <div class="activity-section-title"><h2 id="history-title">Daily verification attempts</h2><span id="activity-updated">Loading…</span></div>
+        <div class="activity-section-title"><h2 id="history-title">Daily legacy verification attempts</h2><span id="activity-updated" role="status">Loading…</span></div>
         <div id="activity-chart" class="activity-chart" aria-live="polite"></div>
       </section>
+      </div>
     </main>
   </body>
 </html>

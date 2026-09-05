@@ -53,6 +53,9 @@ jobs:
       - name: Read-only desktop and mobile browser audit
         if: always()
         run: node scripts/audit/website-browser.mjs
+      - name: Read-only statistics snapshots and keyboard refresh
+        if: always()
+        run: node scripts/audit/website-statistics.mjs
       - name: Upload audit evidence
         if: always()
         uses: actions/upload-artifact@v4
