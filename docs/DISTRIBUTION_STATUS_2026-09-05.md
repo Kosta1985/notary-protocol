@@ -4,7 +4,7 @@ This matrix separates **canonical AccordTrace state** from third-party directory
 
 Canonical service state on this date:
 
-- Production baseline: `027ae0f068b118f7fc03bdd3dc8ae20d69b9960d`
+- Production baseline: `24ff514027530eb45c05ef661a77876f3c1d2358`
 - Service: `https://accordtrace.notary-labs.workers.dev`
 - AccordTrace discovery version: `0.2.1`
 - A2A protocol: `1.0`
@@ -18,14 +18,14 @@ Canonical service state on this date:
 
 | Surface | Public state checked 2026-09-05 | Endpoint / listing | Freshness assessment | Next action |
 | --- | --- | --- | --- | --- |
-| AccordTrace canonical service | Live; CI #864, deploy #58, production smoke #89 and live contract #49 are green on exact production SHA `027ae0f0...` | `https://accordtrace.notary-labs.workers.dev` | **Authoritative / current** | Keep exact-SHA deploy verification and release audit green |
+| AccordTrace canonical service | Live; CI #879, deploy #59, production smoke #90, live contract #50 and Agenstry validator #31 are green on exact production SHA `24ff5140...` | `https://accordtrace.notary-labs.workers.dev` | **Authoritative / current** | Keep exact-SHA deploy verification and release audit green |
 | Official MCP Registry | Published as `io.github.Kosta1985/accord-trace` v0.2.1; repository live registry checks validate version/tool publication | `io.github.Kosta1985/accord-trace` | **Current** | Keep registry metadata synchronized with production |
 | Glama MCP connector | Public listing exists, reports `Healthy`, Streamable HTTP, repository `Kosta1985/notary-protocol`; public tool snapshot currently shows the original four proof tools | `https://glama.ai/mcp/connectors/io.github.Kosta1985/accord-trace` | **Indexed and healthy; tool snapshot partially stale** | Claim ownership through Glama when convenient; then monitor metadata/tool refresh and quality score |
 | A2A Registry | Public listing exists as `dev.workers.accord_trace`; reports A2A 1.0 and canonical manifest URL, but cached card metadata still shows older version/skill state; listing is unclaimed | `https://www.a2a-registry.org/agent/dev.workers.accord_trace` | **Indexed; cached metadata stale** | Claim if ownership flow is useful/available; request/trigger refresh without changing canonical runtime backward |
 | Agenstry | Public provider page remains stale while current post-deploy validator succeeds against the live runtime | `https://agenstry.com/providers/Accord%20Trace` | **Public presentation stale; live validator current** | Keep issue #14 open until public index converges |
 | Ahel integration catalog | Public catalog includes `accord-trace` from `Kosta1985/notary-protocol` and marks it `Serves today` | `https://ahel.ai/catalog/integrations` | **Independent mirror discovered / current enough to show service availability** | Monitor only; do not imply partnership or endorsement |
 | Ahel MCP catalog | Public MCP catalog also includes `accord-trace` and marks it `Serves today` | `https://ahel.ai/catalog/mcp-servers` | **Independent registry mirror** | Monitor only |
-| Cline MCP Marketplace submission | Submission issue #2358 is open. README-only Cline setup checkbox remains deliberately unchecked because that exact Cline-specific install test has not been reproduced | `https://github.com/cline/mcp-marketplace/issues/2358` | **Submitted; not accepted/listed yet** | Reproduce a real Cline setup from README/agent install guidance before checking the box; add marketplace asset if required |
+| Cline MCP Marketplace submission | Submission issue #2358 is open. AccordTrace now has an explicit Cline remote Streamable HTTP setup in `README.md` and root `llms-install.md`, guarded by `release:audit`; the manual Cline-client test checkbox remains deliberately unchecked because a real Cline runtime test has not yet been reproduced | `https://github.com/cline/mcp-marketplace/issues/2358` | **Install-ready and submitted; not accepted/listed yet; manual client test pending** | Reproduce the documented setup in a real Cline client before checking the external test box; add marketplace asset only if still required |
 | LobeHub MCP Marketplace | Fallback request issue #18808 remains open; current maintainer guidance prefers the self-service CLI for listing/claim/update flows | `https://github.com/lobehub/lobehub/issues/18808` | **Requested; not accepted/listed yet** | Complete self-service publication only with an authenticated GitHub-linked session; do not claim listing beforehand |
 | Smithery | Outreach/request for indexing guidance previously recorded; no independently visible AccordTrace listing confirmed in this audit | — | **Unconfirmed** | Use authenticated publication flow if/when available; do not claim listing |
 | MCP.so | Outreach/request previously recorded; no independently visible AccordTrace listing confirmed in this audit | — | **Unconfirmed** | Re-check submission path before any new request; avoid duplicate/spam submissions |
@@ -71,6 +71,10 @@ The canonical copy/paste metadata and directory-specific field mapping are maint
 
 `docs/DIRECTORY_SUBMISSION_PACK_2026-09-05.md`
 
+Cline-specific remote setup is maintained in:
+
+`llms-install.md`
+
 ## Sources checked
 
 Public pages checked during this audit include:
@@ -79,7 +83,7 @@ Public pages checked during this audit include:
 - A2A Registry Accord Trace listing
 - Agenstry Accord Trace provider listing
 - Ahel integration and MCP catalogs
-- Cline marketplace issue #2358
+- Cline marketplace issue #2358 and current Streamable HTTP configuration guidance
 - LobeHub issue #18808 and current maintainer self-service guidance
 - MCP.Directory submit page
 - TrackMCP submit page
@@ -91,9 +95,9 @@ Public pages checked during this audit include:
 
 Repository workflow evidence used for canonical state:
 
-- main CI #864
-- production deploy #58 with exact-SHA verification
-- AccordTrace production smoke #89
-- Accord Trace live contract #49
-- Agenstry discovery validator #30
+- main CI #879
+- production deploy #59 with exact-SHA verification
+- AccordTrace production smoke #90
+- Accord Trace live contract #50
+- Agenstry discovery validator #31
 - MCP registry validation workflow
