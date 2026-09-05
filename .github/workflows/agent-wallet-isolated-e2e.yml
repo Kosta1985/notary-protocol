@@ -5,7 +5,14 @@ on:
     branches: [test/agent-wallet-isolated-e2e-20260905]
     paths:
       - scripts/agent-wallet-isolated-e2e.mjs
+      - scripts/lib/wallet-e2e-http.mjs
+      - test/wallet-e2e-http.test.mjs
       - cloudflare/src/worker-v2.js
+      - cloudflare/src/agent-wallet.js
+      - cloudflare/src/wallet-guardian.js
+      - cloudflare/src/wallet-*.js
+      - cloudflare/src/wallet/**
+      - cloudflare/migrations/**
       - .github/workflows/agent-wallet-isolated-e2e.yml
   workflow_dispatch:
 
@@ -20,15 +27,6 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      CF_TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CF_TOKEN_2: ${{ secrets.CLOUDFLARE_TOKEN }}
-      CF_TOKEN_3: ${{ secrets.CF_API_TOKEN }}
-      CF_TOKEN_4: ${{ secrets.CF_TOKEN }}
-      CF_ACCOUNT_1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CF_ACCOUNT_2: ${{ secrets.CF_ACCOUNT_ID }}
-      CF_ACCOUNT_3: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
-      CF_ACCOUNT_4: ${{ vars.CF_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -36,23 +34,33 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-
       - name: Validate source before external sandbox
-        run: |
-          npm test
-          npm run production:check
-          npm run cf:prepare
-
-      - name: Resolve Cloudflare credentials
-        id: cf
         shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .audit
+          git archive --format=zip --output=.audit/wallet-source.zip HEAD
+          npm test | tee .audit/unit-tests.log
+          npm run production:check | tee .audit/source-readiness.log
+          npm run cf:prepare
+      - name: Resolve Cloudflare credentials
+        shell: bash
+        env:
+          CF_TOKEN_1: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_TOKEN_2: ${{ secrets.CLOUDFLARE_TOKEN }}
+          CF_TOKEN_3: ${{ secrets.CF_API_TOKEN }}
+          CF_TOKEN_4: ${{ secrets.CF_TOKEN }}
+          CF_ACCOUNT_1: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ACCOUNT_2: ${{ secrets.CF_ACCOUNT_ID }}
+          CF_ACCOUNT_3: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CF_ACCOUNT_4: ${{ vars.CF_ACCOUNT_ID }}
         run: |
           set -euo pipefail
           token=""
           for candidate in "${CF_TOKEN_1:-}" "${CF_TOKEN_2:-}" "${CF_TOKEN_3:-}" "${CF_TOKEN_4:-}"; do
             if [[ -n "$candidate" ]]; then token="$candidate"; break; fi
           done
-          if [[ -z "$token" ]]; then echo 'Cloudflare token is required for isolated e2e.' >&2; exit 2; fi
+          [[ -n "$token" ]] || { echo 'Cloudflare token is required.' >&2; exit 2; }
           echo "::add-mask::$token"
           echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
           account=""
@@ -60,84 +68,64 @@ jobs:
             if [[ -n "$candidate" ]]; then account="$candidate"; break; fi
           done
           if [[ -z "$account" ]]; then
-            account="$(curl --fail --silent --show-error -H "Authorization: Bearer $token" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id // empty')"
+            account="$(curl --fail --silent --show-error --max-time 20 -H "Authorization: Bearer $token" https://api.cloudflare.com/client/v4/accounts | jq -r 'if (.result | length) == 1 then .result[0].id else empty end')"
           fi
-          [[ "$account" =~ ^[a-f0-9]{32}$ ]] || { echo 'Cloudflare account could not be resolved.' >&2; exit 3; }
+          [[ "$account" =~ ^[a-f0-9]{32}$ ]] || { echo 'An unambiguous Cloudflare account is required.' >&2; exit 3; }
           echo "CLOUDFLARE_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
-
       - name: Create isolated Worker and D1 identities
         shell: bash
         run: |
           set -euo pipefail
           api='https://api.cloudflare.com/client/v4'
-          worker="at-wallet-e2e-${GITHUB_RUN_ID}"
-          db_name="${worker}"
-          response="$(curl --fail-with-body --silent --show-error \
-            -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'content-type: application/json' \
-            --data "$(jq -nc --arg name "$db_name" '{name:$name}')" \
-            "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
-          db_id="$(printf '%s' "$response" | jq -r '.result.uuid // empty')"
-          [[ "$db_id" =~ ^[a-f0-9-]{36}$ ]] || { echo 'Isolated D1 database was not created.' >&2; exit 4; }
-          subdomain="$(curl --fail --silent --show-error -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty' || true)"
-          if [[ -z "$subdomain" ]]; then subdomain='notary-labs'; fi
+          worker="at-wallet-e2e-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           echo "E2E_WORKER=$worker" >> "$GITHUB_ENV"
+          response="$(curl --fail-with-body --silent --show-error --max-time 20 -X POST -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H 'content-type: application/json' --data "$(jq -nc --arg name "$worker" '{name:$name}')" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database")"
+          db_id="$(printf '%s' "$response" | jq -r '.result.uuid // empty')"
+          [[ "$db_id" =~ ^[a-f0-9-]{36}$ ]] || { echo 'Isolated D1 was not created.' >&2; exit 4; }
           echo "E2E_DB_ID=$db_id" >> "$GITHUB_ENV"
+          subdomain="$(curl --fail --silent --show-error --max-time 20 -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/subdomain" | jq -r '.result.subdomain // empty')"
+          [[ "$subdomain" =~ ^[a-z0-9-]+$ ]] || { echo 'Worker subdomain unavailable.' >&2; exit 5; }
           echo "E2E_BASE_URL=https://${worker}.${subdomain}.workers.dev" >> "$GITHUB_ENV"
-          mkdir -p .audit
-          jq -nc --arg worker "$worker" --arg database "$db_name" '{sandbox_created:true,worker:$worker,database:$database,real_funds:false,credit_or_lending:false}' > .audit/wallet-sandbox-resources.json
-
+          jq -nc --arg worker "$worker" '{sandbox_created:true,worker:$worker,real_funds:false,credit_or_lending:false}' > .audit/wallet-sandbox-resources.json
       - name: Build isolated fail-closed config
-        shell: bash
         run: |
-          set -euo pipefail
-          node <<'NODE'
+          node --input-type=module <<'NODE'
           import fs from 'node:fs';
-          const config=JSON.parse(fs.readFileSync('wrangler.jsonc','utf8'));
-          config.name=process.env.E2E_WORKER;
-          config.workers_dev=true;
-          config.preview_urls=false;
-          delete config.triggers;
-          config.d1_databases[0].database_id=process.env.E2E_DB_ID;
-          config.vars={
-            PUBLIC_BASE_URL:process.env.E2E_BASE_URL,
-            WALLET_MODE:'testnet',
-            WALLET_PROVIDER:'accord_test',
-            WALLET_NETWORK:'accord:isolated-testnet',
-            WALLET_CHAIN_ID:'0',
-            TEST_WALLET_INITIAL_USDC_ATOMIC:'100000000',
-            FEATURE_AGENT_WALLETS:'true',
-            FEATURE_AGENT_PAYMENTS:'true',
-            FEATURE_AGENT_TREASURY:'true',
-            FEATURE_ECONOMIC_TRUST:'true',
-            FEATURE_GUARDIAN_CONTROLS:'true',
-            PASSPORT_CHECKOUT_ENABLED:'false',
-            WALLET_E2E_DIAGNOSTICS:'true'
+          import { isolatedBaseUrl } from './scripts/lib/wallet-e2e-http.mjs';
+          const source = JSON.parse(fs.readFileSync('wrangler.jsonc', 'utf8'));
+          const base = isolatedBaseUrl(process.env.E2E_BASE_URL);
+          if (source.main !== 'cloudflare/src/worker-v2.js') throw new Error('Unexpected runtime entrypoint');
+          const config = {
+            name: process.env.E2E_WORKER, main: source.main,
+            compatibility_date: source.compatibility_date,
+            workers_dev: true, preview_urls: false, assets: source.assets,
+            d1_databases: [{ binding: 'DB', database_name: process.env.E2E_WORKER, database_id: process.env.E2E_DB_ID, migrations_dir: 'cloudflare/migrations' }],
+            vars: {
+              PUBLIC_BASE_URL: base.origin, WALLET_MODE: 'testnet', WALLET_PROVIDER: 'accord_test',
+              WALLET_NETWORK: 'accord:isolated-testnet', WALLET_CHAIN_ID: '0',
+              TEST_WALLET_INITIAL_USDC_ATOMIC: '100000000', FEATURE_AGENT_WALLETS: 'true',
+              FEATURE_AGENT_PAYMENTS: 'true', FEATURE_AGENT_TREASURY: 'true',
+              FEATURE_ECONOMIC_TRUST: 'true', FEATURE_GUARDIAN_CONTROLS: 'true',
+              PASSPORT_CHECKOUT_ENABLED: 'false', WALLET_E2E_DIAGNOSTICS: 'true'
+            }, observability: { enabled: false }
           };
-          config.observability={enabled:false};
-          fs.writeFileSync('wrangler.wallet-e2e.json',JSON.stringify(config,null,2));
+          // Do not inherit production routes, cron, secrets, vars or other bindings.
+          fs.writeFileSync('wrangler.wallet-e2e.json', JSON.stringify(config, null, 2));
           NODE
-          if grep -Eq 'STRIPE_SECRET|STRIPE_WEBHOOK|NOTARY_PRIVATE|sk_live|rk_live|loan|credit_line|overdraft' wrangler.wallet-e2e.json; then
-            echo 'Sandbox config contains a forbidden production/credit marker.' >&2
-            exit 5
-          fi
-
       - name: Apply schema to isolated D1
-        run: npx wrangler@latest d1 migrations apply DB --remote --config wrangler.wallet-e2e.json
-
+        run: npx wrangler@4.129.0 d1 migrations apply DB --remote --config wrangler.wallet-e2e.json
       - name: Generate ephemeral Agent Passport keys and seed public keys
         shell: bash
         run: |
           set -euo pipefail
           keys="$RUNNER_TEMP/agent-wallet-e2e-keys.json"
           seed="$RUNNER_TEMP/agent-wallet-e2e-seed.sql"
-          node scripts/agent-wallet-isolated-e2e.mjs prepare "$keys" "$seed"
           echo "E2E_KEYS_FILE=$keys" >> "$GITHUB_ENV"
           echo "E2E_SEED_FILE=$seed" >> "$GITHUB_ENV"
-          npx wrangler@latest d1 execute DB --remote --config wrangler.wallet-e2e.json --file "$seed"
-
+          node scripts/agent-wallet-isolated-e2e.mjs prepare "$keys" "$seed"
+          npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.wallet-e2e.json --file "$seed"
       - name: Deploy isolated Worker
-        run: npx wrangler@latest deploy --config wrangler.wallet-e2e.json
-
+        run: npx wrangler@4.129.0 deploy --config wrangler.wallet-e2e.json
       - name: Install ephemeral Guardian operator secret
         shell: bash
         run: |
@@ -145,43 +133,63 @@ jobs:
           token="$(node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))")"
           echo "::add-mask::$token"
           echo "WALLET_E2E_OPERATOR_TOKEN=$token" >> "$GITHUB_ENV"
-          printf '%s' "$token" | npx wrangler@latest secret put WALLET_OPERATOR_TOKEN --config wrangler.wallet-e2e.json >/dev/null
-
-      - name: Wait for isolated machine contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent --show-error "$E2E_BASE_URL/api/v1/agent/wallet-capabilities" | jq -e '.wallet_enabled == true and .payments_enabled == true and .payment_contract.funded_balance_only == true and .credit_and_lending.enabled == false' >/dev/null; then
-              echo "Isolated Agent Wallet ready after attempt $attempt."
-              exit 0
-            fi
-            sleep 3
-          done
-          echo 'Isolated Agent Wallet did not become ready.' >&2
-          exit 6
-
+          printf '%s' "$token" | npx wrangler@4.129.0 secret put WALLET_OPERATOR_TOKEN --config wrangler.wallet-e2e.json >/dev/null
       - name: Run real HTTP Alpha to Beta signed-agent flow
         shell: bash
         run: |
           set -euo pipefail
           node scripts/agent-wallet-isolated-e2e.mjs run "$E2E_BASE_URL" "$E2E_KEYS_FILE" | tee .audit/wallet-sandbox-e2e.json
-
-      - name: Delete isolated Cloudflare resources
+      - name: Delete and verify isolated Cloudflare resources
         if: always()
-        shell: bash
         run: |
-          set +e
-          api='https://api.cloudflare.com/client/v4'
-          if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" && -n "${E2E_WORKER:-}" ]]; then
-            curl --silent --show-error -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$E2E_WORKER" >/tmp/worker-delete.json
-          fi
-          if [[ -n "${CLOUDFLARE_API_TOKEN:-}" && -n "${CLOUDFLARE_ACCOUNT_ID:-}" && -n "${E2E_DB_ID:-}" ]]; then
-            curl --silent --show-error -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "$api/accounts/$CLOUDFLARE_ACCOUNT_ID/d1/database/$E2E_DB_ID" >/tmp/db-delete.json
-          fi
-          rm -f "${E2E_KEYS_FILE:-}" "${E2E_SEED_FILE:-}" wrangler.wallet-e2e.json /tmp/worker-delete.json /tmp/db-delete.json
-
-      - name: Archive sanitized evidence only
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const env = process.env;
+          const report = { status: 'passed', worker_deleted: null, database_deleted: null };
+          const expected = `at-wallet-e2e-${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`;
+          const api = `https://api.cloudflare.com/client/v4/accounts/${env.CLOUDFLARE_ACCOUNT_ID}`;
+          async function call(path, method = 'GET') {
+            const r = await fetch(`${api}${path}`, { method, headers: { authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}` }, redirect: 'error', signal: AbortSignal.timeout(15000) });
+            const body = await r.json().catch(() => null);
+            return { status: r.status, ok: r.ok, body };
+          }
+          async function remove(path, probe) {
+            const deleted = await call(path, 'DELETE');
+            if (deleted.status !== 404 && !(deleted.ok && deleted.body?.success === true)) throw new Error('Delete not acknowledged');
+            for (let attempt = 0; attempt < 5; attempt++) {
+              if ((await call(probe)).status === 404) return true;
+              await new Promise(r => setTimeout(r, 500));
+            }
+            throw new Error('Deletion not verified');
+          }
+          try {
+            if (env.E2E_WORKER) {
+              if (env.E2E_WORKER !== expected || !/^[a-f0-9]{32}$/.test(env.CLOUDFLARE_ACCOUNT_ID || '')) throw new Error('Unsafe cleanup target');
+              try { report.worker_deleted = await remove(`/workers/scripts/${expected}`, `/workers/scripts/${expected}/settings`); }
+              catch { report.worker_deleted = false; report.status = 'failed'; }
+              if (env.E2E_DB_ID) {
+                try {
+                  if (!/^[a-f0-9-]{36}$/.test(env.E2E_DB_ID)) throw new Error('Invalid database identity');
+                  const path = `/d1/database/${env.E2E_DB_ID}`;
+                  const before = await call(path);
+                  if (before.status === 404) report.database_deleted = true;
+                  else {
+                    if (!before.ok || before.body?.result?.name !== expected) throw new Error('Database name mismatch');
+                    report.database_deleted = await remove(path, path);
+                  }
+                } catch { report.database_deleted = false; report.status = 'failed'; }
+              }
+            }
+          } catch { report.status = 'failed'; }
+          finally {
+            for (const file of [env.E2E_KEYS_FILE, env.E2E_SEED_FILE, 'wrangler.wallet-e2e.json']) if (file) fs.rmSync(file, { force: true });
+            fs.mkdirSync('.audit', { recursive: true });
+            fs.writeFileSync('.audit/wallet-sandbox-cleanup.json', JSON.stringify(report, null, 2));
+            console.log(JSON.stringify(report));
+          }
+          if (report.status !== 'passed') process.exitCode = 1;
+          NODE
+      - name: Archive sanitized evidence and tracked source only
         if: always()
         uses: actions/upload-artifact@v4
         with:
