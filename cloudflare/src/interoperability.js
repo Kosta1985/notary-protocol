@@ -5,6 +5,7 @@ import { handleAffiliateGrowth } from "./affiliate-growth.js";
 import { handlePassportProduct } from "./passport-product.js";
 import { passportSafeEnv } from "./passport-signer-readiness.js";
 import { recordUsage } from "./usage-analytics.js";
+import { walletCapabilities } from "./wallet-capabilities.js";
 
 const MCP_VERSION = "2026-07-28";
 const MCP_VERSIONS = [MCP_VERSION, "2025-11-25", "2025-06-18"];
@@ -106,6 +107,7 @@ const MCP_ACTIONS = {
   accord_trace_network_capabilities: "network_capabilities",
   accord_trace_network_stats: "network_stats",
   accord_trace_passport_product_capabilities: "passport_product_capabilities",
+  accord_trace_wallet_capabilities: "wallet_capabilities",
   accord_trace_resolve_referral: "resolve_referral"
 };
 
@@ -147,6 +149,11 @@ function mcpTools() {
       inputSchema: { type: "object", additionalProperties: false }
     },
     {
+      name: "accord_trace_wallet_capabilities",
+      description: "Read machine-facing Agent Wallet feature gates, Ed25519 signing contract, funded-balance policy, USDC representation and explicit no-credit/no-lending boundary. Read-only; it never creates a wallet or moves funds.",
+      inputSchema: { type: "object", additionalProperties: false }
+    },
+    {
       name: "accord_trace_resolve_referral",
       description: "Resolve a direct AccordTrace referral code to its active public referral record and disclosure without reserving attribution or creating a sale.",
       inputSchema: { type: "object", required: ["referral_code"], additionalProperties: false, properties: { referral_code: { type: "string", minLength: 1, maxLength: 80 } } }
@@ -176,6 +183,8 @@ async function executeAction(env, action, args = {}, request = null) {
       return readExistingPublicApi(env, "/api/v1/network/stats");
     case "passport_product_capabilities":
       return readExistingPublicApi(await passportSafeEnv(env), "/api/v1/passport-product/capabilities");
+    case "wallet_capabilities":
+      return walletCapabilities(env);
     case "resolve_referral": {
       if (typeof args.referral_code !== 'string' || args.referral_code.length > 80) throw new ProofError("referral_code must be a bounded string");
       const referralCode = args.referral_code.trim();
