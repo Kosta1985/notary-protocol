@@ -6,11 +6,13 @@ import { handleProofs, ProofError } from "./proofs.js";
 import { passportSafeEnv } from "./passport-signer-readiness.js";
 import { handleAgentWallet, agentWalletErrorResponse } from "./agent-wallet.js";
 import { handleWalletCapabilities } from "./wallet-capabilities.js";
+import { handleWalletGuardian, walletGuardianErrorResponse } from "./wallet-guardian.js";
 
 const application = {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const walletCapabilitiesRoute = url.pathname === '/api/v1/agent/wallet-capabilities';
+    const guardianPaymentRoute = /^\/api\/v1\/wallet-admin\/payments\/pi_[a-f0-9]{32}\/(approve|deny)$/.test(url.pathname);
     const walletRoute = url.pathname.startsWith('/api/v1/agent/') || url.pathname.startsWith('/api/v1/wallet-admin/');
     if (request.method === "OPTIONS" && (url.pathname === "/mcp" || url.pathname === "/a2a" || url.pathname.startsWith("/api/v1/proofs") || url.pathname === "/api/v1/hash" || url.pathname === "/api/v1/verify" || url.pathname === "/api/v1/stats" || walletRoute)) {
       return cors(new Response(null, { status: 204 }));
@@ -25,6 +27,15 @@ const application = {
     if (walletCapabilitiesRoute) {
       const response = handleWalletCapabilities(request, env, url);
       if (response) return cors(response);
+    }
+
+    if (guardianPaymentRoute) {
+      try {
+        const guardianResponse = await handleWalletGuardian(request, env, url);
+        if (guardianResponse) return cors(guardianResponse);
+      } catch (error) {
+        return cors(walletGuardianErrorResponse(error));
+      }
     }
 
     if (walletRoute) {
