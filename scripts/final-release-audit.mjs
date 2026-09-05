@@ -37,8 +37,10 @@ const required = [
   'web/llms-full.txt',
   '.github/workflows/deploy-accordtrace.yml',
   '.github/workflows/ci.yml',
+  '.github/workflows/accordtrace-live-contract.yml',
   'docs/PASSPORT_LAUNCH_CAMPAIGN.md',
   'docs/STRIPE_PASSPORT_ACTIVATION.md',
+  'scripts/accordtrace-live-contract.mjs',
   'scripts/framework-integration-audit.mjs',
   'examples/framework-handoff/README.md',
   'examples/framework-handoff/openai_agents.py',
@@ -62,6 +64,8 @@ if (!failures.length) {
   const controlPlaneHardening = read('cloudflare/src/control-plane-hardening.js');
   const deploy = read('.github/workflows/deploy-accordtrace.yml');
   const ci = read('.github/workflows/ci.yml');
+  const liveWorkflow = read('.github/workflows/accordtrace-live-contract.yml');
+  const liveContract = read('scripts/accordtrace-live-contract.mjs');
   const campaign = read('docs/PASSPORT_LAUNCH_CAMPAIGN.md');
   const frameworkReadme = read('examples/framework-handoff/README.md');
 
@@ -69,7 +73,14 @@ if (!failures.length) {
   ok('a2a:version-1.0', agent.supportedInterfaces?.[0]?.protocolVersion === '1.0');
   ok('a2a:canonical-url', agent.supportedInterfaces?.[0]?.url === `${HOST}/a2a`);
   ok('a2a:canonical-and-legacy-card-routes', interoperability.includes('url.pathname === "/.well-known/agent-card.json"') && interoperability.includes('url.pathname === "/.well-known/agent.json"'));
-  ok('a2a:sendmessage-and-message-send', interoperability.includes('SendMessage|message\\/send'));
+  ok('a2a:runtime-dual-methods', interoperability.includes('SendMessage|message\\/send'));
+  ok('a2a:live-contract-dual-methods', liveContract.includes("const A2A_METHODS = ['message/send', 'SendMessage']"));
+  ok('a2a:live-contract-version-negotiation', liveContract.includes("'A2A-Version': '1.0'"));
+  ok('a2a:live-contract-read-only-action', liveContract.includes("action: 'network_capabilities'"));
+  ok('a2a:live-contract-both-success-required', liveContract.includes('for (const method of A2A_METHODS)') && liveContract.includes('for (const probe of probes) validateA2AProbe'));
+  ok('a2a:live-contract-semantic-equivalence', liveContract.includes('A2A message/send and SendMessage returned different network policy semantics'));
+  ok('a2a:live-contract-policy-boundary', ['single_level_direct_product_referral','amount_atomic === 200','amount_atomic === 100','cash_payouts_enabled === false','no_multilevel_downline_commission','no_self_referral'].every((marker) => liveContract.includes(marker)));
+  ok('a2a:live-contract-post-deploy', liveWorkflow.includes('workflow_run:') && liveWorkflow.includes('Deploy AccordTrace production') && liveWorkflow.includes("workflow_run.conclusion == 'success'") && liveWorkflow.includes('workflow_run.head_sha'));
   ok('accordtrace:version', agent.version === VERSION && mcp.version === VERSION);
 
   const expectedSkills = [
