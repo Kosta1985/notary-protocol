@@ -1,3 +1,5 @@
+import { recordUsage } from "./usage-analytics.js";
+
 const encoder = new TextEncoder();
 
 export class ProofError extends Error {
@@ -17,16 +19,16 @@ export async function handleProofs(request, env, url = new URL(request.url)) {
   if (request.method === "POST" && url.pathname === "/api/v1/proofs") {
     const body = await readJson(request);
     if (!Object.prototype.hasOwnProperty.call(body, "data")) throw new ProofError("data is required");
-    return json(await createProof(env, body.data, body.metadata ?? null), 201);
+    return json(await createProof(env, body.data, body.metadata ?? null, request), 201);
   }
   if (request.method === "GET" && url.pathname.startsWith("/api/v1/proofs/")) {
     return json(await getProof(env, decodeURIComponent(url.pathname.slice("/api/v1/proofs/".length))));
   }
-  if (request.method === "POST" && url.pathname === "/api/v1/verify") return json(await verifyProof(env, await readJson(request)));
+  if (request.method === "POST" && url.pathname === "/api/v1/verify") return json(await verifyProof(env, await readJson(request), request));
   return null;
 }
 
-export async function createProof(env, data, metadata = null) {
+export async function createProof(env, data, metadata = null, request = null) {
   const normalizedMetadata = normalizeMetadata(metadata);
   const hash = await hashData(data);
   const proofId = `atp_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -40,6 +42,7 @@ export async function createProof(env, data, metadata = null) {
   };
   await env.DB.prepare("INSERT INTO receipts (id, deal_id, evidence_digest, valid, verified_at, receipt) VALUES (?1, ?2, ?3, 1, ?4, ?5)")
     .bind(proofId, "accordtrace-proof-v1", hash, createdAt, JSON.stringify(proof)).run();
+  await recordUsage(env, "proof_created", { request, synthetic: normalizedMetadata?.synthetic === true });
   return proof;
 }
 
@@ -53,7 +56,7 @@ export async function getProof(env, proofId) {
   return proof;
 }
 
-export async function verifyProof(env, input) {
+export async function verifyProof(env, input, request = null) {
   const proof = await getProof(env, String(input?.proof_id ?? ""));
   const signatureValid = proof.issuer ? await verifyProofSignature(proof) : null;
   let hashMatch = null;
@@ -66,6 +69,7 @@ export async function verifyProof(env, input) {
     hashMatch = suppliedHash === proof.hash;
   }
   const valid = signatureValid !== false && hashMatch !== false;
+  await recordUsage(env, valid ? "proof_verified" : "proof_verification_failed", { request, synthetic: proof.metadata?.synthetic === true });
   return {
     valid,
     proof_id: proof.proof_id,
