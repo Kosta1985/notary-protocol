@@ -20,6 +20,7 @@ function json(rel) { return JSON.parse(read(rel)); }
 const required = [
   'wrangler.jsonc',
   'cloudflare/src/worker-v2.js',
+  'cloudflare/src/interoperability.js',
   'cloudflare/src/passport-product.js',
   'cloudflare/src/affiliate.js',
   'web/.well-known/agent.json',
@@ -42,6 +43,7 @@ if (!failures.length) {
   const adapter = json('adapters/a2a/agent-card.json');
   const mcp = json('web/.well-known/mcp.json');
   const wrangler = json('wrangler.jsonc');
+  const interoperability = read('cloudflare/src/interoperability.js');
   const affiliate = read('cloudflare/src/affiliate.js');
   const passport = read('cloudflare/src/passport-product.js');
   const deploy = read('.github/workflows/deploy-accordtrace.yml');
@@ -50,6 +52,8 @@ if (!failures.length) {
   ok('a2a:cards-synchronized', JSON.stringify(agent) === JSON.stringify(adapter));
   ok('a2a:version-1.0', agent.supportedInterfaces?.[0]?.protocolVersion === '1.0');
   ok('a2a:canonical-url', agent.supportedInterfaces?.[0]?.url === `${HOST}/a2a`);
+  ok('a2a:canonical-and-legacy-card-routes', interoperability.includes('url.pathname === "/.well-known/agent-card.json"') && interoperability.includes('url.pathname === "/.well-known/agent.json"'));
+  ok('a2a:sendmessage-and-message-send', interoperability.includes('SendMessage|message\\/send'));
   ok('accordtrace:version', agent.version === VERSION && mcp.version === VERSION);
 
   const expectedSkills = [
