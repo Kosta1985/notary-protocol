@@ -12,9 +12,11 @@ import asyncio
 import os
 
 from agents import Agent, Runner
-from agents.mcp import MCPServerStreamableHttp
+from agents.mcp import MCPServerStreamableHttp, create_static_tool_filter
 
 from common import MCP_URL, create_evidence, create_proof, print_result, verification_prompt
+
+VERIFY_TOOL = "accord_trace_verify"
 
 
 async def main() -> None:
@@ -31,9 +33,15 @@ async def main() -> None:
             "headers": {"X-AccordTrace-Telemetry": "exclude"},
             "timeout": 20,
         },
+        tool_filter=create_static_tool_filter(allowed_tool_names=[VERIFY_TOOL]),
         cache_tools_list=True,
         max_retry_attempts=2,
     ) as server:
+        discovered = await server.list_tools()
+        discovered_names = {str(getattr(tool, "name", "")) for tool in discovered}
+        if VERIFY_TOOL not in discovered_names:
+            raise RuntimeError(f"AccordTrace {VERIFY_TOOL} tool was not discovered")
+
         agent = Agent(
             name="AccordTraceHandoffVerifier",
             model=os.getenv("OPENAI_MODEL", "gpt-5.4"),
