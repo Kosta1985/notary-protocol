@@ -17,7 +17,8 @@ async function prepare(keysPath, seedPath) {
   }
   fs.writeFileSync(keysPath, JSON.stringify({ agents: agents.map(({ id, privateJwk }) => ({ id, privateJwk })) }), { mode: 0o600 });
   const now = new Date().toISOString();
-  const sql = agents.map(({ id, publicPem }) => `INSERT INTO agent_passports(id,public_key,last_signed_at,created_at,updated_at) VALUES('${escapeSql(id)}','${escapeSql(publicPem)}','${now}','${now}','${now}');`).join('\n');
+  const policySql = `INSERT INTO wallet_policies (id,version,status,single_transaction_limit_atomic,daily_spending_limit_atomic,rolling_24h_limit_atomic,guardian_approval_above_atomic,allowed_assets_json,allow_unknown_recipients,allow_external_transfer,require_task_link,block_high_risk_destinations,created_at) SELECT 'E2E_BALANCE_ISOLATION_V1',version,status,single_transaction_limit_atomic,1000000000,1000000000,guardian_approval_above_atomic,allowed_assets_json,allow_unknown_recipients,allow_external_transfer,require_task_link,block_high_risk_destinations,created_at FROM wallet_policies WHERE id='STANDARD_AUTONOMOUS_V1';`;
+  const sql = policySql + '\n' + agents.map(({ id, publicPem }) => `INSERT INTO agent_passports(id,public_key,last_signed_at,created_at,updated_at) VALUES('${escapeSql(id)}','${escapeSql(publicPem)}','${now}','${now}','${now}');`).join('\n');
   fs.writeFileSync(seedPath, sql, { mode: 0o600 });
   console.log(JSON.stringify({ prepared: true, agent_ids: agents.map(x => x.id), private_keys_logged: false }));
 }
@@ -90,13 +91,23 @@ async function run(baseUrl, keysPath) {
     });
     const alphaNonce = `e2e_${crypto.randomUUID().replaceAll('-', '')}`;
     const { alphaWallet, betaWallet } = await check('separate simulated agent wallet identities', async () => {
-      const a = (await signed(alpha, '/api/v1/agent/wallet', { method: 'POST', body: {}, nonce: alphaNonce })).wallet;
+      const a = (await signed(alpha, '/api/v1/agent/wallet', { method: 'POST', body: { policyId: 'E2E_BALANCE_ISOLATION_V1' }, nonce: alphaNonce })).wallet;
       const b = (await signed(beta, '/api/v1/agent/wallet', { method: 'POST', body: {} })).wallet;
       assert.ok(a?.id && b?.id);
       assert.notEqual(a.id, b.id); assert.notEqual(a.walletAddress, b.walletAddress);
       assert.equal(a.status, 'ACTIVE'); assert.equal(b.status, 'ACTIVE');
       assert.equal(a.settlementMode, 'simulated'); assert.equal(b.settlementMode, 'simulated');
       return { alphaWallet: a, betaWallet: b };
+    });
+    await check('balance test fixture is separate from unchanged standard policy', async () => {
+      const a = (await signed(alpha, '/api/v1/agent/wallet/policy')).policy;
+      const b = (await signed(beta, '/api/v1/agent/wallet/policy')).policy;
+      assert.equal(a.id, 'E2E_BALANCE_ISOLATION_V1');
+      assert.equal(a.singleTransactionLimit, '100'); assert.equal(a.guardianApprovalAbove, '50');
+      assert.equal(a.dailySpendingLimit, '1000'); assert.equal(a.rolling24hLimit, '1000');
+      assert.equal(b.id, 'STANDARD_AUTONOMOUS_V1');
+      assert.equal(b.dailySpendingLimit, '100'); assert.equal(b.rolling24hLimit, '100');
+      report.policy_fixture = { alpha: a.id, beta: b.id, standard_policy_unchanged: true, reason: 'Separate balance failures from prior daily-budget denial.' };
     });
     await check('signed nonce replay is rejected', async () => {
       const rejected = await signed(alpha, '/api/v1/agent/wallet', { method: 'POST', body: {}, nonce: alphaNonce }, [409]);
