@@ -35,6 +35,8 @@ const required = [
   'web/ai.html',
   'web/llms.txt',
   'web/llms-full.txt',
+  'README.md',
+  'llms-install.md',
   '.github/workflows/deploy-accordtrace.yml',
   '.github/workflows/ci.yml',
   '.github/workflows/accordtrace-live-contract.yml',
@@ -68,6 +70,8 @@ if (!failures.length) {
   const liveContract = read('scripts/accordtrace-live-contract.mjs');
   const campaign = read('docs/PASSPORT_LAUNCH_CAMPAIGN.md');
   const frameworkReadme = read('examples/framework-handoff/README.md');
+  const readme = read('README.md');
+  const llmsInstall = read('llms-install.md');
 
   ok('a2a:cards-synchronized', JSON.stringify(agent) === JSON.stringify(adapter));
   ok('a2a:version-1.0', agent.supportedInterfaces?.[0]?.protocolVersion === '1.0');
@@ -93,6 +97,16 @@ if (!failures.length) {
   ok('mcp:registry-id', mcp.registry?.server === MCP_ID);
   ok('mcp:streamable-http', mcp.transport === 'streamable-http');
   ok('mcp:canonical-url', mcp.url === `${HOST}/mcp`);
+  ok('mcp:cline-install-explicit-streamable-http',
+    readme.includes('"type": "streamableHttp"') &&
+    llmsInstall.includes('"type": "streamableHttp"') &&
+    readme.includes(`${HOST}/mcp`) &&
+    llmsInstall.includes(`${HOST}/mcp`));
+  ok('mcp:cline-install-conservative-auto-approval',
+    readme.includes('"autoApprove": []') && llmsInstall.includes('"autoApprove": []'));
+  ok('mcp:cline-install-remote-truth-boundary',
+    /canonical MCP service is hosted remotely/i.test(llmsInstall) &&
+    /Do not invent an `npx`, `uvx`, Docker or stdio command/i.test(llmsInstall));
 
   ok('runtime:worker-v2', wrangler.main === 'cloudflare/src/worker-v2.js');
   ok('runtime:passport-price-bound', wrangler.vars?.STRIPE_PRICE_AGENT_PASSPORT === PASSPORT_PRICE);
