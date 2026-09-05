@@ -12,6 +12,7 @@ This runbook covers the final secure activation of the US$2 Agent Passport Certi
 - Referral economics are fixed at US$1 direct qualifying commission, one level only
 - Cash payouts remain disabled
 - Read-only commercial readiness probe is deployed in `.github/workflows/passport-commercial-readiness.yml`
+- Manual isolated hosted-Checkout verification is defined in `.github/workflows/passport-stripe-sandbox-e2e.yml`
 
 ## Secrets that must never enter source control
 
@@ -56,6 +57,51 @@ HMAC, certificate signatures, duplicate deliveries, incorrect sessions/metadata,
 price/currency rejection, asynchronous payments, refunds, disputes and out-of-order
 reversals. They are NOT a substitute for an actual hosted Checkout sandbox run.
 Do not use real card details or a real charge for testing.
+
+### Manual hosted Stripe sandbox E2E
+
+Run the GitHub Actions workflow `Passport Stripe isolated sandbox e2e` only after these
+repository secrets exist:
+
+- `STRIPE_TEST_SECRET_KEY` — must start with `sk_test_` or `rk_test_`. If a restricted
+  key is used, it must be allowed to read the test Price, create Checkout Sessions,
+  and create/delete temporary webhook endpoints.
+- `STRIPE_TEST_PRICE_AGENT_PASSPORT` — a Stripe test-mode Price id for an active,
+  one-time US$2.00 USD Price.
+- Existing Cloudflare deployment credentials accepted by the workflow.
+
+The workflow deliberately does not require or reuse the production webhook signing
+secret. It creates a temporary Stripe **test-mode** webhook endpoint bound only to a
+run-specific temporary Worker, receives the endpoint's `whsec_...` value directly from
+Stripe, installs it only on that temporary Worker, and deletes the endpoint during
+cleanup.
+
+For every run it creates a fresh temporary Worker, D1 database, issuer key, three
+throwaway Passports, one direct referral attribution, and two hosted Checkout Sessions:
+one referred purchase and one unattributed purchase. Chromium completes the real
+Stripe-hosted test Checkout with Stripe's test card; no live card or real funds are used.
+The success redirect is accepted only when it returns to the run-specific Worker.
+
+The run must prove all of the following before it passes:
+
+- the Stripe Price itself is `livemode=false`, active, one-time, exactly 200 cents USD;
+- the temporary Passport service reports all commercial gates ready;
+- both Checkout Session ids are `cs_test_...`;
+- fulfillment occurs through the verified Stripe webhook, not the browser redirect;
+- two signed Agent Passport Certificates are issued and their issuer signatures verify;
+- the referred purchase creates exactly one US$1 direct qualifying commission;
+- the unattributed purchase creates no additional commission;
+- cash affiliate payouts remain disabled;
+- the temporary Stripe webhook, Worker, D1 database and ephemeral private-key files are
+  removed by cleanup.
+
+The workflow archives only sanitized audit evidence for seven days. Private Passport
+keys, the ephemeral issuer key, Stripe secret keys and webhook signing secrets are not
+included in the artifact.
+
+Passing this workflow is evidence that the isolated test flow works. It does **not**
+automatically enable production checkout and it never changes the production
+`PASSPORT_CHECKOUT_ENABLED` value.
 
 After the actual sandbox run passes, enable `PASSPORT_CHECKOUT_ENABLED=true` through
 a reviewed configuration deployment. Keep cash affiliate payouts disabled.
