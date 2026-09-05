@@ -47,7 +47,21 @@ export async function publicNotFound(response, request, env) {
   if (!(request.headers.get('accept') || '').includes('text/html')
       || /\/[^/]+\.[^/]+$/.test(url.pathname) && !/\.html$/.test(url.pathname)
       || !env?.ASSETS?.fetch) return response;
-  const page = await env.ASSETS.fetch(new Request(new URL('/404.html', request.url), {method: 'GET'}));
+  let page;
+  try {
+    page = await env.ASSETS.fetch(new Request(new URL('/404.html', request.url), {method: 'GET'}));
+    // Cloudflare's default HTML handling redirects file.html to /file, even
+    // through the assets binding. Follow only this known local alias once.
+    if ([301, 302, 307, 308].includes(page.status)) {
+      const target = new URL(page.headers.get('location') || '', request.url);
+      if (target.origin !== url.origin || target.pathname !== '/404' || target.search || target.hash) {
+        void page.body?.cancel().catch(() => {});
+        return response;
+      }
+      void page.body?.cancel().catch(() => {});
+      page = await env.ASSETS.fetch(new Request(target, {method: 'GET'}));
+    }
+  } catch { return response; }
   if (!page.ok || !(page.headers.get('content-type') || '').includes('text/html')) {
     void page.body?.cancel().catch(() => {});
     return response;
