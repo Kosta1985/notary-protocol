@@ -1,0 +1,24 @@
+/* Statistics-only layout. Reuse the existing palette; do not alter other pages. */
+.stats-page .shell{width:min(1240px,100%);margin:0 auto;padding:32px clamp(18px,4vw,48px) 72px}
+.stats-page .hero{min-height:0;height:auto;overflow:visible;padding:clamp(24px,4vw,48px);margin-bottom:32px}
+.stats-page .hero h1{font-size:clamp(42px,6vw,72px);line-height:1.05;overflow-wrap:anywhere}
+.stats-page p,.stats-page #stats-status,.stats-page #daily-status{font-size:15px;line-height:1.65;max-width:80ch}
+.stats-page .hero p{margin:18px 0}
+.stats-page .hero .eyebrow{font-size:11px;margin:0 0 20px}
+.stats-page a{text-decoration:underline;text-underline-offset:4px}
+.stats-page .panel{min-width:0;padding:28px 0;border-bottom:1px solid var(--line)}
+.stats-page .panel h2{font-size:clamp(28px,4vw,40px);line-height:1.12;overflow-wrap:anywhere}
+.stats-page .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));gap:14px;margin-top:20px}
+.stats-page .stat-card{min-width:0;display:flex;flex-direction:column;gap:14px;padding:22px;border:1px solid var(--line);background:var(--white)}
+.stats-page .stat-card strong{font-size:clamp(24px,3vw,34px);line-height:1.15;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.stats-page .stat-card span{font-size:13px;line-height:1.45;overflow-wrap:anywhere}
+.stats-page table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
+.stats-page caption{text-align:left;padding:14px 0}
+.stats-page th,.stats-page td{text-align:right;padding:14px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+.stats-page th:first-child,.stats-page td:first-child{text-align:left;padding-left:0}
+#stats-refresh,#activity-refresh{cursor:pointer;min-height:44px;margin:12px 0;padding:12px 18px;border:1px solid var(--ink);background:var(--signal);color:var(--ink);font-weight:650}
+#stats-refresh:disabled,#activity-refresh:disabled{cursor:wait;opacity:.65}
+.activity-page #activity-ratio-note{font-size:14px;line-height:1.65;margin-top:24px;max-width:64ch}
+.activity-page .activity-totals strong{overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+.activity-page .activity-section-title{gap:20px;flex-wrap:wrap}
+@media(max-width:480px){.stats-page .shell{padding:18px 18px 48px}.stats-page .hero{padding:24px}.activity-page .activity-heading h1{overflow-wrap:anywhere}}

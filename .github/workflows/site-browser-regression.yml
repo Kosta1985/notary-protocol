@@ -34,6 +34,8 @@ jobs:
           echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/ui-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
       - name: Exercise mocked interaction and error scenarios
         run: node scripts/audit/website-interactions.mjs
+      - name: Exercise isolated statistics failures and retry scenarios
+        run: node scripts/audit/statistics-interactions.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
