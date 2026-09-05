@@ -35,6 +35,20 @@ jobs:
           mkdir -p .audit
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          const expectedRelease='b11a135dd27bfdfce549039da0b11579471f0400';
+          const base='https://accordtrace.notary-labs.workers.dev';
+          async function publicGet(path){
+            const response=await fetch(base+path,{headers:{'x-notary-monitor':'signing-preflight','x-accordtrace-telemetry':'exclude'},redirect:'error',signal:AbortSignal.timeout(15000)});
+            if(!response.ok)throw new Error(`Public probe failed: HTTP ${response.status}`);
+            return response.json();
+          }
+          let release;
+          for(let attempt=0;attempt<12;attempt++){
+            release=await publicGet('/api/v1/launch/capabilities');
+            if(release.release_sha===expectedRelease)break;
+            await new Promise(resolve=>setTimeout(resolve,5000));
+          }
+          if(release.release_sha!==expectedRelease)throw new Error('Expected production release not present');
           const token=[1,2,3,4].map(n=>process.env[`CF_TOKEN_${n}`]).find(Boolean);
           if(!token)throw new Error('Cloudflare credential unavailable');
           const api='https://api.cloudflare.com/client/v4';
@@ -51,7 +65,7 @@ jobs:
           const bindings=settings.bindings||[];
           const signer=bindings.find(b=>b.name==='NOTARY_PRIVATE_JWK');
           const db=bindings.find(b=>b.name==='DB'&&b.type==='d1');
-          const result={checked_at:new Date().toISOString(),scope:'Read-only binding names/types, issuer state and aggregate issuance. No secret values, individual records or mutations.',signer_binding:{present:Boolean(signer),type:signer?.type||null},relevant_bindings:bindings.filter(b=>/^(NOTARY_|PROOF_|STRIPE_)/.test(b.name)).map(b=>({name:b.name,type:b.type})),github_test_stripe_key_configured:Boolean(process.env.TEST_STRIPE_KEY),issuance:null,production:null};
+          const result={checked_at:new Date().toISOString(),release_sha:release.release_sha,scope:'Read-only binding names/types, safe signer diagnostics and aggregate issuance. No secret values, individual records or mutations.',signer_binding:{present:Boolean(signer),type:signer?.type||null},relevant_bindings:bindings.filter(b=>/^(NOTARY_|PROOF_|STRIPE_)/.test(b.name)).map(b=>({name:b.name,type:b.type})),github_test_stripe_key_configured:Boolean(process.env.TEST_STRIPE_KEY),issuance:null,production:null};
           const dbId=db?.id||db?.database_id;
           if(dbId&&/^[a-f0-9-]{36}$/.test(dbId)){
             result.issuance={};
@@ -59,18 +73,16 @@ jobs:
               ['certificates','SELECT COUNT(*) AS count FROM agent_passport_certificates'],
               ['orders_by_state','SELECT payment_status, COUNT(*) AS count FROM passport_product_orders GROUP BY payment_status'],
               ['proof_integrity_modes',"SELECT json_extract(receipt,'$.integrity_mode') AS integrity_mode, COUNT(*) AS count FROM receipts WHERE deal_id='accordtrace-proof-v1' AND json_valid(receipt) GROUP BY integrity_mode"]
-            ]){try{result.issuance[name]=await cf(`/accounts/${account}/d1/database/${dbId}/query`,sql)}catch{result.issuance[name]={inspection_available:false}}}
+            ]){try{const rows=await cf(`/accounts/${account}/d1/database/${dbId}/query`,sql);result.issuance[name]=rows.map(r=>({results:r.results,success:r.success,rows_written:r.meta?.rows_written,changed_db:r.meta?.changed_db}));}catch{result.issuance[name]={inspection_available:false}}}
           }
-          const response=await fetch('https://accordtrace.notary-labs.workers.dev/api/v1/passport-product/capabilities',{headers:{'x-notary-monitor':'signing-preflight'},signal:AbortSignal.timeout(15000)});
-          if(response.ok){const p=await response.json();result.production={checkout_enabled:p.checkout_enabled,webhook_enabled:p.webhook_enabled,certificate_signing_enabled:p.certificate_signing_enabled,commercial_ready:p.commercial_ready};}
+          const p=await publicGet('/api/v1/passport-product/capabilities');
+          result.production={checkout_enabled:p.checkout_enabled,webhook_enabled:p.webhook_enabled,certificate_signing_enabled:p.certificate_signing_enabled,commercial_ready:p.commercial_ready,checkout_activation_enabled:p.checkout_activation_enabled,certificate_signer:p.certificate_signer};
+          result.checkout_hold_verified=p.checkout_activation_enabled===false&&p.commercial_ready===false;
+          result.signer_self_test_passed=p.certificate_signer?.valid===true&&p.certificate_signer?.reason==='verified'&&p.certificate_signing_enabled===true;
           fs.writeFileSync('.audit/signing-preflight.json',JSON.stringify(result,null,2));
           console.log(JSON.stringify(result,null,2));
+          if(!result.checkout_hold_verified)throw new Error('Expected checkout activation hold was not verified');
           NODE
-      - name: Archive public tracked source for isolated regression testing
-        if: always()
-        run: |
-          mkdir -p .audit
-          git archive --format=zip --output=.audit/source.zip HEAD
       - uses: actions/upload-artifact@v4
         if: always()
         with:
