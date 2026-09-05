@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "server.json"
+      - "scripts/mcp-registry-live-check.mjs"
       - ".github/workflows/publish-accord-trace-mcp.yml"
 
 permissions:
@@ -18,15 +19,37 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
-      - name: Install official MCP publisher
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install pinned official MCP publisher
+        shell: bash
         run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+          set -euo pipefail
+          publisher_version='v1.8.1'
+          archive='mcp-publisher_linux_amd64.tar.gz'
+          expected_sha256='a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc'
+          curl --fail-with-body --location --silent --show-error \
+            "https://github.com/modelcontextprotocol/registry/releases/download/${publisher_version}/${archive}" \
+            --output "${archive}"
+          printf '%s  %s\n' "${expected_sha256}" "${archive}" | sha256sum --check --strict
+          tar xzf "${archive}" mcp-publisher
+          ./mcp-publisher --version
+
       - name: Validate registry metadata
         run: ./mcp-publisher validate server.json
+
+      - name: Verify server.json against live MCP contract
+        run: node scripts/mcp-registry-live-check.mjs
+
       - name: Authenticate with GitHub OIDC
         if: github.event_name == 'workflow_dispatch'
         run: ./mcp-publisher login github-oidc
+
       - name: Publish remote MCP server
         if: github.event_name == 'workflow_dispatch'
         run: ./mcp-publisher publish server.json
