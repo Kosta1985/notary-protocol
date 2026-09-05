@@ -5,6 +5,7 @@ on:
     branches: [test/agent-wallet-isolated-e2e-20260905]
     paths:
       - scripts/agent-wallet-isolated-e2e.mjs
+      - scripts/agent-wallet-concurrency-e2e.mjs
       - scripts/lib/wallet-e2e-http.mjs
       - test/wallet-e2e-http.test.mjs
       - cloudflare/src/worker-v2.js
@@ -109,7 +110,6 @@ jobs:
               PASSPORT_CHECKOUT_ENABLED: 'false', WALLET_E2E_DIAGNOSTICS: 'true'
             }, observability: { enabled: false }
           };
-          // Do not inherit production routes, cron, secrets, vars or other bindings.
           fs.writeFileSync('wrangler.wallet-e2e.json', JSON.stringify(config, null, 2));
           NODE
       - name: Apply schema to isolated D1
@@ -120,10 +120,16 @@ jobs:
           set -euo pipefail
           keys="$RUNNER_TEMP/agent-wallet-e2e-keys.json"
           seed="$RUNNER_TEMP/agent-wallet-e2e-seed.sql"
+          race_keys="$RUNNER_TEMP/agent-wallet-race-keys.json"
+          race_seed="$RUNNER_TEMP/agent-wallet-race-seed.sql"
           echo "E2E_KEYS_FILE=$keys" >> "$GITHUB_ENV"
           echo "E2E_SEED_FILE=$seed" >> "$GITHUB_ENV"
+          echo "E2E_RACE_KEYS_FILE=$race_keys" >> "$GITHUB_ENV"
+          echo "E2E_RACE_SEED_FILE=$race_seed" >> "$GITHUB_ENV"
           node scripts/agent-wallet-isolated-e2e.mjs prepare "$keys" "$seed"
+          node scripts/agent-wallet-concurrency-e2e.mjs prepare "$race_keys" "$race_seed"
           npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.wallet-e2e.json --file "$seed"
+          npx wrangler@4.129.0 d1 execute DB --remote --config wrangler.wallet-e2e.json --file "$race_seed"
       - name: Deploy isolated Worker
         run: npx wrangler@4.129.0 deploy --config wrangler.wallet-e2e.json
       - name: Install ephemeral Guardian operator secret
@@ -139,6 +145,11 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/agent-wallet-isolated-e2e.mjs run "$E2E_BASE_URL" "$E2E_KEYS_FILE" | tee .audit/wallet-sandbox-e2e.json
+      - name: Run concurrent signed-agent payment and Guardian races
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/agent-wallet-concurrency-e2e.mjs run "$E2E_BASE_URL" "$E2E_RACE_KEYS_FILE" | tee .audit/wallet-concurrency-e2e.json
       - name: Delete and verify isolated Cloudflare resources
         if: always()
         run: |
@@ -182,7 +193,7 @@ jobs:
             }
           } catch { report.status = 'failed'; }
           finally {
-            for (const file of [env.E2E_KEYS_FILE, env.E2E_SEED_FILE, 'wrangler.wallet-e2e.json']) if (file) fs.rmSync(file, { force: true });
+            for (const file of [env.E2E_KEYS_FILE, env.E2E_SEED_FILE, env.E2E_RACE_KEYS_FILE, env.E2E_RACE_SEED_FILE, 'wrangler.wallet-e2e.json']) if (file) fs.rmSync(file, { force: true });
             fs.mkdirSync('.audit', { recursive: true });
             fs.writeFileSync('.audit/wallet-sandbox-cleanup.json', JSON.stringify(report, null, 2));
             console.log(JSON.stringify(report));
@@ -193,7 +204,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: agent-wallet-isolated-e2e-${{ github.run_id }}
+          name: agent-wallet-isolated-e2e-${{ github.run_id }}-${{ github.run_attempt }}
           path: .audit/
           include-hidden-files: true
           retention-days: 7
