@@ -1,20 +1,23 @@
 name: Publish AccordTrace introduction on Moltbook
 
-# Diagnose claim status and publish after owner confirmation.
-# Transport reset before this attempt.
-# Owner reported completed claim verification.
-
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/moltbook-introduction.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_publish:
+        description: 'Type PUBLISH to create the public Moltbook post'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-moltbook-introduction
+  cancel-in-progress: false
+
 jobs:
   publish:
+    if: ${{ inputs.confirm_publish == 'PUBLISH' }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -88,3 +91,10 @@ jobs:
           name: moltbook-post-result
           path: moltbook-post-result.json
           retention-days: 1
+      - name: Cleanup sensitive transport material
+        if: always()
+        run: rm -f /tmp/token.txt /tmp/token.enc /tmp/token.enc.b64 /tmp/private.pem
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'Publishing requires workflow_dispatch plus the exact PUBLISH confirmation.'

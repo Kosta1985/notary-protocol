@@ -1,16 +1,23 @@
 name: Register AccordTrace on Moltbook
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/register-moltbook.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_register:
+        description: 'Type REGISTER to create a new Moltbook registration'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-moltbook-register
+  cancel-in-progress: false
+
 jobs:
   register:
+    if: ${{ inputs.confirm_register == 'REGISTER' }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -55,3 +62,7 @@ jobs:
           path: moltbook-registration.bin
           if-no-files-found: error
           retention-days: 1
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'A new external registration requires workflow_dispatch plus the exact REGISTER confirmation.'
