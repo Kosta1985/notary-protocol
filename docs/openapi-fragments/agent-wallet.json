@@ -1,0 +1,98 @@
+{
+  "paths": {
+    "/api/v1/agent/wallet": {
+      "get": {
+        "operationId": "getOwnAgentWallet",
+        "summary": "Get the authenticated agent wallet",
+        "responses": { "200": { "description": "Wallet state" }, "401": { "description": "Signed agent request required" }, "404": { "description": "Wallet feature disabled" } }
+      },
+      "post": {
+        "operationId": "createOwnAgentWallet",
+        "summary": "Create a feature-flagged test wallet for the authenticated Agent Passport",
+        "responses": { "201": { "description": "Wallet created" }, "401": { "description": "Signed agent request required" }, "422": { "description": "Wallet policy or mode invalid" } }
+      }
+    },
+    "/api/v1/agent/wallet/balance": {
+      "get": { "operationId": "getOwnAgentWalletBalance", "responses": { "200": { "description": "Authoritative settlement-asset balance" } } }
+    },
+    "/api/v1/agent/wallet/policy": {
+      "get": { "operationId": "getOwnAgentWalletPolicy", "responses": { "200": { "description": "Versioned wallet policy and spending limits" } } }
+    },
+    "/api/v1/agent/payments": {
+      "post": {
+        "operationId": "createAgentPayment",
+        "summary": "Create a policy-controlled agent-to-agent payment",
+        "description": "Requires a signed agent request and Idempotency-Key. The current MVP executes only the explicit simulated test provider; production/on-chain execution remains fail-closed.",
+        "parameters": [
+          { "name": "Idempotency-Key", "in": "header", "required": true, "schema": { "type": "string", "minLength": 8, "maxLength": 128 } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AgentPaymentRequest" } } }
+        },
+        "responses": {
+          "201": { "description": "Simulated test settlement confirmed and financial receipt generated" },
+          "202": { "description": "Guardian approval required" },
+          "409": { "description": "Replay or idempotency conflict" },
+          "422": { "description": "Policy denied, insufficient balance, or wallet unavailable" }
+        }
+      }
+    },
+    "/api/v1/agent/payments/{id}": {
+      "get": {
+        "operationId": "getAgentPayment",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Payment intent visible only to sender or recipient" }, "404": { "description": "Payment not found" } }
+      }
+    },
+    "/api/v1/agent/transactions": {
+      "get": {
+        "operationId": "listAgentTransactions",
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 25 } },
+          { "name": "offset", "in": "query", "schema": { "type": "integer", "minimum": 0, "default": 0 } }
+        ],
+        "responses": { "200": { "description": "Paginated wallet transaction history" } }
+      }
+    },
+    "/api/v1/agent/receipts": {
+      "get": {
+        "operationId": "listAgentFinancialReceipts",
+        "responses": { "200": { "description": "Paginated Accord Trace financial receipts" } }
+      }
+    },
+    "/api/v1/agent/economic-trust": {
+      "get": { "operationId": "getOwnEconomicTrust", "responses": { "200": { "description": "Operational economic-trust band; not a credit score" } } }
+    },
+    "/api/v1/wallet-admin/wallets/{id}/freeze": {
+      "post": {
+        "operationId": "freezeAgentWallet",
+        "summary": "Freeze outgoing autonomous activity for one wallet",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Wallet frozen; audit and security receipt written" }, "401": { "description": "Operator bearer token required" } }
+      }
+    },
+    "/api/v1/wallet-admin/wallets/{id}/unfreeze": {
+      "post": {
+        "operationId": "unfreezeAgentWallet",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "description": "Wallet reactivated; audit and security receipt written" } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AgentPaymentRequest": {
+        "type": "object",
+        "required": ["recipientAgentId", "amount", "asset"],
+        "properties": {
+          "recipientAgentId": { "type": "string" },
+          "amount": { "type": "string", "description": "Decimal string; never IEEE-754 money" },
+          "asset": { "type": "string", "enum": ["USDC"] },
+          "purpose": { "type": "string" },
+          "taskId": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}
