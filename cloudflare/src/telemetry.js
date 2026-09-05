@@ -6,8 +6,7 @@ const EVENTS = new Set([
   "proof_verify_valid",
   "proof_verify_invalid",
   "a2a_request",
-  "mcp_request",
-  "mcp_tool_call"
+  "mcp_request"
 ]);
 
 export async function recordAggregateEvent(env, event, request = null) {
