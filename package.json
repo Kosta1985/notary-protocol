@@ -23,7 +23,8 @@
     "smoke:payments": "node scripts/payments-smoke.js",
     "smoke:production": "node scripts/full-production-smoke.js",
     "production:check": "node scripts/production-readiness.mjs",
-    "release:audit": "node scripts/final-release-audit.mjs",
+    "marketplace-logo:audit": "node scripts/marketplace-logo-audit.mjs",
+    "release:audit": "npm run marketplace-logo:audit && node scripts/final-release-audit.mjs",
     "frameworks:audit": "node scripts/framework-integration-audit.mjs",
     "adoption:report": "node scripts/adoption-report.js"
   },
