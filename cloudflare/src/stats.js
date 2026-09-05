@@ -35,8 +35,7 @@ export function buildStats(rows, proofRow = {}) {
     },
     protocols: {
       a2a_requests: totals.a2a_request ?? 0,
-      mcp_requests: totals.mcp_request ?? 0,
-      mcp_tool_calls: totals.mcp_tool_call ?? 0
+      mcp_requests: totals.mcp_request ?? 0
     },
     privacy: "Aggregate event counts only. No IP addresses, user identifiers, or fabricated unique-agent counts are stored by this telemetry endpoint.",
     monitoring: "Requests carrying x-notary-monitor: live-smoke are excluded from aggregate event counters; synthetic proof records are reported separately."
