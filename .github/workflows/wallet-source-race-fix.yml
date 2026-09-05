@@ -1,0 +1,73 @@
+name: One-shot Agent Wallet race fix
+
+on:
+  push:
+    branches: [hardening/wallet-e2e-clean-20260906]
+    paths: [.github/wallet-source-fix-trigger]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: hardening/wallet-e2e-clean-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Apply narrowly-scoped idempotency race fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('cloudflare/src/agent-wallet.js')
+          s=p.read_text()
+          replacements=[
+          ("""    const results = await env.DB.batch([\n      paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'BLOCKED', decision, receiptId: receipt.receiptId, now }),\n      receiptInsert(env, receipt),\n      eventInsert(env, auth.passportId, sender.id, 'POLICY_BLOCK', amountAtomic, asset, intentId, { code: decision.code, reason: decision.reason }, now)\n    ]);\n    assertBatch(results);""",
+          """    const commit = await commitPaymentBatch(env, [\n      paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'BLOCKED', decision, receiptId: receipt.receiptId, now }),\n      receiptInsert(env, receipt),\n      eventInsert(env, auth.passportId, sender.id, 'POLICY_BLOCK', amountAtomic, asset, intentId, { code: decision.code, reason: decision.reason }, now)\n    ], auth.passportId, key, requestDigest);\n    if (commit.replay) return idempotentPaymentReplay(commit.replay);\n    assertBatch(commit.results);"""),
+          ("""    const results = await env.DB.batch([\n      paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'APPROVAL_REQUIRED', decision, receiptId: receipt.receiptId, now }),\n      receiptInsert(env, receipt),\n      eventInsert(env, auth.passportId, sender.id, 'GUARDIAN_APPROVAL', amountAtomic, asset, intentId, { pending: true }, now)\n    ]);\n    assertBatch(results);""",
+          """    const commit = await commitPaymentBatch(env, [\n      paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'APPROVAL_REQUIRED', decision, receiptId: receipt.receiptId, now }),\n      receiptInsert(env, receipt),\n      eventInsert(env, auth.passportId, sender.id, 'GUARDIAN_APPROVAL', amountAtomic, asset, intentId, { pending: true }, now)\n    ], auth.passportId, key, requestDigest);\n    if (commit.replay) return idempotentPaymentReplay(commit.replay);\n    assertBatch(commit.results);"""),
+          ("""  const results = await env.DB.batch([\n    paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'CONFIRMED', decision, receiptId: receipt.receiptId, now, confirmedAt: now }),""",
+          """  const commit = await commitPaymentBatch(env, [\n    paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'CONFIRMED', decision, receiptId: receipt.receiptId, now, confirmedAt: now }),"""),
+          ("""    eventInsert(env, auth.passportId, sender.id, 'SETTLEMENT_CONFIRMED', amountAtomic, asset, transactionId, { providerTxRef: prepared.providerTxRef }, now)\n  ]);\n  assertBatch(results);\n  if ((results[1]?.meta?.changes ?? 1) !== 1)""",
+          """    eventInsert(env, auth.passportId, sender.id, 'SETTLEMENT_CONFIRMED', amountAtomic, asset, transactionId, { providerTxRef: prepared.providerTxRef }, now)\n  ], auth.passportId, key, requestDigest);\n  if (commit.replay) return idempotentPaymentReplay(commit.replay);\n  const results = commit.results;\n  assertBatch(results);\n  if ((results[1]?.meta?.changes ?? 1) !== 1)""")]
+          for old,new in replacements:
+              if s.count(old)!=1: raise SystemExit('Expected exactly one wallet source match')
+              s=s.replace(old,new)
+          needle='function paymentInsert(env, x) {\n'
+          helper="""async function commitPaymentBatch(env, statements, senderPassportId, key, requestDigest) {\n  try {\n    return { results: await env.DB.batch(statements), replay: null };\n  } catch (error) {\n    // A concurrent request can pass the initial idempotency read before the\n    // first request commits. Re-read authoritative state after the failed\n    // transaction; never retry or repeat settlement writes.\n    const prior = await env.DB.prepare(`SELECT * FROM agent_payment_intents WHERE sender_passport_id=?1 AND idempotency_key=?2`).bind(senderPassportId, key).first();\n    if (!prior) throw error;\n    if (prior.request_digest !== requestDigest) throw new AgentWalletError('IDEMPOTENCY_KEY_CONFLICT', 409, 'Idempotency key was already used for a different payment request.');\n    return { results: null, replay: prior };\n  }\n}\nfunction idempotentPaymentReplay(payment) {\n  return json({ payment: serializePayment(payment), idempotentReplay: true }, 200);\n}\n\n"""
+          if s.count(needle)!=1: raise SystemExit('Expected paymentInsert anchor once')
+          s=s.replace(needle,helper+needle)
+          old="const body = { error: { code: known ? error.code : 'INTERNAL_ERROR', message: error instanceof Error ? error.message : 'Unknown error', retryable: status >= 500 || status === 429 } };"
+          new="const body = { error: { code: known ? error.code : 'INTERNAL_ERROR', message: known ? error.message : 'Wallet operation failed.', retryable: status >= 500 || status === 429 } };"
+          if s.count(old)!=1: raise SystemExit('Expected error response anchor once')
+          s=s.replace(old,new)
+          p.write_text(s)
+
+          t=Path('cloudflare/test/agent-wallet-integration.test.js')
+          x=t.read_text()
+          marker="test('simultaneous identical idempotency requests settle at most once and replay committed intent'"
+          if marker in x: raise SystemExit('Race regression already present')
+          x += r'''\n\ntest('simultaneous identical idempotency requests settle at most once and replay committed intent',async t=>{\n  const h=await setup(t);\n  await h.invoke(h.alpha,'/api/v1/agent/wallet',{method:'POST',body:{}});\n  await h.invoke(h.beta,'/api/v1/agent/wallet',{method:'POST',body:{}});\n  const body={recipientAgentId:h.beta.id,amount:'1',asset:'USDC',purpose:'AGENT_TASK_SETTLEMENT',taskId:'same-key-race'};\n  const results=await Promise.all([\n    h.invoke(h.alpha,'/api/v1/agent/payments',{method:'POST',body,idempotencyKey:'same-key-race-0001'}),\n    h.invoke(h.alpha,'/api/v1/agent/payments',{method:'POST',body,idempotencyKey:'same-key-race-0001'})\n  ]);\n  assert.ok(results.every(r=>[200,201].includes(r.status)),JSON.stringify(results));\n  assert.equal(results.filter(r=>r.status===201).length,1);\n  assert.equal(results.filter(r=>r.body.idempotentReplay===true).length,1);\n  assert.equal(balance(h.db,h.alpha.id),9000000);\n  assert.equal(balance(h.db,h.beta.id),11000000);\n  assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM agent_payment_intents WHERE sender_passport_id=? AND idempotency_key=?").get(h.alpha.id,'same-key-race-0001').n,1);\n  assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM agent_financial_transactions").get().n,1);\n});\n\ntest('unexpected wallet failures redact internal error messages',async()=>{\n  const response=agentWalletErrorResponse(new Error('D1_ERROR SELECT secret sk_live_hidden'));\n  assert.equal(response.status,500);\n  const text=await response.text();\n  assert.match(text,/INTERNAL_ERROR/);\n  assert.match(text,/Wallet operation failed/);\n  assert.doesNotMatch(text,/D1_ERROR|SELECT|sk_live_hidden/);\n});\n'''.replace('\\n','\n')
+          t.write_text(x)
+          PY
+          node --check cloudflare/src/agent-wallet.js
+          node --test cloudflare/test/agent-wallet-integration.test.js
+          npm test
+          npm run production:check
+      - name: Commit exact tested fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Kosta1985'
+          git config user.email '105794933+Kosta1985@users.noreply.github.com'
+          git add cloudflare/src/agent-wallet.js cloudflare/test/agent-wallet-integration.test.js
+          git diff --cached --check
+          git commit -m 'fix(wallet): recover concurrent idempotency races safely'
+          git push origin HEAD:hardening/wallet-e2e-clean-20260906
