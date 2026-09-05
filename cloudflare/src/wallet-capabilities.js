@@ -30,6 +30,20 @@ export function walletCapabilities(env={}){
       signed_headers:['X-Accord-Passport-Id','X-Accord-Timestamp','X-Accord-Nonce','X-Accord-Signature'],
       signature_scope:['passport_id','timestamp','nonce','method','path','canonical_query','sha256_raw_body']
     },
+    control_model:{
+      name:'agent_owned_actions_with_limited_guardian_control',
+      agent_signs_ordinary_actions:true,
+      agent_can_initiate_payments:true,
+      agent_can_self_approve_guardian_payments:false,
+      agent_can_override_guardian_policy:false,
+      accordtrace_holds_agent_passport_private_key:false,
+      guardian_can:['freeze_wallet','unfreeze_wallet','assign_predefined_active_policy','approve_guardian_required_payment','deny_guardian_required_payment'],
+      guardian_cannot:['initiate_agent_payment','withdraw_to_guardian','seize_or_redirect_balance','mint_or_create_balance','bypass_insufficient_balance','create_credit_or_debt','sign_as_agent','export_agent_private_key'],
+      unrestricted_operator_withdrawal:false,
+      hidden_seizure_path:false,
+      funded_balance_only:true,
+      every_guardian_state_change_audited:true
+    },
     payment_contract:{
       idempotency_key_required:true,
       idempotency_header:'Idempotency-Key',
@@ -85,7 +99,8 @@ export function walletCapabilities(env={}){
       'Current settlement provider is simulated test infrastructure only.',
       'Production/on-chain money movement remains disabled until a reviewed provider and secure key-management boundary are added.',
       'Economic trust is operational history, not a credit score, lending decision, identity guarantee, or proof of solvency.',
-      'Agents cannot self-approve Guardian-required payments through MCP, A2A or signed agent routes.'
+      'Agents cannot self-approve Guardian-required payments through MCP, A2A or signed agent routes.',
+      'Guardian authority is deliberately limited: there is no operator withdrawal, seizure, balance creation, credit creation, or sign-as-agent capability.'
     ]
   };
 }
