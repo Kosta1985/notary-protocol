@@ -1,10 +1,10 @@
 # AccordTrace non-Stripe final status — 2026-09-05
 
-This record captures the verified production state before the separate Stripe secret-activation step. It is intentionally evidence-based: repository readiness, production deployment, live protocol checks and third-party distribution state are kept separate.
+This record captures the **verified input production baseline** used to prepare the non-Stripe freeze before the separate Stripe secret-activation step. The merge commit produced by this freeze will supersede the SHA below; after merge, the latest successful exact-SHA deploy, production smoke and live-contract workflows are the authoritative current-runtime truth. Repository readiness, production deployment, live protocol checks and third-party distribution state are kept separate.
 
-## Production baseline
+## Verified input baseline before freeze merge
 
-- Production release SHA: `58d93a3a2fadb82d6e893e499944bd8d1e678f89`
+- Verified production release SHA: `58d93a3a2fadb82d6e893e499944bd8d1e678f89`
 - Service: `https://accordtrace.notary-labs.workers.dev`
 - AccordTrace version: `0.2.1`
 - A2A: `1.0`
@@ -13,9 +13,9 @@ This record captures the verified production state before the separate Stripe se
 - Worker: `cloudflare/src/worker-v2.js`
 - D1 migration floor: 21
 
-## Verified production runs
+## Verified production runs on the input baseline
 
-All of the following ran against the same production release SHA above and completed successfully:
+All of the following ran against the same verified input production SHA above and completed successfully:
 
 - main CI #858 — run `33941050493`
 - production deploy #57 — run `33941050505`
@@ -158,4 +158,4 @@ Cash affiliate payouts remain disabled.
 
 ## Freeze decision
 
-Outside Stripe activation and external/community work, the current AccordTrace technical surface is considered ready for today's final production baseline only while all CI, exact-SHA deployment, production smoke and live contract gates remain green. Any future change must preserve those gates rather than relying on this document as a static claim.
+Outside Stripe activation and external/community work, the AccordTrace technical surface represented by this baseline is considered ready for today's final non-Stripe freeze only while all CI, exact-SHA deployment, production smoke and live-contract gates remain green. The freeze merge must run those gates again; its successful exact-SHA deployment supersedes the input baseline above. Any future change must preserve those gates rather than relying on this document as a static claim.
