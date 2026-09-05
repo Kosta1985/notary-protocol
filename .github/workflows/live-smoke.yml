@@ -28,4 +28,4 @@ jobs:
         with:
           node-version: 22
       - name: Black-box test AccordTrace production
-        run: node scripts/live-agent-check.mjs https://accordtrace.notary-labs.workers.dev
+        run: node --import ./scripts/monitor-fetch.mjs scripts/live-agent-check.mjs https://accordtrace.notary-labs.workers.dev
