@@ -8,6 +8,7 @@ const REQUIRED_SKILLS = [
   'network_capabilities',
   'network_stats',
   'passport_product_capabilities',
+  'wallet_capabilities',
   'resolve_referral'
 ];
 const A2A_METHODS = ['message/send', 'SendMessage'];
@@ -168,6 +169,25 @@ async function main() {
   if (stats.response?.ok) {
     check(stats.body && typeof stats.body === 'object' && !Array.isArray(stats.body), 'Stats response is not a JSON object');
     check(Boolean(stats.body?.privacy), 'Stats response must declare its privacy boundary');
+  }
+
+  const wallet = await json('/api/v1/agent/wallet-capabilities');
+  observations.wallet = {
+    status: wallet.response?.status ?? null,
+    audience: wallet.body?.audience ?? null,
+    fundedBalanceOnly: wallet.body?.payment_contract?.funded_balance_only ?? null,
+    creditEnabled: wallet.body?.credit_and_lending?.enabled ?? null,
+    mutationsRequirePassportSignature: wallet.body?.machine_protocols?.mutations_require_direct_passport_signed_request ?? null
+  };
+  check(!wallet.error, `Agent Wallet capability request failed: ${wallet.error}`);
+  check(wallet.response?.ok, `Agent Wallet capability HTTP ${wallet.response?.status ?? 'unreachable'}`);
+  if (wallet.response?.ok) {
+    check(wallet.body?.audience === 'autonomous_agents', `Agent Wallet audience drift: ${wallet.body?.audience}`);
+    check(wallet.body?.machine_first === true, 'Agent Wallet machine_first must be true');
+    check(wallet.body?.payment_contract?.funded_balance_only === true, 'Agent Wallet funded_balance_only must be true');
+    check(wallet.body?.payment_contract?.negative_balances === false, 'Agent Wallet negative balances unexpectedly enabled');
+    check(wallet.body?.credit_and_lending?.enabled === false, 'Agent Wallet credit/lending unexpectedly enabled');
+    check(wallet.body?.machine_protocols?.mutations_require_direct_passport_signed_request === true, 'Agent Wallet mutation signature boundary missing');
   }
 
   const probes = [];
