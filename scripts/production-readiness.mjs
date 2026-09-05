@@ -15,6 +15,12 @@ const requiredFiles = [
   'cloudflare/src/affiliate.js',
   'cloudflare/src/affiliate-growth.js',
   'cloudflare/src/passport-product.js',
+  'cloudflare/src/agent-wallet.js',
+  'cloudflare/src/wallet-auth.js',
+  'cloudflare/src/wallet-capabilities.js',
+  'cloudflare/src/wallet/money.js',
+  'cloudflare/src/wallet/policy.js',
+  'cloudflare/src/wallet/providers/accord-test.js',
   'adapters/a2a/agent-card.json',
   'web/index.html',
   'web/passport.html',
@@ -55,7 +61,7 @@ for (let i = 0; i < migrations.length; i += 1) {
   const expected = String(i + 1).padStart(4, '0');
   if (!migrations[i].startsWith(`${expected}_`)) problems.push(`migration_sequence:${expected}:${migrations[i]}`);
 }
-if (migrations.length < 21) problems.push(`migration_count:${migrations.length}:expected_at_least_21`);
+if (migrations.length < 24) problems.push(`migration_count:${migrations.length}:expected_at_least_24`);
 
 const worker = read('cloudflare/src/worker.js');
 for (const marker of ['handleValidation','handleValidationDns','handlePaymentHardening','handleIdentityHardening','handleReputationHardening','handleLaunch','handleDeveloper','handleAgentContinuity','runContinuityScheduled','handleAffiliate','matureAffiliateCommissions']) {
@@ -63,7 +69,7 @@ for (const marker of ['handleValidation','handleValidationDns','handlePaymentHar
 }
 
 const workerV2 = read('cloudflare/src/worker-v2.js');
-for (const marker of ['handleInteroperability','handleProofs','coreWorker.fetch','coreWorker.scheduled']) {
+for (const marker of ['handleInteroperability','handleProofs','handleAgentWallet','handleWalletCapabilities','coreWorker.fetch','coreWorker.scheduled']) {
   if (!workerV2.includes(marker)) problems.push(`worker_v2_missing:${marker}`);
 }
 if (workerV2.indexOf('handleInteroperability') > workerV2.indexOf('coreWorker.fetch')) problems.push('worker_v2_interoperability_order_invalid');
@@ -76,7 +82,9 @@ for (const marker of [
   'accord_trace_network_capabilities',
   'accord_trace_network_stats',
   'accord_trace_passport_product_capabilities',
+  'accord_trace_wallet_capabilities',
   'accord_trace_resolve_referral',
+  'walletCapabilities',
   'handleAffiliateGrowth',
   'handlePassportProduct',
   'TASK_STATE_COMPLETED',
@@ -84,6 +92,7 @@ for (const marker of [
 ]) {
   if (!interoperability.includes(marker)) problems.push(`interoperability_missing:${marker}`);
 }
+if (interoperability.includes('handleAgentWallet') || interoperability.includes('createPayment')) problems.push('interoperability_wallet_mutation_path_forbidden');
 
 const proofs = read('cloudflare/src/proofs.js');
 for (const marker of ['service_recorded_hash','issuer_signed_hash','accordtrace.proof.v1','INSERT INTO receipts']) {
@@ -96,10 +105,13 @@ try { wrangler = JSON.parse(wranglerText); }
 catch { problems.push('wrangler_json_invalid'); }
 if (wrangler?.main !== 'cloudflare/src/worker-v2.js') problems.push(`wrangler_main_invalid:${wrangler?.main || 'missing'}`);
 const workerFirst = new Set(wrangler?.assets?.run_worker_first || []);
-for (const route of ['/api/v1/continuity/*','/api/v1/network/*','/api/v1/passport-product/*','/api/v1/proofs*','/api/v1/hash','/api/v1/verify','/a2a','/mcp','/.well-known/*']) {
+for (const route of ['/api/v1/continuity/*','/api/v1/network/*','/api/v1/passport-product/*','/api/v1/agent/*','/api/v1/wallet-admin/*','/api/v1/proofs*','/api/v1/hash','/api/v1/verify','/a2a','/mcp','/.well-known/*']) {
   if (!workerFirst.has(route)) problems.push(`worker_first_route_missing:${route}`);
 }
 if (!(wrangler?.triggers?.crons || []).includes('*/5 * * * *')) problems.push('continuity_cron_missing');
+for (const secret of ['WALLET_OPERATOR_TOKEN']) {
+  if (Object.prototype.hasOwnProperty.call(wrangler?.vars || {}, secret)) problems.push(`wallet_secret_must_not_be_plaintext_var:${secret}`);
+}
 
 const agentCard = parseJson('web/.well-known/agent.json', 'agent_card_json_invalid');
 const adapterCard = parseJson('adapters/a2a/agent-card.json', 'adapter_agent_card_json_invalid');
@@ -108,7 +120,7 @@ if (agentCard) {
   if (agentCard.name !== 'Accord Trace') problems.push(`agent_card_name_invalid:${agentCard.name || 'missing'}`);
   if (agentCard.supportedInterfaces?.[0]?.protocolVersion !== '1.0') problems.push('agent_card_a2a_version_invalid');
   if (!agentCard.supportedInterfaces?.[0]?.url?.endsWith('/a2a')) problems.push('agent_card_a2a_url_invalid');
-  for (const skill of ['notarize_evidence','verify_proof','network_capabilities','network_stats','passport_product_capabilities','resolve_referral']) {
+  for (const skill of ['notarize_evidence','verify_proof','network_capabilities','network_stats','passport_product_capabilities','wallet_capabilities','resolve_referral']) {
     if (!agentCard.skills?.some((candidate) => candidate.id === skill)) problems.push(`agent_card_skill_missing:${skill}`);
   }
 }
@@ -120,6 +132,17 @@ if (mcpManifest) {
   if (!String(mcpManifest.url || '').endsWith('/mcp')) problems.push('mcp_url_invalid');
   if (mcpManifest.registry?.server !== 'io.github.Kosta1985/accord-trace') problems.push('mcp_registry_identity_invalid');
 }
+
+const walletCapabilities = read('cloudflare/src/wallet-capabilities.js');
+for (const marker of ["audience:'autonomous_agents'",'machine_first:true','funded_balance_only:true','negative_balances:false','mutations_require_direct_passport_signed_request:true','credit_and_lending']) {
+  if (!walletCapabilities.includes(marker)) problems.push(`wallet_capability_boundary_missing:${marker}`);
+}
+for (const marker of ['loans:false','borrowing:false','credit_lines:false','overdrafts:false','debt_balances:false','interest:false','collateral:false','leverage:false','margin:false','liquidation:false']) {
+  if (!walletCapabilities.includes(marker)) problems.push(`wallet_credit_boundary_missing:${marker}`);
+}
+const walletProvider = read('cloudflare/src/wallet/providers/accord-test.js');
+if (!walletProvider.includes('accord_test_provider_requires_testnet_mode')) problems.push('wallet_test_provider_mode_guard_missing');
+if (!walletProvider.includes("mode==='production'&&provider==='accord_test'")) problems.push('wallet_production_test_provider_guard_missing');
 
 const launch = read('cloudflare/src/launch.js');
 if (!launch.includes('handleStripe')) problems.push('launch_route_missing:handleStripe');
@@ -145,7 +168,6 @@ for (const marker of ['Sample Agent Passport Certificate','SAMPLE','agent_passpo
   if (!passportPage.toLowerCase().includes(marker.toLowerCase())) problems.push(`passport_page_missing:${marker}`);
 }
 const passportUi = read('web/passport.js');
-// Validate the fail-closed contract, not a particular marketing/button label.
 for (const marker of ['product.commercial_ready===true','missing.length===0','certificate_signing_enabled','aria-disabled','/api/v1/network/referrals/']) {
   if (!passportUi.includes(marker)) problems.push(`passport_ui_missing:${marker}`);
 }
@@ -177,7 +199,7 @@ for (const marker of ['/passport.html','/ai.html','/network.html','/llms.txt','/
 }
 
 const liveAgentCheck = read('scripts/live-agent-check.mjs');
-for (const marker of ['rest: "passed"','a2a: "passed"','mcp: "passed"','agent_growth_discovery','affiliate_network','passport_product_safety','accord_trace_network_capabilities','accord_trace_network_stats','accord_trace_passport_product_capabilities']) {
+for (const marker of ['rest: "passed"','a2a: "passed"','mcp: "passed"','agent_growth_discovery','agent_wallet_discovery','affiliate_network','passport_product_safety','accord_trace_network_capabilities','accord_trace_network_stats','accord_trace_passport_product_capabilities','accord_trace_wallet_capabilities']) {
   if (!liveAgentCheck.includes(marker)) problems.push(`live_agent_check_missing:${marker}`);
 }
 
@@ -216,6 +238,7 @@ const passportPriceConfigured = process.env.STRIPE_PRICE_AGENT_PASSPORT || wrang
 if (!passportPriceConfigured) notes.push('STRIPE_PRICE_AGENT_PASSPORT not configured; Agent Passport Certificate checkout remains disabled.');
 if (!process.env.NOTARY_PRIVATE_JWK) notes.push('NOTARY_PRIVATE_JWK not configured; free proofs use service_recorded_hash and signed Passport Certificate issuance remains disabled.');
 if (!process.env.STRIPE_PUBLISHABLE_KEY) notes.push('STRIPE_PUBLISHABLE_KEY is not configured; hosted Checkout does not require it server-side, but retain it for future embedded/client features.');
+notes.push('Agent Wallet production money movement remains intentionally disabled; the current provider is test-only and funded-balance/no-credit.');
 notes.push('Affiliate cash payouts remain intentionally disabled until payout-provider, KYC/tax and final terms activation.');
 if (String(process.env.LIVE_API_KEYS_ENABLED || '').toLowerCase() !== 'true') notes.push('Live developer API keys are disabled; test mode remains available after deployment.');
 
@@ -225,7 +248,8 @@ const result = {
     entrypoint: wrangler?.main || null,
     a2a_protocol: agentCard?.supportedInterfaces?.[0]?.protocolVersion || null,
     mcp_transport: mcpManifest?.transport || null,
-    agent_growth_tools: ['network_capabilities','network_stats','passport_product_capabilities','resolve_referral'],
+    agent_growth_tools: ['network_capabilities','network_stats','passport_product_capabilities','wallet_capabilities','resolve_referral'],
+    agent_wallet: { machine_first: true, funded_balance_only: true, credit_and_lending: false, production_money_movement: false },
     commercial_launch: { product: 'agent_passport_certificate', price_atomic: 200, currency: 'usd', direct_commission_atomic: 100, referral_levels: 1, stripe_price_configured: Boolean(passportPriceConfigured) },
     proof_modes: ['service_recorded_hash','issuer_signed_hash']
   },
