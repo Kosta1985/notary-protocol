@@ -1,16 +1,23 @@
-name: One-time Cloudflare inventory audit
+name: Manual Cloudflare inventory audit
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/cloudflare-audit.yml"
+  workflow_dispatch:
+    inputs:
+      confirm_audit:
+        description: 'Type AUDIT to run the read-only Cloudflare inventory audit'
+        required: true
+        type: string
 
 permissions:
   contents: read
 
+concurrency:
+  group: accordtrace-cloudflare-audit
+  cancel-in-progress: false
+
 jobs:
   audit:
+    if: ${{ inputs.confirm_audit == 'AUDIT' }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -84,4 +91,10 @@ jobs:
               done <<< "$tables"
             done < <(printf '%s' "$databases" | jq -r '.result[]? | [.uuid, .name] | @tsv')
           done < <(printf '%s' "$accounts" | jq -r '.result[] | [.id, .name] | @tsv')
-          rm -f /tmp/token.txt /tmp/token.enc /tmp/token.enc.b64 /tmp/private.pem
+      - name: Cleanup sensitive transport material
+        if: always()
+        run: rm -f /tmp/token.txt /tmp/token.enc /tmp/token.enc.b64 /tmp/private.pem
+      - name: Safety note
+        run: |
+          echo 'This workflow has no push or schedule trigger.'
+          echo 'The read-only audit requires workflow_dispatch plus the exact AUDIT confirmation.'
