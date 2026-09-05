@@ -75,3 +75,31 @@ test('Alpha pays Beta from funded balance, policy blocks 1000 USDC, Guardian fre
   assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM receipts WHERE deal_id='accordtrace-financial-v1'").get().n,5);
   assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM sqlite_master WHERE type='table' AND (lower(name) LIKE '%loan%' OR lower(name) LIKE '%debt%' OR lower(name) LIKE '%credit%')").get().n,0);
 });
+
+
+test('simultaneous identical idempotency requests settle at most once and replay committed intent',async t=>{
+  const h=await setup(t);
+  await h.invoke(h.alpha,'/api/v1/agent/wallet',{method:'POST',body:{}});
+  await h.invoke(h.beta,'/api/v1/agent/wallet',{method:'POST',body:{}});
+  const body={recipientAgentId:h.beta.id,amount:'1',asset:'USDC',purpose:'AGENT_TASK_SETTLEMENT',taskId:'same-key-race'};
+  const results=await Promise.all([
+    h.invoke(h.alpha,'/api/v1/agent/payments',{method:'POST',body,idempotencyKey:'same-key-race-0001'}),
+    h.invoke(h.alpha,'/api/v1/agent/payments',{method:'POST',body,idempotencyKey:'same-key-race-0001'})
+  ]);
+  assert.ok(results.every(r=>[200,201].includes(r.status)),JSON.stringify(results));
+  assert.equal(results.filter(r=>r.status===201).length,1);
+  assert.equal(results.filter(r=>r.body.idempotentReplay===true).length,1);
+  assert.equal(balance(h.db,h.alpha.id),9000000);
+  assert.equal(balance(h.db,h.beta.id),11000000);
+  assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM agent_payment_intents WHERE sender_passport_id=? AND idempotency_key=?").get(h.alpha.id,'same-key-race-0001').n,1);
+  assert.equal(h.db.prepare("SELECT COUNT(*) AS n FROM agent_financial_transactions").get().n,1);
+});
+
+test('unexpected wallet failures redact internal error messages',async()=>{
+  const response=agentWalletErrorResponse(new Error('D1_ERROR SELECT secret sk_live_hidden'));
+  assert.equal(response.status,500);
+  const text=await response.text();
+  assert.match(text,/INTERNAL_ERROR/);
+  assert.match(text,/Wallet operation failed/);
+  assert.doesNotMatch(text,/D1_ERROR|SELECT|sk_live_hidden/);
+});

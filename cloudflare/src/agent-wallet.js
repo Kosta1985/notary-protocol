@@ -105,23 +105,25 @@ async function createPayment(request, env, auth) {
 
   if (decision.decision === POLICY_DECISIONS.DENY || decision.decision === POLICY_DECISIONS.QUARANTINE) {
     const receipt = await buildWalletReceipt({ receiptType: 'FINANCIAL_TRANSACTION', agentId: auth.passportId, wallet: sender.wallet_address, action: 'PAYMENT', recipientAgentId: recipientPassportId, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, policyDecision: decision.decision, policyCode: decision.code, guardianApproval: false, provider: sender.provider, network: sender.network, settlementMode: sender.settlement_mode, status: 'BLOCKED', reason: decision.reason, timestamp: now });
-    const results = await env.DB.batch([
+    const commit = await commitPaymentBatch(env, [
       paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'BLOCKED', decision, receiptId: receipt.receiptId, now }),
       receiptInsert(env, receipt),
       eventInsert(env, auth.passportId, sender.id, 'POLICY_BLOCK', amountAtomic, asset, intentId, { code: decision.code, reason: decision.reason }, now)
-    ]);
-    assertBatch(results);
+    ], auth.passportId, key, requestDigest);
+    if (commit.replay) return idempotentPaymentReplay(commit.replay);
+    assertBatch(commit.results);
     return json({ payment: { id: intentId, status: 'BLOCKED', policy: decision }, receipt }, 422);
   }
 
   if (decision.decision === POLICY_DECISIONS.REQUIRE_APPROVAL) {
     const receipt = await buildWalletReceipt({ receiptType: 'FINANCIAL_TRANSACTION', agentId: auth.passportId, wallet: sender.wallet_address, action: 'PAYMENT', recipientAgentId: recipientPassportId, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, policyDecision: decision.decision, policyCode: decision.code, guardianApproval: false, provider: sender.provider, network: sender.network, settlementMode: sender.settlement_mode, status: 'APPROVAL_REQUIRED', reason: decision.reason, timestamp: now });
-    const results = await env.DB.batch([
+    const commit = await commitPaymentBatch(env, [
       paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'APPROVAL_REQUIRED', decision, receiptId: receipt.receiptId, now }),
       receiptInsert(env, receipt),
       eventInsert(env, auth.passportId, sender.id, 'GUARDIAN_APPROVAL', amountAtomic, asset, intentId, { pending: true }, now)
-    ]);
-    assertBatch(results);
+    ], auth.passportId, key, requestDigest);
+    if (commit.replay) return idempotentPaymentReplay(commit.replay);
+    assertBatch(commit.results);
     return json({ payment: { id: intentId, status: 'APPROVAL_REQUIRED', policy: decision }, receipt }, 202);
   }
 
@@ -134,7 +136,7 @@ async function createPayment(request, env, auth) {
   const transactionId = id('ft');
   const receipt = await buildWalletReceipt({ receiptType: 'FINANCIAL_TRANSACTION', agentId: auth.passportId, wallet: sender.wallet_address, action: 'PAYMENT', recipientAgentId: recipientPassportId, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, policyDecision: decision.decision, policyCode: decision.code, guardianApproval: false, provider: prepared.provider, network: prepared.network, settlementMode: prepared.settlementMode, transactionRef: prepared.providerTxRef, status: 'CONFIRMED', timestamp: now });
 
-  const results = await env.DB.batch([
+  const commit = await commitPaymentBatch(env, [
     paymentInsert(env, { intentId, key, requestDigest, sender: auth.passportId, recipient: recipientPassportId, senderWallet: sender.id, recipientWallet: recipient.id, amountAtomic, asset, purpose: body.purpose || 'AGENT_PAYMENT', taskId: body.taskId || null, status: 'CONFIRMED', decision, receiptId: receipt.receiptId, now, confirmedAt: now }),
     env.DB.prepare(`UPDATE wallet_balances SET available_atomic=available_atomic-?1,updated_at=?2 WHERE wallet_id=?3 AND asset=?4 AND available_atomic>=?1`).bind(toDbInteger(amountAtomic), now, sender.id, asset),
     env.DB.prepare(`INSERT INTO wallet_balances (wallet_id,asset,available_atomic,reserved_atomic,updated_at) VALUES (?1,?2,?3,0,?4) ON CONFLICT(wallet_id,asset) DO UPDATE SET available_atomic=available_atomic+excluded.available_atomic,updated_at=excluded.updated_at`).bind(recipient.id, asset, toDbInteger(amountAtomic), now),
@@ -143,7 +145,9 @@ async function createPayment(request, env, auth) {
     eventInsert(env, auth.passportId, sender.id, 'PAYMENT_SENT', amountAtomic, asset, intentId, { recipientPassportId }, now),
     eventInsert(env, recipientPassportId, recipient.id, 'PAYMENT_RECEIVED', amountAtomic, asset, intentId, { senderPassportId: auth.passportId }, now),
     eventInsert(env, auth.passportId, sender.id, 'SETTLEMENT_CONFIRMED', amountAtomic, asset, transactionId, { providerTxRef: prepared.providerTxRef }, now)
-  ]);
+  ], auth.passportId, key, requestDigest);
+  if (commit.replay) return idempotentPaymentReplay(commit.replay);
+  const results = commit.results;
   assertBatch(results);
   if ((results[1]?.meta?.changes ?? 1) !== 1) throw new AgentWalletError('BALANCE_RACE_DETECTED', 409, 'Balance changed during settlement; reconciliation required.');
   return json({ payment: { id: intentId, status: 'CONFIRMED', transactionId, providerTxRef: prepared.providerTxRef, amount: formatAssetAmount(amountAtomic, asset), asset, policy: decision }, receipt }, 201);
@@ -206,6 +210,23 @@ async function handleAdmin(request, env, url) {
   assertBatch(results); return json({ wallet: publicWallet(await walletForPassport(env, wallet.passport_id)), receipt });
 }
 
+async function commitPaymentBatch(env, statements, senderPassportId, key, requestDigest) {
+  try {
+    return { results: await env.DB.batch(statements), replay: null };
+  } catch (error) {
+    // A concurrent request can pass the initial idempotency read before the
+    // first request commits. Re-read authoritative state after the failed
+    // transaction; never retry or repeat settlement writes.
+    const prior = await env.DB.prepare(`SELECT * FROM agent_payment_intents WHERE sender_passport_id=?1 AND idempotency_key=?2`).bind(senderPassportId, key).first();
+    if (!prior) throw error;
+    if (prior.request_digest !== requestDigest) throw new AgentWalletError('IDEMPOTENCY_KEY_CONFLICT', 409, 'Idempotency key was already used for a different payment request.');
+    return { results: null, replay: prior };
+  }
+}
+function idempotentPaymentReplay(payment) {
+  return json({ payment: serializePayment(payment), idempotentReplay: true }, 200);
+}
+
 function paymentInsert(env, x) {
   return env.DB.prepare(`INSERT INTO agent_payment_intents (id,idempotency_key,request_digest,sender_passport_id,recipient_passport_id,sender_wallet_id,recipient_wallet_id,amount_atomic,asset,purpose,task_id,status,policy_decision,policy_code,policy_reason,requires_guardian_approval,receipt_id,requested_at,confirmed_at,created_at,updated_at) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13,?14,?15,?16,?17,?18,?19,?18,?18)`).bind(x.intentId, x.key, x.requestDigest, x.sender, x.recipient, x.senderWallet, x.recipientWallet, toDbInteger(x.amountAtomic), x.asset, x.purpose, x.taskId, x.status, x.decision.decision, x.decision.code, x.decision.reason, x.decision.requiresGuardianApproval ? 1 : 0, x.receiptId, x.now, x.confirmedAt || null);
 }
@@ -231,7 +252,7 @@ function json(value, status = 200) { return new Response(JSON.stringify(value), 
 export function agentWalletErrorResponse(error) {
   const known = error instanceof AgentWalletError || error instanceof AgentRequestError;
   const status = known ? error.status : 500;
-  const body = { error: { code: known ? error.code : 'INTERNAL_ERROR', message: error instanceof Error ? error.message : 'Unknown error', retryable: status >= 500 || status === 429 } };
+  const body = { error: { code: known ? error.code : 'INTERNAL_ERROR', message: known ? error.message : 'Wallet operation failed.', retryable: status >= 500 || status === 429 } };
   if (known && error.details) body.error.details = error.details;
   return json(body, status);
 }
