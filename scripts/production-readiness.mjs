@@ -211,7 +211,8 @@ if (requireCloudflare) {
 for (const key of ['STRIPE_SECRET_KEY','STRIPE_WEBHOOK_SECRET','STRIPE_PRICE_DOMAIN_CONTROL','STRIPE_PRICE_PUBLISHER_VALIDATION','STRIPE_PRICE_SECURITY_ASSESSMENT']) {
   if (!process.env[key]) notes.push(`${key} not configured; corresponding Stripe checkout capability remains disabled.`);
 }
-if (!process.env.STRIPE_PRICE_AGENT_PASSPORT) notes.push('STRIPE_PRICE_AGENT_PASSPORT not configured; Agent Passport Certificate checkout remains disabled.');
+const passportPriceConfigured = process.env.STRIPE_PRICE_AGENT_PASSPORT || wrangler?.vars?.STRIPE_PRICE_AGENT_PASSPORT;
+if (!passportPriceConfigured) notes.push('STRIPE_PRICE_AGENT_PASSPORT not configured; Agent Passport Certificate checkout remains disabled.');
 if (!process.env.NOTARY_PRIVATE_JWK) notes.push('NOTARY_PRIVATE_JWK not configured; free proofs use service_recorded_hash and signed Passport Certificate issuance remains disabled.');
 if (!process.env.STRIPE_PUBLISHABLE_KEY) notes.push('STRIPE_PUBLISHABLE_KEY is not configured; hosted Checkout does not require it server-side, but retain it for future embedded/client features.');
 notes.push('Affiliate cash payouts remain intentionally disabled until payout-provider, KYC/tax and final terms activation.');
@@ -224,7 +225,7 @@ const result = {
     a2a_protocol: agentCard?.supportedInterfaces?.[0]?.protocolVersion || null,
     mcp_transport: mcpManifest?.transport || null,
     agent_growth_tools: ['network_capabilities','network_stats','passport_product_capabilities','resolve_referral'],
-    commercial_launch: { product: 'agent_passport_certificate', price_atomic: 200, currency: 'usd', direct_commission_atomic: 100, referral_levels: 1 },
+    commercial_launch: { product: 'agent_passport_certificate', price_atomic: 200, currency: 'usd', direct_commission_atomic: 100, referral_levels: 1, stripe_price_configured: Boolean(passportPriceConfigured) },
     proof_modes: ['service_recorded_hash','issuer_signed_hash']
   },
   migrations: migrations.length,
