@@ -45,8 +45,12 @@ test('Cloudflare inventory audit requires explicit confirmation and cleans trans
   assert.match(workflows.cloudflareAudit, /read-only audit requires workflow_dispatch plus the exact AUDIT confirmation/);
 });
 
-test('secondary A2A submission remains manual and exact-card verified', () => {
+test('secondary A2A submission remains manual and exact current 9-skill card verified', () => {
   assert.match(workflows.secondaryA2A, /search=Accord%20Trace/);
+  assert.match(workflows.secondaryA2A, /wallet_capabilities/);
+  for (const skill of ['notarize_evidence','verify_proof','get_proof','hash_content','network_capabilities','network_stats','passport_product_capabilities','wallet_capabilities','resolve_referral']) {
+    assert.ok(workflows.secondaryA2A.includes(`index(\"${skill}\")`), `secondary registry preflight missing ${skill}`);
+  }
   assert.match(workflows.secondaryA2A, /Verified exact Accord Trace listing with canonical Agent Card URI/);
   assert.match(workflows.secondaryA2A, /Repeated unsolicited submissions are intentionally not automated/);
 });
