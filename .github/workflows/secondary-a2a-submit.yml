@@ -33,6 +33,7 @@ jobs:
               and index("network_capabilities") != null
               and index("network_stats") != null
               and index("passport_product_capabilities") != null
+              and index("wallet_capabilities") != null
               and index("resolve_referral") != null
             ))
           ' >/dev/null
