@@ -145,7 +145,8 @@ for (const marker of ['Sample Agent Passport Certificate','SAMPLE','agent_passpo
   if (!passportPage.toLowerCase().includes(marker.toLowerCase())) problems.push(`passport_page_missing:${marker}`);
 }
 const passportUi = read('web/passport.js');
-for (const marker of ['product.commercial_ready','Stripe activation in progress','aria-disabled','/api/v1/network/referrals/']) {
+// Validate the fail-closed contract, not a particular marketing/button label.
+for (const marker of ['product.commercial_ready===true','missing.length===0','certificate_signing_enabled','aria-disabled','/api/v1/network/referrals/']) {
   if (!passportUi.includes(marker)) problems.push(`passport_ui_missing:${marker}`);
 }
 

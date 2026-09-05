@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Validate production source contract before merge
+        run: npm run production:check
       - name: Build Cloudflare assets and merged OpenAPI
         run: |
           npm run cf:prepare
