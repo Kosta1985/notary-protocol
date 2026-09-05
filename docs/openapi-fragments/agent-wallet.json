@@ -92,6 +92,26 @@
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
         "responses": { "200": { "description": "Wallet reactivated; audit and security receipt written" } }
       }
+    },
+    "/api/v1/wallet-admin/payments/{id}/approve": {
+      "post": {
+        "operationId": "approveAgentPayment",
+        "summary": "Guardian-authorize an APPROVAL_REQUIRED funded payment",
+        "description": "Operator-only. Re-checks sender/recipient state, current policy, rolling spend and authoritative funded balance immediately before settlement. Approval cannot create credit or bypass insufficient balance. Current implementation executes only with the simulated test provider.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GuardianDecisionRequest" } } } },
+        "responses": { "200": { "description": "Funded payment confirmed or idempotently already confirmed" }, "401": { "description": "Operator bearer token required" }, "409": { "description": "Payment state changed or is not awaiting approval" }, "422": { "description": "Current policy, wallet state or funded balance forbids settlement" } }
+      }
+    },
+    "/api/v1/wallet-admin/payments/{id}/deny": {
+      "post": {
+        "operationId": "denyAgentPayment",
+        "summary": "Guardian-deny an APPROVAL_REQUIRED payment",
+        "description": "Operator-only. Marks the pending payment blocked, writes audit/economic evidence and does not move funds.",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GuardianDecisionRequest" } } } },
+        "responses": { "200": { "description": "Payment blocked or idempotently already denied" }, "401": { "description": "Operator bearer token required" }, "409": { "description": "Payment state changed or is not awaiting approval" } }
+      }
     }
   },
   "components": {
@@ -106,6 +126,11 @@
           "purpose": { "type": "string" },
           "taskId": { "type": ["string", "null"] }
         }
+      },
+      "GuardianDecisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": { "reason": { "type": "string", "maxLength": 500 } }
       }
     }
   }
