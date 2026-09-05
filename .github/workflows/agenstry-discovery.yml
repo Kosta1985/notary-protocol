@@ -72,6 +72,7 @@ jobs:
             network_capabilities \
             network_stats \
             passport_product_capabilities \
+            wallet_capabilities \
             resolve_referral
           do
             if ! printf '%s' "$validation" | jq -e --arg skill "$skill" \
@@ -90,7 +91,8 @@ jobs:
             'tamper evident agent handoff receipt' \
             'verify AI agent artifact integrity' \
             'AI agent affiliate referral network' \
-            'agent passport certificate readiness'
+            'agent passport certificate readiness' \
+            'AI agent USDC wallet treasury policy no credit'
           do
             echo "=== $query ==="
             curl --fail-with-body --silent --show-error --get \
