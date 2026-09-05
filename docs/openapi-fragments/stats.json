@@ -1,0 +1,46 @@
+{
+  "paths": {
+    "/api/v1/stats": {
+      "get": {
+        "summary": "Read privacy-safe aggregate Accord Trace activity",
+        "description": "Returns 30-day aggregate event counts plus total Accord Trace proof records. Automated live-smoke requests are excluded from event counters; synthetic proof records are reported separately. No IP addresses or user identifiers are used to manufacture unique-agent counts.",
+        "responses": {
+          "200": {
+            "description": "Aggregate Accord Trace activity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": ["service", "windowDays", "totals", "daily", "proofs", "protocols", "privacy"],
+                  "properties": {
+                    "service": { "type": "string", "const": "Accord Trace" },
+                    "windowDays": { "type": "integer", "const": 30 },
+                    "totals": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+                    "daily": { "type": "array", "items": { "type": "object" } },
+                    "proofs": {
+                      "type": "object",
+                      "properties": {
+                        "records_total": { "type": "integer", "minimum": 0 },
+                        "synthetic_monitor_records": { "type": "integer", "minimum": 0 },
+                        "non_synthetic_records": { "type": "integer", "minimum": 0 }
+                      }
+                    },
+                    "protocols": {
+                      "type": "object",
+                      "properties": {
+                        "a2a_requests": { "type": "integer", "minimum": 0 },
+                        "mcp_requests": { "type": "integer", "minimum": 0 }
+                      }
+                    },
+                    "privacy": { "type": "string" },
+                    "monitoring": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
