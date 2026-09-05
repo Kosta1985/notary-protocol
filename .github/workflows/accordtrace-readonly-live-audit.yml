@@ -1,0 +1,70 @@
+name: AccordTrace read-only live audit
+
+on:
+  push:
+    branches: [test/agent-wallet-isolated-e2e-20260905]
+    paths:
+      - .github/workflows/accordtrace-readonly-live-audit.yml
+      - scripts/accordtrace-live-contract.mjs
+      - scripts/full-production-smoke.js
+      - scripts/payments-smoke.js
+      - scripts/control-plane-smoke.js
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  readonly-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Production agent contract
+        run: npm run accordtrace:live | tee accordtrace-live-contract.json
+      - name: Production public HTTP smoke
+        run: npm run smoke:production | tee accordtrace-production-smoke.json
+      - name: Payment capabilities and fail-closed empty verification
+        run: npm run smoke:payments | tee accordtrace-payments-smoke.json
+      - name: Control plane fail-closed without credentials
+        env:
+          CONTROL_PLANE_SMOKE_TOKEN: ''
+        run: npm run smoke:control-plane | tee accordtrace-control-plane-smoke.json
+      - name: Assert live wallet remains non-credit and production mutations disabled
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://accordtrace.notary-labs.workers.dev'
+          curl --fail --silent --show-error --max-time 15 "$base/api/v1/agent/wallet-capabilities" > wallet-live.json
+          jq -e '
+            .audience == "autonomous_agents" and
+            .machine_first == true and
+            .payment_contract.funded_balance_only == true and
+            .payment_contract.negative_balances == false and
+            .credit_and_lending.enabled == false and
+            .machine_protocols.mutations_require_direct_passport_signed_request == true
+          ' wallet-live.json >/dev/null
+          status="$(curl --silent --show-error --max-time 15 -o unsigned-wallet.json -w '%{http_code}' "$base/api/v1/agent/wallet")"
+          [[ "$status" == '404' || "$status" == '401' ]] || { echo "Unexpected unsigned wallet HTTP $status" >&2; exit 1; }
+          # The public production capability contract may advertise the API even while
+          # wallet mutations are feature-gated. This audit never supplies an agent key.
+          jq -nc --arg unsigned_status "$status" '{status:"ok",production_write_attempted:false,unsigned_wallet_http:$unsigned_status,credit_or_lending:false}' > readonly-live-summary.json
+      - name: Upload read-only evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accordtrace-readonly-live-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            accordtrace-live-contract.json
+            accordtrace-production-smoke.json
+            accordtrace-payments-smoke.json
+            accordtrace-control-plane-smoke.json
+            wallet-live.json
+            unsigned-wallet.json
+            readonly-live-summary.json
+          retention-days: 7
