@@ -22,20 +22,37 @@ test('community schema prevents self complaints and constrains states',()=>{
   assert.match(sql,/state IN \('created','completed','cancelled'\)/);
 });
 
+test('community lifecycle audit is append-only and bounded to known event types',()=>{
+  const sql=fs.readFileSync('cloudflare/migrations/0027_community_audit_lifecycle.sql','utf8');
+  assert.match(sql,/CREATE TABLE IF NOT EXISTS community_audit_events/);
+  assert.match(sql,/event_digest TEXT NOT NULL UNIQUE/);
+  assert.match(sql,/migration_completed/);
+  assert.match(sql,/migration_cancelled/);
+  assert.doesNotMatch(sql,/UPDATE community_audit_events|DELETE FROM community_audit_events/i);
+});
+
 test('portability implementation excludes secrets and funds and requires signed agent intents',()=>{
   const source=fs.readFileSync('cloudflare/src/community.js','utf8');
+  const lifecycle=fs.readFileSync('cloudflare/src/community-migration-lifecycle.js','utf8');
   assert.match(source,/private_material_included:false/);
   assert.match(source,/funds_included:false/);
   assert.match(source,/verifyEd25519\(passport\.public_key/);
   assert.match(source,/destination_origin_https_required/);
   assert.match(source,/automatic_trust_effect:false/);
   assert.match(source,/automatic_enforcement:false/);
+  assert.match(lifecycle,/accordtrace\.community\.migration\.\$\{action\}\.v1/);
+  assert.match(lifecycle,/state='created'/);
+  assert.match(lifecycle,/community_audit_events/);
+  assert.match(lifecycle,/secret_material_included:false/);
+  assert.match(lifecycle,/funds_included:false/);
   assert.doesNotMatch(source,/private_key\s*:/);
-  assert.doesNotMatch(source,/seed_phrase|mnemonic|wallet_secret/i);
+  assert.doesNotMatch(lifecycle,/private_key\s*:/);
+  assert.doesNotMatch(source+lifecycle,/seed_phrase|mnemonic|wallet_secret/i);
 });
 
-test('runtime routes community separately from payment and wallet handlers',()=>{
+test('runtime routes community lifecycle separately from payment and wallet handlers',()=>{
   const source=fs.readFileSync('cloudflare/src/worker-v2.js','utf8');
+  assert.match(source,/handleCommunityMigrationLifecycle/);
   assert.match(source,/handleCommunity/);
   assert.match(source,/communityRoute/);
   assert.match(source,/communityErrorResponse/);
