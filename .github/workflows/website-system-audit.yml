@@ -1,0 +1,53 @@
+name: AccordTrace website system audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [audit/accordtrace-system-check-20260905]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-system-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Unit and integration tests
+        run: |
+          mkdir -p .audit
+          set -o pipefail
+          npm test 2>&1 | tee .audit/unit-tests.log | tail -n 55
+      - name: Validate prepared release assets
+        run: |
+          npm run production:check
+          npm run cf:prepare
+          npm run accordtrace:metadata
+      - name: Read-only live HTTP and link audit
+        if: always()
+        run: node scripts/audit/website-system.mjs
+      - name: Install isolated browser tooling
+        if: always()
+        run: |
+          npm install --prefix "$RUNNER_TEMP/accordtrace-browser" --no-package-lock --no-audit --no-fund playwright@1.55.0
+          "$RUNNER_TEMP/accordtrace-browser/node_modules/.bin/playwright" install --with-deps chromium
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/accordtrace-browser/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+      - name: Read-only desktop and mobile browser audit
+        if: always()
+        run: node scripts/audit/website-browser.mjs
+      - name: Upload audit evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accordtrace-system-audit-${{ github.sha }}
+          path: .audit/
+          include-hidden-files: true
+          retention-days: 7
