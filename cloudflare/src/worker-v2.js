@@ -32,7 +32,7 @@ export default {
       }
     }
 
-    const coreEnv = url.pathname.startsWith("/api/v1/passport-product/") ? passportSafeEnv(env) : env;
+    const coreEnv = url.pathname.startsWith("/api/v1/passport-product/") ? await passportSafeEnv(env) : env;
     return coreWorker.fetch(request, coreEnv, ctx);
   },
 
