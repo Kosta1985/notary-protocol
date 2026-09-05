@@ -36,6 +36,8 @@ jobs:
         run: node scripts/audit/website-interactions.mjs
       - name: Exercise isolated statistics failures and retry scenarios
         run: node scripts/audit/statistics-interactions.mjs
+      - name: Exercise isolated evidence response and navigation states
+        run: node scripts/audit/evidence-interactions.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

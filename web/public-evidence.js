@@ -30,26 +30,83 @@ export function classifyReference(value) {
   return { kind: 'validation', id };
 }
 
+// Limit decoded response bytes even if Content-Length is missing, compressed or wrong.
+// No response body (including errors and optional 404s) is left unread and active.
+const MAX_RESPONSE_BYTES = 1_048_576;
+function discardResponse(response) {
+  if (response?.body && !response.body.locked) void response.body.cancel().catch(() => {});
+}
+function validateResponseComplexity(value) {
+  const stack = [{ value, depth: 0 }];
+  let nodes = 0;
+  while (stack.length) {
+    const item = stack.pop();
+    if (++nodes > 100_000 || item.depth > 128) throw new EvidenceError('response_too_complex');
+    if (typeof item.value === 'number' && !Number.isFinite(item.value)) throw new EvidenceError('invalid_response');
+    if (item.value !== null && typeof item.value === 'object') {
+      const keys = Object.keys(item.value);
+      if (nodes + stack.length + keys.length > 100_000) throw new EvidenceError('response_too_complex');
+      for (const key of keys) stack.push({ value: item.value[key], depth: item.depth + 1 });
+    }
+  }
+}
+async function readResponseJson(response, signal) {
+  const declared = response.headers.get('content-length');
+  if (declared && /^\d+$/.test(declared) && Number(declared) > MAX_RESPONSE_BYTES) throw new EvidenceError('response_too_large');
+  if (!response.body) throw new EvidenceError('invalid_response');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0, complete = false;
+  const cancel = () => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener('abort', cancel, { once: true });
+  try {
+    for (;;) {
+      if (signal.aborted) throw new EvidenceError('cancelled');
+      const { done, value } = await reader.read();
+      if (signal.aborted) throw new EvidenceError('cancelled');
+      if (done) { complete = true; break; }
+      size += value.byteLength;
+      if (size > MAX_RESPONSE_BYTES) throw new EvidenceError('response_too_large');
+      chunks.push(value);
+    }
+  } finally {
+    signal.removeEventListener('abort', cancel);
+    if (!complete) cancel();
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+  let value;
+  try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+  catch { throw new EvidenceError('invalid_response'); }
+  validateResponseComplexity(value);
+  return value;
+}
+
 export async function requestJson(path, { signal, body, optional = false, acceptInvalid = false, timeoutMs = 10000, headers = {}, fetchImpl = globalThis.fetch } = {}) {
   if (typeof path !== 'string' || !/^\/(?:api\/v1\/|v1\/)/.test(path) || /[\\\r\n]/.test(path)) throw new EvidenceError('invalid_endpoint');
+  const normalized = new URL(path, 'https://accordtrace.invalid');
+  if (normalized.origin !== 'https://accordtrace.invalid' || !/^\/(?:api\/v1\/|v1\/)/.test(normalized.pathname)) throw new EvidenceError('invalid_endpoint');
   if (signal?.aborted) throw new EvidenceError('cancelled');
   const controller = new AbortController();
-  let timedOut = false;
+  let timedOut = false, response;
   const abort = () => controller.abort();
   signal?.addEventListener('abort', abort, { once: true });
   const timer = setTimeout(() => { timedOut = true; controller.abort(); }, timeoutMs);
   try {
-    const response = await fetchImpl(path, {
+    response = await fetchImpl(path, {
       method: body === undefined ? 'GET' : 'POST',
       headers: { accept: 'application/json', ...(body === undefined ? {} : { 'content-type': 'application/json' }), ...headers },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller.signal, cache: 'no-store', redirect: 'error', credentials: 'omit'
     });
+    if (controller.signal.aborted) throw new EvidenceError('cancelled');
     if (optional && response.status === 404) return null;
     if (!response.ok && !(acceptInvalid && response.status === 422)) throw new EvidenceError(response.status === 404 ? 'not_found' : response.status === 429 ? 'rate_limited' : response.status >= 500 ? 'unavailable' : 'request_rejected', response.status);
-    if (!/application\/(?:[a-z0-9.+-]+\+)?json\b/i.test(response.headers.get('content-type') || '')) throw new EvidenceError('invalid_response');
-    let value;
-    try { value = await response.json(); } catch { throw new EvidenceError('invalid_response'); }
+    if (!/^application\/(?:[a-z0-9.+-]+\+)?json(?:\s*;|$)/i.test(response.headers.get('content-type') || '')) throw new EvidenceError('invalid_response');
+    const value = await readResponseJson(response, controller.signal);
+    if (controller.signal.aborted) throw new EvidenceError('cancelled');
     if (!object(value) || Object.prototype.hasOwnProperty.call(value, 'error')) throw new EvidenceError('invalid_response');
     if (response.status === 422 && value.valid !== false) throw new EvidenceError('invalid_response');
     return value;
@@ -59,6 +116,7 @@ export async function requestJson(path, { signal, body, optional = false, accept
     if (error instanceof EvidenceError) throw error;
     throw new EvidenceError('network');
   } finally {
+    discardResponse(response);
     clearTimeout(timer);
     signal?.removeEventListener('abort', abort);
   }
@@ -70,6 +128,8 @@ export function publicErrorMessage(error) {
     invalid_passport: 'Enter a full Agent Passport ID: agtp_ followed by 64 hexadecimal characters.',
     not_evidence_reference: 'Referral codes and order IDs are not evidence IDs. Use a Passport, proof, Certificate or validation request ID.',
     not_found: 'No matching public evidence was found. Check the ID and try again.',
+    response_too_large: 'The response exceeds the safe display limit. Evidence could not be confirmed.',
+    response_too_complex: 'The response exceeds the supported data complexity. Evidence could not be confirmed.',
     invalid_response: 'The service returned an incomplete or unexpected response. Evidence could not be confirmed.',
     unavailable: 'The evidence service is temporarily unavailable. Please try again.',
     rate_limited: 'Too many requests. Please wait before trying again.',
