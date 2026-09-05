@@ -61,9 +61,12 @@ test('MCP Passport capabilities cannot report malformed signer as commercially r
   assert.equal(response.status, 200);
   const body = await response.json();
   assert.equal(body.error, undefined);
-  assert.equal(body.result.structuredContent.certificate_signing_enabled, false);
-  assert.equal(body.result.structuredContent.readiness.certificate_signing_key, false);
-  assert.equal(body.result.structuredContent.commercial_ready, false);
+  const capabilities = body.result.structuredContent;
+  assert.equal(capabilities.checkout_enabled, true, 'Stripe checkout prerequisites are deliberately present in this test');
+  assert.equal(capabilities.webhook_enabled, true, 'Stripe webhook prerequisite is deliberately present in this test');
+  assert.equal(capabilities.referral_pricing_consistent, true);
+  assert.equal(capabilities.certificate_signing_enabled, false);
+  assert.equal(capabilities.commercial_ready, false);
 });
 
 test('production wrapper applies Passport-only signer sanitization before legacy product routes', () => {
