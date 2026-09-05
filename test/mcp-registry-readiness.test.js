@@ -16,19 +16,22 @@ test('MCP registry identity and remote stay canonical', () => {
 test('MCP publisher is pinned and integrity checked', () => {
   assert.match(workflow, /actions\/checkout@v7/);
   assert.match(workflow, /actions\/setup-node@v7/);
-  assert.match(workflow, /publisher_version='v1\.8\.1'/);
+  assert.match(workflow, /MCP_PUBLISHER_VERSION: v1\.8\.1/);
   assert.match(workflow, /a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc/);
   assert.match(workflow, /sha256sum --check --strict/);
   assert.doesNotMatch(workflow, /releases\/latest\/download/);
 });
 
-test('registry publish remains manual while push only validates', () => {
+test('pull requests and pushes validate, while publishing remains manual and OIDC-scoped', () => {
   assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /pull_request:/);
   assert.match(workflow, /push:/);
-  assert.match(workflow, /Authenticate with GitHub OIDC[\s\S]*if: github\.event_name == 'workflow_dispatch'/);
-  assert.match(workflow, /Publish remote MCP server[\s\S]*if: github\.event_name == 'workflow_dispatch'/);
-  assert.match(workflow, /Verify server\.json against live MCP contract/);
+  assert.match(workflow, /validate:\n[\s\S]*Verify server\.json against live MCP contract/);
   assert.match(workflow, /node scripts\/mcp-registry-live-check\.mjs/);
+  assert.match(workflow, /publish:\n\s+if: github\.event_name == 'workflow_dispatch'/);
+  assert.match(workflow, /publish:[\s\S]*permissions:\n\s+contents: read\n\s+id-token: write/);
+  const globalPermissions = workflow.slice(workflow.indexOf('permissions:'), workflow.indexOf('env:'));
+  assert.doesNotMatch(globalPermissions, /id-token:/, 'validation events must not receive OIDC write permission');
 });
 
 test('live MCP registry check verifies version and all public tools', () => {
