@@ -12,22 +12,6 @@ async function readJson(url, fetcher) {
   };
 }
 
-function normalizeAgentMetrics(stats) {
-  const agents = stats?.agents ?? stats?.agentMetrics ?? null;
-  if (!agents) return null;
-  const active = agents.active ?? agents.identified ?? {};
-  return {
-    active24h: active.active24h ?? active.daily ?? null,
-    active7d: active.active7d ?? active.weekly ?? null,
-    active30d: active.active30d ?? active.monthly ?? null,
-    new7d: active.new7d ?? null,
-    returning7d: active.returning7d ?? null,
-    identifiedRequests: agents.requests?.identified ?? null,
-    anonymousRequests: agents.requests?.anonymous ?? null,
-    protocols: agents.protocols ?? null
-  };
-}
-
 export async function probeAccordTrace(fetcher = fetch) {
   const [homepage, agentCard, accordTraceStats, legacyStats] = await Promise.all([
     fetcher(`${accordTraceBase}/`, { headers: monitorHeaders }),
@@ -36,16 +20,14 @@ export async function probeAccordTrace(fetcher = fetch) {
     readJson(`${legacyBase}/v1/stats`, fetcher)
   ]);
   const homepageText = homepage.ok ? await homepage.text() : "";
-  const agentMetrics = normalizeAgentMetrics(accordTraceStats.body);
+  const stats = accordTraceStats.body;
 
   return {
     generatedAt: new Date().toISOString(),
     attribution: {
-      supported: Boolean(agentMetrics),
-      method: agentMetrics ? "pseudonymous client identifier; server stores one-way hash" : null,
-      note: agentMetrics
-        ? "Identified agent counts exclude anonymous requests; IP addresses are not used to manufacture unique-agent counts."
-        : "Current aggregate counters do not identify humans, bots, or third-party agents."
+      supported: false,
+      method: null,
+      note: "Accord Trace reports aggregate event counts only and does not manufacture unique-agent counts from IP addresses or anonymous requests."
     },
     accordTrace: {
       service: accordTraceBase,
@@ -54,12 +36,14 @@ export async function probeAccordTrace(fetcher = fetch) {
       agentCardStatus: agentCard.status,
       agentName: agentCard.body?.name ?? null,
       publicStatsStatus: accordTraceStats.status,
-      publicStats: accordTraceStats.body,
-      agentMetrics,
-      verifiedProofCount: accordTraceStats.body?.totals?.verification_valid ?? accordTraceStats.body?.totals?.proof_verified ?? null,
-      note: accordTraceStats.status === 200
-        ? null
-        : "AccordTrace does not currently expose a public aggregate statistics endpoint."
+      publicStats: stats,
+      proofRecordsTotal: stats?.proofs?.records_total ?? null,
+      syntheticMonitorProofs: stats?.proofs?.synthetic_monitor_records ?? null,
+      nonSyntheticProofs: stats?.proofs?.non_synthetic_records ?? null,
+      a2aRequests30d: stats?.protocols?.a2a_requests ?? null,
+      mcpRequests30d: stats?.protocols?.mcp_requests ?? null,
+      verifiedProofCount30d: stats?.totals?.proof_verify_valid ?? null,
+      note: accordTraceStats.status === 200 ? null : "Accord Trace modern aggregate statistics are unavailable."
     },
     legacyNotaryProtocol: {
       service: legacyBase,
@@ -71,11 +55,23 @@ export async function probeAccordTrace(fetcher = fetch) {
   };
 }
 
+function assertModernStats(result) {
+  if (result.accordTrace.homepageStatus !== 200) throw new Error(`Accord Trace homepage HTTP ${result.accordTrace.homepageStatus}`);
+  if (result.accordTrace.agentCardStatus !== 200 || result.accordTrace.agentName !== "Accord Trace") throw new Error("Current Accord Trace Agent Card is unavailable or stale");
+  if (result.accordTrace.publicStatsStatus !== 200) throw new Error(`Accord Trace /api/v1/stats HTTP ${result.accordTrace.publicStatsStatus}`);
+  const stats = result.accordTrace.publicStats;
+  if (stats?.service !== "Accord Trace" || stats?.windowDays !== 30) throw new Error("Accord Trace stats contract is invalid");
+  if (!stats?.proofs || !stats?.protocols || typeof stats?.privacy !== "string") throw new Error("Accord Trace stats contract is incomplete");
+}
+
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   probeAccordTrace()
-    .then((result) => console.log(JSON.stringify(result, null, 2)))
+    .then((result) => {
+      console.log(JSON.stringify(result, null, 2));
+      assertModernStats(result);
+    })
     .catch((error) => {
-      console.error(`AccordTrace stats probe failed: ${error.message}`);
+      console.error(`Accord Trace stats probe failed: ${error.message}`);
       process.exitCode = 1;
     });
 }
