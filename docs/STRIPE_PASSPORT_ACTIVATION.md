@@ -29,6 +29,13 @@ The production Worker remains fail-closed until all three secrets below are conf
    - Generate it outside source control and keep a secure recovery copy before activation.
    - The public key may be published; the private JWK must remain a Worker secret.
 
+## Current production baseline
+
+- Production release SHA: `0c46528d26ef1cee2a03994decdb818474e191f7`
+- Production readiness reports `stripe_price_configured: true`.
+- Full production smoke passes, including exact release SHA verification.
+- Checkout remains intentionally disabled while the three secrets above are absent.
+
 ## Activation verification
 
 Do not announce checkout as live until all of the following pass:
