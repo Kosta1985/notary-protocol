@@ -3,34 +3,111 @@
     "/api/v1/proofs": {
       "post": {
         "operationId": "createAccordTraceProof",
-        "description": "Create an AccordTrace service-recorded proof bound to the canonical SHA-256 digest of submitted JSON-compatible data. Submitted data is not stored in the proof record. When an Ed25519 issuer key is configured the proof also carries an issuer signature; otherwise integrity_mode is service_recorded_hash and issuer is null.",
-        "responses": { "201": { "description": "Proof created" }, "400": { "description": "Invalid proof request" }, "503": { "description": "A configured issuer signing key is invalid" } }
+        "description": "Create an AccordTrace service-recorded proof bound to the canonical SHA-256 digest of submitted JSON-compatible data. Submitted data is not stored in the proof record. When an Ed25519 issuer key is configured the proof also carries an issuer signature; otherwise integrity_mode is service_recorded_hash and issuer is null. JSON requests are bounded to 1 MiB, depth 128 and 100,000 nodes including the envelope.",
+        "responses": {
+          "201": {
+            "description": "Proof created"
+          },
+          "400": {
+            "description": "Invalid proof request"
+          },
+          "503": {
+            "description": "A configured issuer signing key is invalid"
+          },
+          "413": {
+            "description": "Request exceeds 1 MiB, nesting depth 128 or 100,000 JSON nodes (including the request envelope)."
+          },
+          "405": {
+            "description": "Method not allowed; supported methods are listed in Allow."
+          }
+        }
       }
     },
     "/api/v1/proofs/{proof_id}": {
       "get": {
         "operationId": "getAccordTraceProof",
-        "parameters": [{ "name": "proof_id", "in": "path", "required": true, "schema": { "type": "string" } }],
-        "responses": { "200": { "description": "Public non-secret proof metadata" }, "404": { "description": "Proof not found" } }
+        "parameters": [
+          {
+            "name": "proof_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public non-secret proof metadata"
+          },
+          "404": {
+            "description": "Proof not found"
+          }
+        }
       }
     },
     "/api/v1/verify": {
       "post": {
         "operationId": "verifyAccordTraceProof",
-        "description": "Verify the AccordTrace service record, verify an issuer signature when present, and optionally compare supplied data or a supplied hash to the proof digest.",
-        "responses": { "200": { "description": "Verification result with integrity_mode, hash_match and signature_valid" }, "404": { "description": "Proof not found" } }
+        "description": "Verify the AccordTrace service record, verify an issuer signature when present, and optionally compare supplied data or a supplied hash to the proof digest. JSON requests are bounded to 1 MiB, depth 128 and 100,000 nodes including the envelope.",
+        "responses": {
+          "200": {
+            "description": "Verification result with integrity_mode, hash_match and signature_valid"
+          },
+          "404": {
+            "description": "Proof not found"
+          },
+          "413": {
+            "description": "Request exceeds 1 MiB, nesting depth 128 or 100,000 JSON nodes (including the request envelope)."
+          },
+          "405": {
+            "description": "Method not allowed; supported methods are listed in Allow."
+          }
+        }
       }
     },
     "/api/v1/hash": {
       "post": {
         "operationId": "hashAccordTraceContent",
-        "description": "Compute the AccordTrace canonical SHA-256 digest without creating a proof.",
-        "responses": { "200": { "description": "Canonical digest" } }
+        "description": "Compute the AccordTrace canonical SHA-256 digest without creating a proof. JSON requests are bounded to 1 MiB, depth 128 and 100,000 nodes including the envelope.",
+        "responses": {
+          "200": {
+            "description": "Canonical digest"
+          },
+          "413": {
+            "description": "Request exceeds 1 MiB, nesting depth 128 or 100,000 JSON nodes (including the request envelope)."
+          },
+          "405": {
+            "description": "Method not allowed; supported methods are listed in Allow."
+          }
+        }
       }
     },
     "/mcp": {
-      "get": { "operationId": "getMcpStatus", "responses": { "200": { "description": "Remote MCP transport status" } } },
-      "post": { "operationId": "callMcp", "description": "Streamable-HTTP JSON-RPC MCP endpoint for AccordTrace proof tools.", "responses": { "200": { "description": "MCP JSON-RPC response" } } }
+      "get": {
+        "operationId": "getMcpStatus",
+        "responses": {
+          "200": {
+            "description": "Remote MCP transport status"
+          }
+        },
+        "description": "Public transport metadata; HEAD returns the same headers without a body."
+      },
+      "post": {
+        "operationId": "callMcp",
+        "description": "Streamable-HTTP JSON-RPC MCP endpoint for AccordTrace proof tools. JSON requests are bounded to 1 MiB, depth 128 and 100,000 nodes including the envelope.",
+        "responses": {
+          "200": {
+            "description": "MCP JSON-RPC response"
+          },
+          "413": {
+            "description": "Request exceeds 1 MiB, nesting depth 128 or 100,000 JSON nodes (including the request envelope)."
+          },
+          "405": {
+            "description": "Method not allowed; supported methods are listed in Allow."
+          }
+        }
+      }
     }
   }
 }

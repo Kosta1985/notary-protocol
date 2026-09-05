@@ -12,7 +12,7 @@ form?.addEventListener('submit',async event=>{
   try{
     const result=await requestJson('/api/v1/launch/waitlist',{body:payload,signal:controller.signal});
     if(result.accepted!==true)throw new Error('Unexpected waitlist response');
-    status.className='status ok';status.textContent='You are on the early-access list.';form.reset();
+    status.className='status ok';status.textContent='Your early-access request has been received. Existing unsubscribe preferences are preserved.';form.reset();
   }catch(error){
     status.className='status bad';
     status.textContent=error.status===400?'Enter a valid email address and try again.':error.code==='timeout'||error.code==='network'?'We could not confirm receipt of your request. Please retry; duplicate email submissions do not create another entry.':publicErrorMessage(error);

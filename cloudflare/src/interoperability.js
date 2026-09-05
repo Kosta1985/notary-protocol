@@ -33,10 +33,14 @@ export async function handleInteroperability(request, env, url = new URL(request
 
 async function handleA2A(request, env) {
   const body = await readJson(request);
+  const preflight = rpcPreflight(body);
+  if (preflight) return preflight;
   const method = String(body?.method ?? "");
-  if (!/^(SendMessage|message\/send)$/i.test(method)) return null;
+  if (!/^(SendMessage|message\/send)$/i.test(method)) return rpcError(body.id ?? null, -32601, "Method not found");
   const message = body?.params?.message ?? body?.message;
-  const instruction = extractAction(message);
+  let instruction;
+  try { instruction = extractAction(message); }
+  catch (error) { return actionError(body.id ?? null, error); }
   if (!instruction) return rpcError(body?.id ?? null, -32602, "A2A message must include an AccordTrace action and arguments");
   await recordUsage(env, "a2a_request", { request });
   try {
@@ -59,24 +63,30 @@ async function handleA2A(request, env) {
 
 async function handleMcp(request, env) {
   const body = await readJson(request);
+  const preflight = rpcPreflight(body);
+  if (preflight) return preflight;
   const id = body?.id ?? null;
   const method = String(body?.method ?? "");
   await recordUsage(env, "mcp_request", { request });
   try {
+    if (method === "ping") return rpcResult(id, {});
     if (method === "server/discover") {
       return rpcResult(id, { name: "accord-trace", version: "0.2.1", supportedVersions: MCP_VERSIONS, transport: "streamable-http", capabilities: { tools: {} } });
     }
     if (method === "initialize") {
-      const requested = String(body?.params?.protocolVersion ?? MCP_VERSION);
+      const requested = body.params?.protocolVersion ?? MCP_VERSION;
+      if (typeof requested !== 'string' || requested.length > 128) throw new ProofError("protocolVersion must be a bounded string");
       const protocolVersion = MCP_VERSIONS.includes(requested) ? requested : MCP_VERSION;
       return rpcResult(id, { protocolVersion, capabilities: { tools: {} }, serverInfo: { name: "accord-trace", version: "0.2.1" } });
     }
     if (method === "notifications/initialized") return new Response(null, { status: 202 });
     if (method === "tools/list") return rpcResult(id, { tools: mcpTools() });
     if (method === "tools/call") {
-      const name = String(body?.params?.name ?? "");
-      const args = body?.params?.arguments ?? {};
-      const action = MCP_ACTIONS[name];
+      const name = body.params?.name;
+      if (typeof name !== 'string' || !/^[A-Za-z0-9_.-]{1,128}$/.test(name)) throw new ProofError("A valid tool name is required");
+      const args = body.params?.arguments === undefined ? {} : body.params.arguments;
+      if (!isObject(args)) throw new ProofError("Tool arguments must be a JSON object");
+      const action = Object.hasOwn(MCP_ACTIONS, name) ? MCP_ACTIONS[name] : null;
       if (!action) return rpcError(id, -32601, `Unknown AccordTrace tool: ${name}`);
       await recordUsage(env, "mcp_tool_call", { request });
       const result = await executeAction(env, action, args, request);
@@ -145,6 +155,9 @@ function mcpTools() {
 }
 
 async function executeAction(env, action, args = {}, request = null) {
+  if (!isObject(args)) throw new ProofError("Action arguments must be a JSON object");
+  if (typeof action !== 'string' || action.length > 128) throw new ProofError("A valid action name is required");
+  if (['verify_proof', 'get_proof'].includes(action) && typeof args.proof_id !== 'string') throw new ProofError("proof_id must be a string");
   switch (action) {
     case "notarize_evidence":
     case "create_proof":
@@ -164,7 +177,8 @@ async function executeAction(env, action, args = {}, request = null) {
     case "passport_product_capabilities":
       return readExistingPublicApi(await passportSafeEnv(env), "/api/v1/passport-product/capabilities");
     case "resolve_referral": {
-      const referralCode = String(args?.referral_code ?? "").trim();
+      if (typeof args.referral_code !== 'string' || args.referral_code.length > 80) throw new ProofError("referral_code must be a bounded string");
+      const referralCode = args.referral_code.trim();
       if (!referralCode) throw new ProofError("referral_code is required");
       return readExistingPublicApi(env, `/api/v1/network/referrals/${encodeURIComponent(referralCode)}`);
     }
@@ -187,10 +201,14 @@ async function readExistingPublicApi(env, pathname) {
 }
 
 function extractAction(message) {
-  for (const part of message?.parts ?? []) {
+  if (!isObject(message) || !Array.isArray(message.parts) || message.parts.length > 128) {
+    throw new ProofError("A2A message must contain an array of at most 128 parts");
+  }
+  for (const part of message.parts) {
+    if (!isObject(part)) throw new ProofError("A2A message parts must be objects");
     const data = part?.data;
-    if (data && typeof data === "object" && typeof data.action === "string") return { action: data.action, arguments: data.arguments ?? {} };
-    if (data?.accordtrace && typeof data.accordtrace.action === "string") return { action: data.accordtrace.action, arguments: data.accordtrace.arguments ?? {} };
+    if (data && typeof data === "object" && typeof data.action === "string") return { action: data.action, arguments: data.arguments === undefined ? {} : data.arguments };
+    if (data?.accordtrace && typeof data.accordtrace.action === "string") return { action: data.accordtrace.action, arguments: data.accordtrace.arguments === undefined ? {} : data.accordtrace.arguments };
   }
   return null;
 }
@@ -205,6 +223,25 @@ function actionError(id, error) {
   const code = error instanceof ProofError ? -32602 : -32603;
   const response = rpcError(id, code, error instanceof Error ? error.message : "Internal error");
   return new Response(response.body, { status, headers: response.headers });
+}
+
+// Validate envelopes before dispatch. Notifications receive no JSON-RPC
+// result and never execute a request-only proof/checkout action.
+function isObject(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
+function rpcPreflight(body) {
+  const id = body.id;
+  const hasId = Object.hasOwn(body, 'id');
+  const idValid = !hasId || id === null || typeof id === 'string' && id.length <= 200
+    || typeof id === 'number' && Number.isFinite(id);
+  if (body.jsonrpc !== '2.0' || !idValid || typeof body.method !== 'string'
+      || !body.method || body.method.length > 128) {
+    return json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Invalid JSON-RPC request' } }, 400);
+  }
+  if (!hasId) return new Response(null, { status: 202 });
+  if (Object.hasOwn(body, 'params') && !isObject(body.params)) {
+    return json({ jsonrpc: '2.0', id, error: { code: -32602, message: 'This method requires named object parameters' } }, 400);
+  }
+  return null;
 }
 
 function rpcResult(id, result) { return json({ jsonrpc: "2.0", id, result }); }

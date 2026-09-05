@@ -41,6 +41,9 @@ jobs:
       - name: Read-only live HTTP and link audit
         if: always()
         run: node scripts/audit/website-system.mjs
+      - name: Public documentation, metadata and protocol edge checks
+        if: always()
+        run: node scripts/audit/website-entrypoints.mjs
       - name: Install isolated browser tooling
         if: always()
         run: |

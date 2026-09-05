@@ -7,6 +7,6 @@
   "registry": {
     "server": "io.github.Kosta1985/accord-trace"
   },
-  "documentation": "https://accordtrace.notary-labs.workers.dev/docs.html",
+  "documentation": "https://accordtrace.notary-labs.workers.dev/developers.html",
   "agentCard": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
 }
