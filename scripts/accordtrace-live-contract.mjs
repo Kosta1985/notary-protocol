@@ -10,6 +10,7 @@ const REQUIRED_SKILLS = [
   'passport_product_capabilities',
   'resolve_referral'
 ];
+const A2A_METHODS = ['message/send', 'SendMessage'];
 
 async function json(path, init = {}) {
   try {
@@ -51,6 +52,66 @@ function cardFingerprint(card) {
     supportedInterfaces: card.supportedInterfaces ?? null,
     skills: skillIds(card)
   });
+}
+
+async function readNetworkCapabilitiesViaA2A(method) {
+  const id = `accordtrace-live-contract-network-${method.replace(/[^a-z0-9]+/gi, '-')}`;
+  const read = await json('/a2a', {
+    method: 'POST',
+    headers: { 'A2A-Version': '1.0' },
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id,
+      method,
+      params: {
+        message: {
+          messageId: id,
+          role: 'ROLE_USER',
+          parts: [{
+            data: { action: 'network_capabilities', arguments: {} },
+            mediaType: 'application/json'
+          }]
+        }
+      }
+    })
+  });
+  return {
+    method,
+    read,
+    data: read.body?.result?.task?.artifacts?.[0]?.parts?.[0]?.data ?? null
+  };
+}
+
+function a2aObservation(probe) {
+  const { method, read, data } = probe;
+  return {
+    method,
+    status: read.response?.status ?? null,
+    jsonrpc: read.body?.jsonrpc ?? null,
+    responseId: read.body?.id ?? null,
+    error: read.body?.error ?? read.error ?? null,
+    action: 'network_capabilities',
+    model: data?.model ?? null,
+    passportPriceAtomic: data?.passport_price?.amount_atomic ?? null,
+    directCommissionAtomic: data?.direct_commission?.amount_atomic ?? null,
+    cashPayoutsEnabled: data?.cash_payouts_enabled ?? null
+  };
+}
+
+function validateA2AProbe(probe, check) {
+  const { method, read, data } = probe;
+  const label = `A2A ${method}`;
+  check(!read.error, `${label} network capability request failed: ${read.error}`);
+  check(read.response?.ok, `${label} network capability HTTP ${read.response?.status ?? 'unreachable'}`);
+  if (!read.response?.ok) return;
+  check(!read.body?.error, `${label} network capability returned JSON-RPC error: ${JSON.stringify(read.body?.error)}`);
+  check(read.body?.jsonrpc === '2.0', `${label} did not return JSON-RPC 2.0`);
+  check(data?.model === 'single_level_direct_product_referral', `${label} unexpected affiliate model: ${data?.model}`);
+  check(data?.passport_price?.amount_atomic === 200, `${label} unexpected Passport product price: ${data?.passport_price?.amount_atomic}`);
+  check(data?.direct_commission?.amount_atomic === 100, `${label} unexpected direct commission: ${data?.direct_commission?.amount_atomic}`);
+  check(data?.cash_payouts_enabled === false, `${label} affiliate cash payouts unexpectedly enabled`);
+  check(data?.rules?.includes('no_multilevel_downline_commission'), `${label} no-downline policy missing`);
+  check(data?.rules?.includes('no_self_referral'), `${label} no-self-referral policy missing`);
 }
 
 async function main() {
@@ -109,48 +170,27 @@ async function main() {
     check(Boolean(stats.body?.privacy), 'Stats response must declare its privacy boundary');
   }
 
-  const networkRead = await json('/a2a', {
-    method: 'POST',
-    headers: { 'A2A-Version': '1.0' },
-    body: JSON.stringify({
-      jsonrpc: '2.0',
-      id: 'accordtrace-live-contract-network',
-      method: 'SendMessage',
-      params: {
-        message: {
-          messageId: 'accordtrace-live-contract-network',
-          role: 'ROLE_USER',
-          parts: [{
-            data: { action: 'network_capabilities', arguments: {} },
-            mediaType: 'application/json'
-          }]
-        }
-      }
-    })
-  });
-  const networkData = networkRead.body?.result?.task?.artifacts?.[0]?.parts?.[0]?.data;
+  const probes = [];
+  for (const method of A2A_METHODS) probes.push(await readNetworkCapabilitiesViaA2A(method));
+  for (const probe of probes) validateA2AProbe(probe, check);
+
+  const canonicalProbe = probes.find((probe) => probe.method === 'message/send') ?? probes[0];
   observations.a2a = {
-    status: networkRead.response?.status ?? null,
-    jsonrpc: networkRead.body?.jsonrpc ?? null,
-    responseId: networkRead.body?.id ?? null,
-    error: networkRead.body?.error ?? networkRead.error ?? null,
-    action: 'network_capabilities',
-    model: networkData?.model ?? null,
-    passportPriceAtomic: networkData?.passport_price?.amount_atomic ?? null,
-    directCommissionAtomic: networkData?.direct_commission?.amount_atomic ?? null,
-    cashPayoutsEnabled: networkData?.cash_payouts_enabled ?? null
+    ...a2aObservation(canonicalProbe),
+    canonicalMethod: 'message/send',
+    compatibilityMethod: 'SendMessage',
+    methods: Object.fromEntries(probes.map((probe) => [probe.method, a2aObservation(probe)]))
   };
-  check(!networkRead.error, `A2A network capability request failed: ${networkRead.error}`);
-  check(networkRead.response?.ok, `A2A network capability HTTP ${networkRead.response?.status ?? 'unreachable'}`);
-  if (networkRead.response?.ok) {
-    check(!networkRead.body?.error, `A2A network capability returned JSON-RPC error: ${JSON.stringify(networkRead.body?.error)}`);
-    check(networkRead.body?.jsonrpc === '2.0', 'A2A network capability did not return JSON-RPC 2.0');
-    check(networkData?.model === 'single_level_direct_product_referral', `Unexpected affiliate model: ${networkData?.model}`);
-    check(networkData?.passport_price?.amount_atomic === 200, `Unexpected Passport product price: ${networkData?.passport_price?.amount_atomic}`);
-    check(networkData?.direct_commission?.amount_atomic === 100, `Unexpected direct commission: ${networkData?.direct_commission?.amount_atomic}`);
-    check(networkData?.cash_payouts_enabled === false, 'Affiliate cash payouts unexpectedly enabled');
-    check(networkData?.rules?.includes('no_multilevel_downline_commission'), 'No-downline policy missing from live A2A response');
-    check(networkData?.rules?.includes('no_self_referral'), 'No-self-referral policy missing from live A2A response');
+
+  if (probes.every((probe) => probe.read.response?.ok && !probe.read.body?.error)) {
+    const fingerprints = probes.map((probe) => JSON.stringify({
+      model: probe.data?.model ?? null,
+      passportPriceAtomic: probe.data?.passport_price?.amount_atomic ?? null,
+      directCommissionAtomic: probe.data?.direct_commission?.amount_atomic ?? null,
+      cashPayoutsEnabled: probe.data?.cash_payouts_enabled ?? null,
+      rules: probe.data?.rules ?? null
+    }));
+    check(new Set(fingerprints).size === 1, 'A2A message/send and SendMessage returned different network policy semantics');
   }
 
   const report = {
