@@ -8,6 +8,7 @@ import { handleAgentWallet, agentWalletErrorResponse } from "./agent-wallet.js";
 import { handleWalletCapabilities } from "./wallet-capabilities.js";
 import { handleWalletGuardian, walletGuardianErrorResponse } from "./wallet-guardian.js";
 import { handleCommunity, CommunityError } from "./community.js";
+import { handleCommunityMigrationLifecycle, CommunityMigrationLifecycleError } from "./community-migration-lifecycle.js";
 
 const application = {
   async fetch(request, env, ctx) {
@@ -51,6 +52,8 @@ const application = {
 
     if (communityRoute) {
       try {
+        const lifecycleResponse = await handleCommunityMigrationLifecycle(request, env, url);
+        if (lifecycleResponse) return cors(lifecycleResponse);
         const communityResponse = await handleCommunity(request, env, url);
         if (communityResponse) return cors(communityResponse);
       } catch (error) {
@@ -92,10 +95,9 @@ function errorResponse(error) {
 }
 
 function communityErrorResponse(error) {
-  const status = error instanceof CommunityError ? error.status : 500;
-  return new Response(JSON.stringify({
-    error: error instanceof CommunityError ? error.message : 'community_internal_error'
-  }), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+  const known=error instanceof CommunityError||error instanceof CommunityMigrationLifecycleError;
+  const status=known?error.status:500;
+  return new Response(JSON.stringify({error:known?error.message:'community_internal_error'}),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 }
 
 function cors(response) {
