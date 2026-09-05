@@ -2,9 +2,6 @@ name: Agent Wallet isolated sandbox e2e
 
 on:
   workflow_dispatch:
-  push:
-    branches: [hardening/wallet-e2e-clean-20260906]
-    paths: [.github/wallet-e2e-trigger]
 
 permissions:
   contents: read
