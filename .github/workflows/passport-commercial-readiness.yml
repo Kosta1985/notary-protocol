@@ -1,0 +1,31 @@
+name: Passport commercial readiness
+
+on:
+  workflow_run:
+    workflows: ["Deploy AccordTrace production"]
+    types: [completed]
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: passport-commercial-readiness
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Probe fail-closed commercial readiness
+        run: node scripts/passport-commercial-readiness.mjs https://accordtrace.notary-labs.workers.dev
