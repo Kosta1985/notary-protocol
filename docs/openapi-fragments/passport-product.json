@@ -6,10 +6,30 @@
         "responses": {"200": {"description": "Passport Certificate product policy and readiness"}}
       }
     },
+    "/api/v1/passport-product/founding-1000": {
+      "get": {
+        "summary": "Get live Founding 1000 campaign availability",
+        "description": "Returns aggregate available, reserved and issued slot counts for the capped first-1,000 promotional Agent Passport Certificate campaign. Counts represent cryptographic Passport grants, not unique humans, companies, customers or paid sales.",
+        "responses": {"200": {"description": "Founding 1000 campaign policy and aggregate availability"}}
+      }
+    },
+    "/api/v1/passport-product/founding-1000/claim": {
+      "post": {
+        "summary": "Claim one free Founding 1000 Agent Passport Certificate",
+        "description": "Requires an active cryptographic Agent Passport signature over accordtrace.passport-product.founding-1000.claim.v1. One promotional grant is allowed per Passport. The grant requires no card or payment, does not qualify as a paid sale, and creates no direct-referral commission.",
+        "responses": {
+          "201": {"description": "Founding Certificate issued from a reserved campaign slot"},
+          "200": {"description": "Idempotent replay returned the previously issued Founding Certificate"},
+          "401": {"description": "Passport signature verification failed"},
+          "409": {"description": "Campaign full, duplicate product issuance, replay mismatch, or conflicting order"},
+          "503": {"description": "Campaign disabled or Certificate signing is not ready"}
+        }
+      }
+    },
     "/api/v1/passport-product/checkout": {
       "post": {
         "summary": "Create a signed US$2 Agent Passport Certificate Checkout session",
-        "description": "Requires an active cryptographic Agent Passport signature over accordtrace.passport-product.checkout.v1. The affiliate program is separate and optional. If referral_code is supplied, the referred Passport must already have cryptographically reserved that direct attribution.",
+        "description": "Requires an active cryptographic Agent Passport signature over accordtrace.passport-product.checkout.v1. The affiliate program is separate and optional. If referral_code is supplied, the referred Passport must already have cryptographically reserved that direct attribution. This paid path is separate from the capped Founding 1000 promotional grant path.",
         "responses": {
           "201": {"description": "Dedicated Stripe Checkout session created"},
           "409": {"description": "Replay, open-order, existing-certificate, or referral-attribution conflict"},
@@ -20,7 +40,7 @@
     "/api/v1/passport-product/stripe/webhook": {
       "post": {
         "summary": "Receive verified Stripe events for the Agent Passport Certificate product",
-        "description": "Stripe HMAC signature verification is performed on the untouched raw body before parsing. Only verified paid events with the exact configured product amount/currency can fulfill a Certificate and qualify a direct referral commission.",
+        "description": "Stripe HMAC signature verification is performed on the untouched raw body before parsing. Only verified paid events with the exact configured product amount/currency can fulfill a paid Certificate and qualify a direct referral commission. Founding 1000 grants never enter this settlement path.",
         "responses": {"200": {"description": "Event received or idempotent duplicate"}, "400": {"description": "Invalid Stripe signature/event"}}
       }
     },
