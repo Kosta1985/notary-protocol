@@ -24,6 +24,11 @@ test('Founding grant is cryptographically claimed by an active Passport',()=>{
   assert.match(source,/unique_human_or_company_claim:false/);
 });
 
+test('machine-readable offer points agents to the real claim endpoint',()=>{
+  assert.match(source,/claim:\{method:'POST',url:`\$\{publicBase\(env,url\)\}\$\{base\}\/claim`,domain:CLAIM_DOMAIN\}/);
+  assert.match(source,/request\.method==='POST'&&url\.pathname===`\$\{base\}\/claim`/);
+});
+
 test('Founding grant is economically isolated from paid sales and referrals',()=>{
   assert.match(migration,/fulfillment_source TEXT NOT NULL DEFAULT 'stripe'/);
   assert.match(source,/'founding_grant'/);
