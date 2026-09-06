@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.Kosta1985/accord-trace",
   "title": "Accord Trace",
-  "description": "Cryptographic receipts for AI-agent actions, artifacts, approvals, and workflow handoffs.",
+  "description": "Agent-first cryptographic evidence and capability infrastructure for proofs, verification, Agent Passport Certificate discovery, direct referral-network discovery, and Agent Wallet capability discovery.",
   "repository": {
     "url": "https://github.com/Kosta1985/notary-protocol",
     "source": "github"
