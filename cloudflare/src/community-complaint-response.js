@@ -24,10 +24,10 @@ export async function handleCommunityComplaintResponse(request,env,url=new URL(r
   const evidenceMatch=url.pathname.match(/^\/api\/v1\/community\/complaints\/([^/]+)\/evidence$/);
   if(request.method==='GET'&&evidenceMatch){
     const complaintId=cleanId(decodeURIComponent(evidenceMatch[1]),'complaint_id');
-    const complaint=await env.DB.prepare(`SELECT id,category,evidence_digest,state,submitted_at,reviewed_at,resolution_code FROM community_complaints WHERE id=?1`).bind(complaintId).first();
+    const complaint=await env.DB.prepare(`SELECT id,category,evidence_digest,state,submitted_at,reviewed_at FROM community_complaints WHERE id=?1`).bind(complaintId).first();
     if(!complaint)return reply({error:'complaint_not_found'},404);
     const response=await env.DB.prepare(`SELECT evidence_digest,submitted_at FROM community_complaint_responses WHERE complaint_id=?1`).bind(complaintId).first();
-    return reply({complaint,response:response||null,presumption:'allegation_and_response_evidence_only',meaning:'Complaint and response digests record competing evidence references. Neither side is automatically treated as true.',automatic_trust_effect:false,automatic_enforcement:false});
+    return reply({complaint,response:response||null,presumption:'allegation_and_response_evidence_only',meaning:'Complaint and response digests record competing evidence references. Neither side is automatically treated as true.',automatic_trust_effect:false,automatic_enforcement:false,free_form_resolution_public:false});
   }
 
   return null;
