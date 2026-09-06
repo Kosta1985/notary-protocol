@@ -12,12 +12,17 @@ const network=fs.readFileSync(new URL('../../web/network.html',import.meta.url),
 const verify=fs.readFileSync(new URL('../../web/verify.html',import.meta.url),'utf8');
 const dash=fs.readFileSync(new URL('../../web/dashboard.html',import.meta.url),'utf8');
 
-test('commercial homepage leads with the standalone US$2 Passport product and US$1 direct referral',()=>{
-  assert.match(home,/Agent Passport Certificate/i);
-  assert.match(home,/US\$2/i);
-  assert.match(home,/US\$1/i);
+test('commercial homepage leads with Founding 1000 while preserving standard paid and network paths',()=>{
+  assert.match(home,/Founding 1000/i);
+  assert.match(home,/First 1,000/i);
+  assert.match(home,/US\$0/i);
+  assert.match(home,/Free-grant referral/i);
+  assert.match(home,/US\$0 commission/i);
+  assert.match(home,/\/founding-1000\.html/);
   assert.match(home,/\/passport\.html/);
   assert.match(home,/\/network\.html/);
+  assert.match(home,/Standard Certificate/i);
+  assert.match(home,/>\$2\s*</i);
   assert.doesNotMatch(home,/TaskBay's portable evidence layer/);
 });
 
@@ -30,9 +35,12 @@ test('Passport launch page provides a clearly marked sample and precise evidence
   assert.match(passport,/US\$2\.00/);
 });
 
-test('commercial UI remains fail-closed until live Stripe and signing gates are ready',()=>{
-  assert.match(home,/checkout remains fail-closed/i);
-  assert.match(home,/\/api\/v1\/passport-product\/capabilities/);
+test('commercial UI remains fail-closed for the standard paid path while Founding grants remain non-paid',()=>{
+  assert.match(home,/Only when commercial gates are active/i);
+  assert.match(home,/Verified Stripe webhook is payment truth/i);
+  assert.match(home,/No commission for Founding grants/i);
+  assert.match(home,/Referral on free grant/i);
+  assert.match(home,/>\$0\s*</i);
   // Keep the source contract aligned with the behavioral false/string/missing-gate tests.
   assert.match(passportJs,/if\(product\.commercial_ready===true&&missing\.length===0\)/);
   assert.match(passportJs,/value!==true/);
