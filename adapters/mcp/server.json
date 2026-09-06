@@ -1,8 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.kosta1985/notary-protocol",
-  "title": "Notary Protocol",
-  "description": "Verify signed DealEnvelopes and retrieve portable NotaryReceipts.",
+  "title": "AccordTrace Legacy MCP Compatibility Adapter",
+  "description": "Legacy stdio compatibility adapter exposing only notary_verify and notary_get_receipt. New integrations should use the canonical AccordTrace remote MCP server io.github.Kosta1985/accord-trace at https://accordtrace.notary-labs.workers.dev/mcp.",
   "repository": {
     "url": "https://github.com/Kosta1985/notary-protocol",
     "source": "github"
@@ -17,7 +17,7 @@
       "environmentVariables": [
         {
           "name": "NOTARY_URL",
-          "description": "Notary Protocol API base URL.",
+          "description": "Legacy Notary Protocol-compatible API base URL. This adapter is compatibility-only; use the canonical AccordTrace remote MCP endpoint for new integrations.",
           "format": "string",
           "isRequired": false,
           "isSecret": false,
