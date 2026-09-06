@@ -1,47 +1,134 @@
 {
   "schema_version": "ai-catalog/0.1",
   "name": "AccordTrace",
-  "description": "Portable tamper-evident proof records, cryptographic Agent Passports, defensive security signals, bilateral reputation evidence, and least-privilege capability authorization for AI-agent workflows.",
+  "description": "Agent-first infrastructure for tamper-evident proofs, verification, Agent Passport Certificates, funded Agent Wallet policy, direct referral-network discovery, defensive security signals, reputation evidence, and least-privilege capability authorization across A2A, MCP and REST.",
   "homepage": "https://accordtrace.notary-labs.workers.dev",
   "resources": [
     {
       "type": "a2a-agent",
-      "name": "AccordTrace",
+      "name": "Accord Trace",
       "url": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json",
-      "intents": ["create tamper-evident proof", "verify evidence record", "retain agent transaction receipt"]
+      "intents": [
+        "create tamper-evident proof",
+        "verify cryptographic proof",
+        "retrieve proof metadata",
+        "hash content",
+        "inspect direct referral network policy and statistics",
+        "inspect Agent Passport Certificate readiness",
+        "inspect Agent Wallet capabilities",
+        "resolve a direct referral code"
+      ]
     },
     {
       "type": "mcp-server",
-      "name": "AccordTrace MCP",
+      "name": "Accord Trace MCP",
       "url": "https://accordtrace.notary-labs.workers.dev/mcp",
-      "intents": ["notarize agent evidence", "verify proof identifier"]
+      "intents": [
+        "notarize agent evidence",
+        "verify proof identifier or supplied content",
+        "retrieve proof metadata",
+        "hash content with SHA-256",
+        "inspect affiliate network capabilities and statistics",
+        "inspect Agent Passport Certificate readiness",
+        "inspect Agent Wallet feature gates and signing contract",
+        "resolve direct referral disclosure"
+      ]
     },
     {
       "type": "openapi",
-      "name": "AccordTrace REST API",
+      "name": "Accord Trace REST API",
       "url": "https://accordtrace.notary-labs.workers.dev/openapi.json",
-      "intents": ["create proof", "verify proof", "discover marketplace security trust and gateway APIs"]
+      "intents": [
+        "create and verify proofs",
+        "discover Agent Passport Certificate APIs",
+        "discover Agent Wallet and funded payment policy",
+        "discover direct referral network APIs",
+        "discover security reputation validation and capability gateway APIs"
+      ]
     },
     {
       "type": "api",
-      "name": "AccordTrace Agent Security",
+      "name": "Accord Trace Agent Passport Certificate",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/passport-product/capabilities",
+      "intents": [
+        "inspect Agent Passport Certificate price",
+        "inspect commercial readiness gates",
+        "discover certificate issuance and verification policy"
+      ],
+      "notes": "Read-only capability discovery does not start checkout. A valid Certificate proves historical Accord Trace issuance, not legal identity, KYC, authority, safety or Trust."
+    },
+    {
+      "type": "api",
+      "name": "Accord Trace Agent Wallet",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/agent/wallet-capabilities",
+      "intents": [
+        "inspect Agent Wallet feature gates",
+        "inspect Ed25519 request-signing contract",
+        "inspect funded USDC balance policy",
+        "inspect no-credit and no-lending boundary",
+        "discover machine wallet and payment endpoints"
+      ],
+      "notes": "Public capability discovery is read-only and never creates a wallet or moves funds. The current MVP executes only the explicit simulated test provider; production or on-chain execution remains fail-closed."
+    },
+    {
+      "type": "api",
+      "name": "Accord Trace Agent Affiliate Network",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/network/capabilities",
+      "intents": [
+        "inspect one-level direct referral economics",
+        "inspect anti-self-referral and attribution policy",
+        "inspect commission payout activation status",
+        "discover affiliate enrollment and referral endpoints"
+      ],
+      "notes": "Referral activity is separate from Agent Passport ownership, Trust and validation. Cash payouts remain disabled until payout-provider, KYC/tax and final terms activation."
+    },
+    {
+      "type": "api",
+      "name": "Accord Trace Network Statistics",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/network/stats",
+      "intents": [
+        "inspect aggregate affiliate states",
+        "inspect referral attribution states",
+        "inspect qualified direct sales and commission states"
+      ],
+      "notes": "Aggregate invitation and request counts are not identities, customers, sales or revenue."
+    },
+    {
+      "type": "api",
+      "name": "Accord Trace Agent Security",
       "url": "https://accordtrace.notary-labs.workers.dev/api/v1/security/capabilities",
-      "intents": ["create cryptographic agent passport", "record signed security event", "deploy passive authorized canary", "receive containment recommendation"],
-      "notes": "v0.1 verifies Ed25519 Passport key control and security signals. Identity, marketplace ownership, payment claims, and public reputation are not implied."
+      "intents": [
+        "create cryptographic agent passport",
+        "record signed security event",
+        "deploy passive authorized canary",
+        "receive containment recommendation"
+      ],
+      "notes": "Security APIs verify cryptographic key control and security signals. Identity, marketplace ownership, payment claims and public reputation are not implied."
     },
     {
       "type": "api",
-      "name": "AccordTrace Reputation Evidence",
+      "name": "Accord Trace Reputation Evidence",
       "url": "https://accordtrace.notary-labs.workers.dev/api/v1/trust/capabilities",
-      "intents": ["sign proof-bound task delivery claim", "sign accepted or disputed work claim", "record bilateral payment claim", "query cryptographic reputation evidence"],
-      "notes": "v0.1 reports bilateral cryptographic evidence and counterparty diversity. It does not issue a numeric trust score, prove legal identity, independently verify payment settlement, or custody funds."
+      "intents": [
+        "sign proof-bound task delivery claim",
+        "sign accepted or disputed work claim",
+        "record bilateral payment claim",
+        "query cryptographic reputation evidence"
+      ],
+      "notes": "Reports bilateral cryptographic evidence and counterparty diversity. It does not issue a numeric trust score, prove legal identity, independently verify payment settlement or custody funds."
     },
     {
       "type": "api",
-      "name": "AccordTrace Capability Gateway",
+      "name": "Accord Trace Capability Gateway",
       "url": "https://accordtrace.notary-labs.workers.dev/api/v1/gateway/capabilities",
-      "intents": ["issue signed least-privilege capability lease", "authorize protected agent action", "enforce call quota", "revoke agent capability lease", "check remaining capability quota"],
-      "notes": "v0.1 is a policy-decision service. The caller's runtime or gateway must enforce allow/deny before using real credentials or invoking tools. Leases contain no target-system credentials."
+      "intents": [
+        "issue signed least-privilege capability lease",
+        "authorize protected agent action",
+        "enforce call quota",
+        "revoke agent capability lease",
+        "check remaining capability quota"
+      ],
+      "notes": "The Gateway is a policy-decision service. The caller runtime or gateway must enforce allow/deny before using real credentials or invoking tools. Leases contain no target-system credentials."
     }
   ],
   "partner_program": "https://github.com/Kosta1985/notary-protocol/blob/main/PARTNERS.md"
