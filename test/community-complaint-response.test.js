@@ -17,6 +17,8 @@ test('complaint evidence endpoint treats both sides as evidence, not truth or en
   assert.match(source,/Neither side is automatically treated as true/);
   assert.match(source,/automatic_trust_effect:false/);
   assert.match(source,/automatic_enforcement:false/);
+  assert.match(source,/free_form_resolution_public:false/);
+  assert.doesNotMatch(source,/SELECT id,category,evidence_digest,state,submitted_at,reviewed_at,resolution_code/);
   assert.doesNotMatch(source,/trust_score|blacklist|guilty/i);
 });
 
