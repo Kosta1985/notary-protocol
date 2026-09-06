@@ -9,6 +9,7 @@ import { handleWalletCapabilities } from "./wallet-capabilities.js";
 import { handleWalletGuardian, walletGuardianErrorResponse } from "./wallet-guardian.js";
 import { handleCommunity, CommunityError } from "./community.js";
 import { handleCommunityMigrationLifecycle, CommunityMigrationLifecycleError } from "./community-migration-lifecycle.js";
+import { handleCommunityComplaintResponse, CommunityComplaintResponseError } from "./community-complaint-response.js";
 
 const application = {
   async fetch(request, env, ctx) {
@@ -54,6 +55,8 @@ const application = {
       try {
         const lifecycleResponse = await handleCommunityMigrationLifecycle(request, env, url);
         if (lifecycleResponse) return cors(lifecycleResponse);
+        const complaintResponse = await handleCommunityComplaintResponse(request, env, url);
+        if (complaintResponse) return cors(complaintResponse);
         const communityResponse = await handleCommunity(request, env, url);
         if (communityResponse) return cors(communityResponse);
       } catch (error) {
@@ -95,7 +98,7 @@ function errorResponse(error) {
 }
 
 function communityErrorResponse(error) {
-  const known=error instanceof CommunityError||error instanceof CommunityMigrationLifecycleError;
+  const known=error instanceof CommunityError||error instanceof CommunityMigrationLifecycleError||error instanceof CommunityComplaintResponseError;
   const status=known?error.status:500;
   return new Response(JSON.stringify({error:known?error.message:'community_internal_error'}),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 }
