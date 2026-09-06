@@ -1,6 +1,6 @@
 {
   "name": "Accord Trace",
-  "description": "Cryptographic receipts for AI-agent actions, artifacts, approvals, and workflow handoffs.",
+  "description": "Agent-first cryptographic evidence and economic capability infrastructure: proofs, verification, Agent Passport Certificate discovery, direct referral-network discovery, and Agent Wallet capability discovery.",
   "version": "0.2.1",
   "transport": "streamable-http",
   "url": "https://accordtrace.notary-labs.workers.dev/mcp",
@@ -8,5 +8,16 @@
     "server": "io.github.Kosta1985/accord-trace"
   },
   "documentation": "https://accordtrace.notary-labs.workers.dev/developers.html",
-  "agentCard": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json"
+  "agentCard": "https://accordtrace.notary-labs.workers.dev/.well-known/agent-card.json",
+  "capabilities": [
+    "notarize_evidence",
+    "verify_proof",
+    "get_proof",
+    "hash_content",
+    "network_capabilities",
+    "network_stats",
+    "passport_product_capabilities",
+    "wallet_capabilities",
+    "resolve_referral"
+  ]
 }
