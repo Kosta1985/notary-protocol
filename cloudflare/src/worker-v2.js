@@ -7,6 +7,8 @@ import { passportSafeEnv } from "./passport-signer-readiness.js";
 import { handleAgentWallet, agentWalletErrorResponse } from "./agent-wallet.js";
 import { handleWalletCapabilities } from "./wallet-capabilities.js";
 import { handleWalletGuardian, walletGuardianErrorResponse } from "./wallet-guardian.js";
+import { handleCommunity, CommunityError } from "./community.js";
+import { handleCommunityMigrationLifecycle, CommunityMigrationLifecycleError } from "./community-migration-lifecycle.js";
 
 const application = {
   async fetch(request, env, ctx) {
@@ -14,7 +16,8 @@ const application = {
     const walletCapabilitiesRoute = url.pathname === '/api/v1/agent/wallet-capabilities';
     const guardianPaymentRoute = /^\/api\/v1\/wallet-admin\/payments\/pi_[a-f0-9]{32}\/(approve|deny)$/.test(url.pathname);
     const walletRoute = url.pathname.startsWith('/api/v1/agent/') || url.pathname.startsWith('/api/v1/wallet-admin/');
-    if (request.method === "OPTIONS" && (url.pathname === "/mcp" || url.pathname === "/a2a" || url.pathname.startsWith("/api/v1/proofs") || url.pathname === "/api/v1/hash" || url.pathname === "/api/v1/verify" || url.pathname === "/api/v1/stats" || walletRoute)) {
+    const communityRoute = url.pathname.startsWith('/api/v1/community/');
+    if (request.method === "OPTIONS" && (url.pathname === "/mcp" || url.pathname === "/a2a" || url.pathname.startsWith("/api/v1/proofs") || url.pathname === "/api/v1/hash" || url.pathname === "/api/v1/verify" || url.pathname === "/api/v1/stats" || walletRoute || communityRoute)) {
       return cors(new Response(null, { status: 204 }));
     }
 
@@ -44,6 +47,17 @@ const application = {
         if (walletResponse) return cors(walletResponse);
       } catch (error) {
         return cors(agentWalletErrorResponse(error));
+      }
+    }
+
+    if (communityRoute) {
+      try {
+        const lifecycleResponse = await handleCommunityMigrationLifecycle(request, env, url);
+        if (lifecycleResponse) return cors(lifecycleResponse);
+        const communityResponse = await handleCommunity(request, env, url);
+        if (communityResponse) return cors(communityResponse);
+      } catch (error) {
+        return cors(communityErrorResponse(error));
       }
     }
 
@@ -78,6 +92,12 @@ function errorResponse(error) {
     error: error instanceof ProofError ? error.code : "interoperability_error",
     message: error instanceof Error ? error.message : "Unknown error"
   }), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" } });
+}
+
+function communityErrorResponse(error) {
+  const known=error instanceof CommunityError||error instanceof CommunityMigrationLifecycleError;
+  const status=known?error.status:500;
+  return new Response(JSON.stringify({error:known?error.message:'community_internal_error'}),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});
 }
 
 function cors(response) {
