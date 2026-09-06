@@ -18,6 +18,27 @@ const checks = [
   ['continuity', '/api/v1/continuity/capabilities', x => x.ok && x.text.includes('fleet_monitoring') && x.text.includes('scheduled_scans') && x.text.includes('monitored_passport_days')],
   ['affiliate-network', '/api/v1/network/capabilities', x => x.ok && x.text.includes('single_level_direct_product_referral') && x.text.includes('no_multilevel_downline_commission') && x.text.includes('"cash_payouts_enabled":false')],
   ['network-page', '/network.html', x => x.ok && includesCI(x.text, 'Agent Affiliate Network') && includesCI(x.text, 'US$2 Agent Passport Certificate') && includesCI(x.text, 'US$1 qualifying commission') && includesCI(x.text, 'No downline') && includesCI(x.text, 'cash payouts remain disabled')],
+  ['founding-1000', '/api/v1/passport-product/founding-1000', x => {
+    if (!x.ok) return false;
+    try {
+      const body = JSON.parse(x.text);
+      const campaign = body?.campaign;
+      return campaign?.id === 'founding_1000_202609'
+        && campaign?.limit === 1000
+        && Number.isSafeInteger(campaign?.available)
+        && Number.isSafeInteger(campaign?.reserved)
+        && Number.isSafeInteger(campaign?.issued)
+        && campaign.available + campaign.reserved + campaign.issued === 1000
+        && body?.offer?.certificate_price?.amount_atomic === 0
+        && body?.offer?.card_required === false
+        && body?.offer?.referral_commission_for_free_grant?.amount_atomic === 0
+        && body?.eligibility?.one_grant_per_passport === true
+        && body?.eligibility?.unique_human_or_company_claim === false
+        && typeof body?.claim?.url === 'string'
+        && body.claim.url.endsWith('/api/v1/passport-product/founding-1000/claim');
+    } catch { return false; }
+  }],
+  ['founding-1000-page', '/founding-1000.html', x => x.ok && includesCI(x.text, 'First 1,000') && includesCI(x.text, 'Free') && includesCI(x.text, 'No referral payout on free grants') && x.text.includes('/api/v1/passport-product/founding-1000/claim')],
   ['developer', '/api/v1/developer/capabilities', x => x.ok && x.text.includes('hash_only_key_storage') && x.text.includes('"test_mode":true')],
   ['developer-page', '/developers.html', x => x.ok && x.text.includes('Integrate agents without trusting a dashboard')],
   ['passport-page', '/agents.html', x => x.ok && x.text.includes('Public Agent Passport')],
@@ -29,7 +50,7 @@ const checks = [
   ['stripe-adapter', '/api/v1/launch/stripe/capabilities', x => x.ok && x.text.includes('success redirect never authorizes validation')],
   ['checkout-return', '/checkout-success.html', x => x.ok && x.text.includes('does not treat a browser redirect as proof of payment')],
   ['launch', '/api/v1/launch/capabilities', x => x.ok && x.text.includes('release_drift_detection')],
-  ['openapi', '/openapi.json', x => x.ok && x.text.includes('/api/v1/validation') && x.text.includes('/api/v1/developer/test/ping') && x.text.includes('/api/v1/launch/stripe/webhook') && x.text.includes('/api/v1/continuity/fleets') && x.text.includes('/api/v1/network/capabilities')]
+  ['openapi', '/openapi.json', x => x.ok && x.text.includes('/api/v1/validation') && x.text.includes('/api/v1/developer/test/ping') && x.text.includes('/api/v1/launch/stripe/webhook') && x.text.includes('/api/v1/continuity/fleets') && x.text.includes('/api/v1/network/capabilities') && x.text.includes('/api/v1/passport-product/founding-1000/claim')]
 ];
 
 export async function runFullProductionSmoke(baseUrl = defaultBase, fetcher = fetch, expectedSha = process.env.EXPECTED_RELEASE_SHA || null) {
