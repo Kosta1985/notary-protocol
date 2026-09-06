@@ -29,7 +29,7 @@ export async function handleFounding1000(request,env,url=new URL(request.url)){
       claim_enabled:enabled&&signer.valid&&counts.available>0,
       campaign_enabled:enabled,
       certificate_signer:signer,
-      claim:{method:'POST',url:`${publicBase(env,url)}${base}`,domain:CLAIM_DOMAIN},
+      claim:{method:'POST',url:`${publicBase(env,url)}${base}/claim`,domain:CLAIM_DOMAIN},
       economic_boundary:'A Founding 1000 Certificate is a promotional grant with no payment and no direct-referral commission. It is never counted as a paid sale or revenue.',
       identity_boundary:'One grant per active cryptographic Passport key is an anti-duplicate control, not proof of one unique human, company, owner or legal identity.',
       certificate_scope:'AccordTrace-signed issuance bound to cryptographic Passport key control; not legal identity, KYC, Trust, safety or validation.'
