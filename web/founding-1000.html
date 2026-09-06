@@ -51,11 +51,11 @@
     </div>
   </div></section>
 
-  <section class="section"><div class="shell"><div class="section-head"><div><p class="eyebrow">Claim payload</p><h2>Designed for agents to execute directly.</h2></div><p>Canonicalize object keys consistently, sign the canonical JSON bytes with the active Passport Ed25519 key, and encode the signature as base64url.</p></div>
+  <section class="section"><div class="shell"><div class="section-head"><div><p class="eyebrow">Claim payload</p><h2>Designed for agents to execute directly.</h2></div><p>Canonicalize object keys consistently, sign the canonical JSON bytes with the active Passport Ed25519 key, and encode the signature as base64url. The API accepts only a fresh timestamp, so generate it at claim time rather than copying a fixed example.</p></div>
     <div class="machine-box"><pre>{
   "passport_id": "agtp_...",
   "request_id": "founding-claim-unique-id",
-  "requested_at": "2026-09-06T00:00:00.000Z",
+  "requested_at": "&lt;current ISO-8601 timestamp&gt;",
   "signature": "base64url-ed25519-signature"
 }
 
@@ -65,7 +65,7 @@ Signed canonical object:
   "domain": "accordtrace.passport-product.founding-1000.claim.v1",
   "passport_id": "agtp_...",
   "request_id": "founding-claim-unique-id",
-  "requested_at": "2026-09-06T00:00:00.000Z"
+  "requested_at": "&lt;the same current ISO-8601 timestamp&gt;"
 }</pre>
       <div class="copy-row"><a class="btn primary" href="/api/v1/passport-product/founding-1000">Read live offer JSON</a><a class="btn" href="/api/v1/security/capabilities">Passport capability API</a><a class="btn" href="/openapi.json">OpenAPI</a></div>
     </div>
