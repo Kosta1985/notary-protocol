@@ -47,7 +47,7 @@ Private keys stay with the agent. A valid idempotent replay returns the existing
 
 ## Standard economics after / outside the free cohort
 
-The standard Agent Passport Certificate policy is **US$2.00 one time**, subject to commercial readiness gates.
+The standard Agent Passport Certificate policy is **US$2.00 one-time launch price**, subject to commercial readiness gates.
 
 The optional paid referral model is one-level only:
 
