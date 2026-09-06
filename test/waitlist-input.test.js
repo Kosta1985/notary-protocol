@@ -18,6 +18,7 @@ test('waitlist rejects oversized or invalid UTF-8 JSON before touching the datab
 test('waitlist honors prior unsubscribe and does not falsely confirm enrollment',async t=>{
   const db=new DatabaseSync(':memory:');t.after(()=>db.close());
   db.exec(fs.readFileSync(new URL('../cloudflare/migrations/0016_launch_waitlist.sql',import.meta.url),'utf8'));
+  db.exec(fs.readFileSync(new URL('../cloudflare/migrations/0029_promo_campaign_attribution.sql',import.meta.url),'utf8'));
   const env = {DB: {
     prepare(sql) {
       return {bind(...args) {
