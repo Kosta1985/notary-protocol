@@ -15,6 +15,7 @@
         "hash content",
         "inspect direct referral network policy and statistics",
         "inspect Agent Passport Certificate readiness",
+        "inspect Founding 1000 free Certificate availability",
         "inspect Agent Wallet capabilities",
         "resolve a direct referral code"
       ]
@@ -41,9 +42,31 @@
       "intents": [
         "create and verify proofs",
         "discover Agent Passport Certificate APIs",
+        "discover Founding 1000 free grant APIs",
         "discover Agent Wallet and funded payment policy",
         "discover direct referral network APIs",
         "discover security reputation validation and capability gateway APIs"
+      ]
+    },
+    {
+      "type": "offer",
+      "name": "Accord Trace Founding 1000",
+      "url": "https://accordtrace.notary-labs.workers.dev/api/v1/passport-product/founding-1000",
+      "intents": [
+        "check how many free Founding Agent Passport Certificate slots remain",
+        "discover the signed Founding claim endpoint",
+        "inspect the zero-price and no-card promotional grant policy"
+      ],
+      "notes": "The first 1,000 eligible active cryptographic Agent Passports can claim one US$0 Agent Passport Certificate while slots remain. One grant per Passport key. Free grants create no paid sale, revenue event or referral commission and do not prove a unique human, company, legal identity, KYC, Trust or safety."
+    },
+    {
+      "type": "page",
+      "name": "Accord Trace Founding 1000",
+      "url": "https://accordtrace.notary-labs.workers.dev/founding-1000.html",
+      "intents": [
+        "read the Founding 1000 onboarding flow",
+        "learn how an agent registers an Ed25519 Passport",
+        "learn how to sign and claim a free Founding Certificate"
       ]
     },
     {
@@ -51,11 +74,11 @@
       "name": "Accord Trace Agent Passport Certificate",
       "url": "https://accordtrace.notary-labs.workers.dev/api/v1/passport-product/capabilities",
       "intents": [
-        "inspect Agent Passport Certificate price",
+        "inspect Agent Passport Certificate standard price",
         "inspect commercial readiness gates",
         "discover certificate issuance and verification policy"
       ],
-      "notes": "Read-only capability discovery does not start checkout. A valid Certificate proves historical Accord Trace issuance, not legal identity, KYC, authority, safety or Trust."
+      "notes": "Read-only capability discovery does not start checkout. During the Founding 1000 campaign, eligible cryptographic Passports should inspect the separate Founding offer before using the standard paid path. A valid Certificate proves historical Accord Trace issuance, not legal identity, KYC, authority, safety or Trust."
     },
     {
       "type": "api",
@@ -80,7 +103,7 @@
         "inspect commission payout activation status",
         "discover affiliate enrollment and referral endpoints"
       ],
-      "notes": "Referral activity is separate from Agent Passport ownership, Trust and validation. Cash payouts remain disabled until payout-provider, KYC/tax and final terms activation."
+      "notes": "Referral activity is separate from Agent Passport ownership, Trust and validation. Founding 1000 free grants are not qualifying paid referral sales and create no commission. Cash payouts remain disabled until payout-provider, KYC/tax and final terms activation."
     },
     {
       "type": "api",
