@@ -15,16 +15,18 @@ export async function handleLaunch(request,env,url=new URL(request.url)){
     try{b=await readJsonBody(request,{maxBytes:4096,maxDepth:6,maxNodes:32});}
     catch(error){if(error instanceof InputError)return reply({error:'invalid_campaign_event',message:error.message},error.status);throw error;}
     const event=String(b.event||'');if(!CAMPAIGN_EVENTS.has(event))return reply({error:'campaign_event_invalid'},400);
-    const campaign=attribute(b.campaign,'campaign','public_beta_202609');
-    const channel=attribute(b.channel,'channel','direct');
-    const medium=attribute(b.medium,'medium','owned');
+    const campaign=attribute(b.campaign,'public_beta_202609');
+    const channel=attribute(b.channel,'direct');
+    const medium=attribute(b.medium,'owned');
+    if(!campaign||!channel||!medium)return reply({error:'campaign_attribution_invalid'},400);
     await recordCampaignEvent(env,{campaign,channel,medium,event});
     return reply({accepted:true,aggregate_only:true,unique_visitor_claim:false},202);
   }
 
   if(request.method==='GET'&&url.pathname==='/api/v1/launch/stats'){
     const campaign=url.searchParams.get('campaign');
-    const filter=campaign?attribute(campaign,'campaign'):null;
+    const filter=campaign?attribute(campaign):null;
+    if(campaign&&!filter)return reply({error:'campaign_filter_invalid'},400);
     const eventRows=filter
       ?await env.DB.prepare(`SELECT day,campaign,channel,medium,event,count FROM campaign_daily WHERE campaign=?1 ORDER BY day DESC,channel,medium,event`).bind(filter).all()
       :await env.DB.prepare(`SELECT day,campaign,channel,medium,event,count FROM campaign_daily ORDER BY day DESC,campaign,channel,medium,event LIMIT 500`).all();
@@ -46,9 +48,10 @@ export async function handleLaunch(request,env,url=new URL(request.url)){
     if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return reply({error:'invalid_email'},400);
     const interest=INTERESTS.has(String(b.interest||''))?String(b.interest):'agent_verification';
     const source=String(b.source||'website').trim().slice(0,80)||'website';
-    const campaign=attribute(b.campaign,'campaign','public_beta_202609');
-    const channel=attribute(b.channel,'channel','direct');
-    const medium=attribute(b.medium,'medium','owned');
+    const campaign=attribute(b.campaign,'public_beta_202609');
+    const channel=attribute(b.channel,'direct');
+    const medium=attribute(b.medium,'owned');
+    if(!campaign||!channel||!medium)return reply({error:'campaign_attribution_invalid'},400);
     const now=new Date().toISOString(); const id=`wl_${await sha256Hex(email).then(x=>x.slice(0,24))}`;
     await env.DB.prepare(`INSERT INTO launch_waitlist (id,email,interest,source,status,created_at,updated_at,campaign,channel,medium) VALUES (?1,?2,?3,?4,'waiting',?5,?5,?6,?7,?8) ON CONFLICT(email) DO UPDATE SET interest=excluded.interest,source=excluded.source,campaign=excluded.campaign,channel=excluded.channel,medium=excluded.medium,updated_at=excluded.updated_at WHERE launch_waitlist.status<>'unsubscribed'`).bind(id,email,interest,source,now,campaign,channel,medium).run();
     await recordCampaignEvent(env,{campaign,channel,medium,event:'waitlist_submit'});
@@ -57,12 +60,7 @@ export async function handleLaunch(request,env,url=new URL(request.url)){
   return reply({error:'not_found'},404);
 }
 
-function attribute(value,name,fallback=null){
-  const normalized=String(value??'').trim().toLowerCase();
-  if(!normalized){if(fallback!==null)return fallback;throw new InputError(`${name} is required`,400);}
-  if(!ATTR_PATTERN.test(normalized))throw new InputError(`${name} must use lowercase letters, numbers, hyphen or underscore`,400);
-  return normalized;
-}
+function attribute(value,fallback=null){const normalized=String(value??'').trim().toLowerCase();if(!normalized)return fallback;if(!ATTR_PATTERN.test(normalized))return null;return normalized}
 async function recordCampaignEvent(env,{campaign,channel,medium,event}){try{await env.DB.prepare(`INSERT INTO campaign_daily(day,campaign,channel,medium,event,count) VALUES(date('now'),?1,?2,?3,?4,1) ON CONFLICT(day,campaign,channel,medium,event) DO UPDATE SET count=count+1`).bind(campaign,channel,medium,event).run();return true}catch{return false}}
 async function sha256Hex(v){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return[...new Uint8Array(d)].map(x=>x.toString(16).padStart(2,'0')).join('')}
 function reply(body,status=200){return new Response(JSON.stringify(body),{status,headers:JSON_HEADERS})}
